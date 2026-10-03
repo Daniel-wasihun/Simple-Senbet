@@ -1,0 +1,11 @@
+.git
+.next
+node_modules
+npm-debug.log
+Dockerfile*
+docker-compose*
+.env*.local
+.env
+project-plan.md
+README.md
+index.html
