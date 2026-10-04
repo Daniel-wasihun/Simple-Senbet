@@ -15,7 +15,7 @@ import { useLanguage } from "@/context/language-context";
 export default function CreateSchoolPage() {
   const router = useRouter();
   const { createSchool, user } = useSenbet();
-  const { t } = useLanguage();
+  const { t, tRole } = useLanguage();
 
   const [name, setName] = useState("");
   const [parishName, setParishName] = useState("");
@@ -28,7 +28,7 @@ export default function CreateSchoolPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !parishName) {
-      setError("Please provide both School Name and Parish Name.");
+      setError(t("auth.schoolNameRequired"));
       return;
     }
     setLoading(true);
@@ -43,7 +43,7 @@ export default function CreateSchoolPage() {
       });
       router.push("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create school");
+      setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setLoading(false);
     }
@@ -62,15 +62,15 @@ export default function CreateSchoolPage() {
           <div className="inline-flex h-12 w-12 rounded-2xl bg-brand-gold items-center justify-center text-brand-blue-dark font-black shadow-lg text-2xl mb-2">
             ✝
           </div>
-          <h2 className="text-2xl font-bold text-white font-serif">{t("auth.createSchool")}</h2>
-          <p className="text-xs text-slate-400">የሰንበት ትምህርት ቤትዎን መረጃ እዚህ ያቋቁሙ</p>
+          <h2 className="text-2xl font-bold text-white font-serif">{t("auth.createSchoolTitle")}</h2>
+          <p className="text-xs text-slate-400">{t("auth.createSchoolSubtitle")}</p>
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-950/80 backdrop-blur-md text-white shadow-2xl p-6 sm:p-8">
           <div className="mb-6">
             <h3 className="text-lg font-bold text-white">{t("settings.schoolProfile")}</h3>
             <p className="text-xs text-slate-400 mt-1">
-              Create your Sunday School and establish your Owner / Admin privileges
+              {t("auth.ownerSetupDesc")}
             </p>
           </div>
 
@@ -91,7 +91,7 @@ export default function CreateSchoolPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="ደብረ መዊዕ ቅዱስ ጊዮርጊስ ሰንበት ት/ቤት"
+                placeholder="ቅዱስ ጊዮርጊስ ሰንበት ት/ቤት"
                 icon={Building2}
                 className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
                 required
@@ -103,7 +103,7 @@ export default function CreateSchoolPage() {
                 type="text"
                 value={parishName}
                 onChange={(e) => setParishName(e.target.value)}
-                placeholder="የደብረ መዊዕ ቅዱስ ጊዮርጊስ እና በዓታ ለማርያም ቤተክርስቲያን"
+                placeholder="ቅዱስ ጊዮርጊስ ቤተክርስቲያን"
                 icon={Church}
                 className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
                 required
@@ -147,9 +147,9 @@ export default function CreateSchoolPage() {
             <div className="rounded-xl bg-blue-950/50 border border-blue-800/80 p-3.5 text-xs text-blue-200 flex items-start gap-2.5">
               <Shield className="h-4 w-4 text-brand-gold shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-white">Owner Role Assignment</p>
+                <p className="font-semibold text-white">{t("auth.ownerRoleAssignment")}</p>
                 <p className="text-[11px] text-blue-300">
-                  Administrator: <strong>{user?.full_name || "You"}</strong> (
+                  {tRole("admin")}: <strong>{user?.full_name || "Admin"}</strong> (
                   {user?.email || "admin"}).
                 </p>
               </div>

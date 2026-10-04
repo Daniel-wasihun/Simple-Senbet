@@ -183,6 +183,7 @@ export default function CourseAssessmentsPage({ params }: { params: Promise<{ id
   };
 
   const handleSave = () => {
+    if (!validation.isValid) return;
     saveCourseAssessments(courseId, items);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -216,7 +217,12 @@ export default function CourseAssessmentsPage({ params }: { params: Promise<{ id
           </div>
 
           <div className="flex items-center gap-2">
-            <Button onClick={handleSave} variant="primary" className="flex items-center gap-1.5">
+            <Button
+              onClick={handleSave}
+              disabled={!validation.isValid}
+              variant={validation.isValid ? "primary" : "secondary"}
+              className="flex items-center gap-1.5"
+            >
               <Save className="h-4 w-4" />
               <span>{t("common.save")}</span>
             </Button>
@@ -406,7 +412,13 @@ export default function CourseAssessmentsPage({ params }: { params: Promise<{ id
               </span>
             )}
 
-            <Button onClick={handleSave} variant="primary" size="sm" className="text-xs h-8 ml-2">
+            <Button
+              onClick={handleSave}
+              disabled={!validation.isValid}
+              variant={validation.isValid ? "primary" : "secondary"}
+              size="sm"
+              className="text-xs h-8 ml-2"
+            >
               {t("common.save")}
             </Button>
           </div>

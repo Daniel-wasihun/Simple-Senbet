@@ -39,7 +39,7 @@ export default function LandingPage() {
                   MVP
                 </span>
               </span>
-              <p className="text-[11px] text-blue-300 font-serif">የሰንበት ትምህርት ቤት መረጃ አስተዳደር</p>
+              <p className="text-[11px] text-blue-300 font-serif">{t("app.tagline")}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -73,7 +73,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-900/60 border border-amber-400/30 text-amber-300 text-xs font-medium mb-6 backdrop-blur-xs">
             <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-            <span>Dedicated Sunday School Information & Curriculum Platform</span>
+            <span>{t("app.subtitle")}</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight font-serif">
@@ -228,7 +228,7 @@ export default function LandingPage() {
         <p>
           © {new Date().getFullYear()} {t("common.appName")} MVP. All rights reserved.
         </p>
-        <p className="mt-1 font-serif">የሰንበት ትምህርት ቤት መረጃና ትምህርት ክፍል ዲጂታል አደረጃጀት</p>
+        <p className="mt-1 font-serif">{t("app.tagline")}</p>
       </footer>
     </div>
   );

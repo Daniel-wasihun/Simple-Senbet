@@ -29,7 +29,7 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !fullName || !schoolName) {
-      setError("Please fill in your name, credentials, and Senbet School name.");
+      setError(t("auth.requiredFields"));
       return;
     }
     setLoading(true);
@@ -41,7 +41,7 @@ export default function RegisterPage() {
       });
       router.push("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to register account");
+      setError(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function RegisterPage() {
           </Link>
           <h2 className="mt-3 text-2xl font-bold text-white font-serif">{t("auth.registerTitle")}</h2>
           <p className="text-xs text-slate-400 mt-1">
-            {t("auth.adminNotice") || "The person creating this school becomes the School Owner/Admin."}
+            {t("auth.adminNotice")}
           </p>
         </div>
 
@@ -72,9 +72,9 @@ export default function RegisterPage() {
           <div className="mb-5 flex items-center gap-2.5 pb-4 border-b border-slate-800">
             <ShieldCheck className="h-5 w-5 text-brand-gold shrink-0" />
             <div>
-              <h3 className="text-sm font-bold text-white">Owner & Sunday School Setup</h3>
+              <h3 className="text-sm font-bold text-white">{t("auth.ownerSetup")}</h3>
               <p className="text-[11px] text-slate-400">
-                Setup your administrative account and establish your Senbet School
+                {t("auth.ownerSetupDesc")}
               </p>
             </div>
           </div>
@@ -138,7 +138,7 @@ export default function RegisterPage() {
                   type="text"
                   value={schoolName}
                   onChange={(e) => setSchoolName(e.target.value)}
-                  placeholder="ደብረ መዊዕ ቅዱስ ጊዮርጊስ ሰንበት ት/ቤት"
+                  placeholder="ቅዱስ ጊዮርጊስ ሰንበት ት/ቤት"
                   icon={Building2}
                   className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
                   required
@@ -150,7 +150,7 @@ export default function RegisterPage() {
                   type="text"
                   value={parishName}
                   onChange={(e) => setParishName(e.target.value)}
-                  placeholder="የደብረ መዊዕ ቅዱስ ጊዮርጊስ ቤተክርስቲያን"
+                  placeholder="ቅዱስ ጊዮርጊስ ቤተክርስቲያን"
                   icon={Church}
                   className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
                 />
@@ -168,7 +168,7 @@ export default function RegisterPage() {
           </form>
 
           <div className="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
-            <span>Already have an account?</span>
+            <span>{t("auth.haveAccount")}</span>
             <Link href="/login" className="text-amber-400 hover:underline font-semibold">
               {t("auth.login")}
             </Link>

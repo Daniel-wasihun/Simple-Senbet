@@ -67,10 +67,13 @@ create table if not exists public.students (
   school_id uuid references public.schools(id) on delete cascade not null,
   student_id text not null, -- Unique student code within school e.g. STU-2024-001
   full_name text not null,
+  baptismal_name text, -- Christian / Baptismal name (የክርስትና ስም)
   gender text not null check (gender in ('male', 'female')),
   date_of_birth date,
+  address text,
   parent_name text,
   parent_phone text,
+  parent_email text,
   status text default 'active' not null check (status in ('active', 'graduated', 'transferred', 'suspended')),
   created_at timestamptz default now() not null,
   unique (school_id, student_id)

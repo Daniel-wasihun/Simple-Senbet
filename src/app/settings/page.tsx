@@ -226,7 +226,6 @@ export default function SettingsPage() {
                     }`}
                   >
                     {tRole(u.role)}
-                    {u.is_owner && " (Owner)"}
                   </span>
 
                   {!u.is_owner && (

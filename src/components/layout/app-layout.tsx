@@ -48,6 +48,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Determine if a custom school was established by the user
+  const isCustomSchool = Boolean(
+    school &&
+    school.id !== "sch-debre-mewi" &&
+    school.id !== "sch-default" &&
+    school.name !== "ደብረ መዊዕ ቅዱስ ጊዮርጊስ ሰንበት ትምህርት ቤት" &&
+    school.name !== "ሰንበት ትምህርት ቤት" &&
+    school.name.trim() !== ""
+  );
+  const appTitle = isCustomSchool && school ? school.name : t("common.appName");
+  const parishSubtitle =
+    isCustomSchool && school?.parish_name && school.parish_name !== "የደብረ መዊዕ ቅዱስ ጊዮርጊስ እና በዓታ ለማርያም ቤተክርስቲያን"
+      ? school.parish_name
+      : t("app.subtitle");
+
   // If on public pages like /, /login, /register, /create-school, don't show full app chrome
   const isPublicPage =
     pathname === "/" ||
@@ -167,10 +182,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="font-bold text-sm text-slate-900 dark:text-white truncate font-serif leading-tight">
-                {school ? school.name : t("common.appName")}
+                {appTitle}
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                {school?.parish_name || t("app.subtitle")}
+                {parishSubtitle}
               </p>
             </div>
           </Link>
@@ -217,7 +232,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="rounded-lg bg-amber-50/70 dark:bg-amber-950/20 p-2.5 border border-amber-200/70 dark:border-amber-900/30">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-400 mb-0.5">
                 <Sparkles className="h-3.5 w-3.5 text-brand-gold" />
-                <span>{school?.name ? school.name.split(" ")[0] : t("common.appName")}</span>
+                <span>{appTitle}</span>
               </div>
               <p className="text-[10px] text-amber-800 dark:text-amber-300/80 leading-tight">
                 {currentAcademicYear?.name || "2017 ዓ.ም"}
@@ -286,7 +301,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   ✝
                 </div>
                 <span className="font-bold text-sm text-slate-900 dark:text-white truncate font-serif">
-                  {school ? school.name : t("common.appName")}
+                  {appTitle}
                 </span>
               </div>
               <button
@@ -351,25 +366,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center gap-2.5 min-w-0">
-              <h1 className="font-bold text-base sm:text-lg md:text-xl text-slate-900 dark:text-white tracking-tight font-serif truncate max-w-[220px] sm:max-w-xs md:max-w-md lg:max-w-lg">
-                {school ? school.name : t("common.appName")}
+            <div className="flex items-center min-w-0">
+              <h1 className="font-bold text-base sm:text-lg md:text-xl text-slate-900 dark:text-white tracking-tight font-serif truncate max-w-[240px] sm:max-w-md md:max-w-lg lg:max-w-xl">
+                {appTitle}
               </h1>
-              {school?.parish_name && (
-                <span className="hidden sm:inline-flex text-xs px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-brand-blue dark:text-blue-400 border border-blue-200 dark:border-blue-900 font-medium truncate max-w-[180px]">
-                  {school.parish_name}
-                </span>
-              )}
             </div>
           </div>
 
-          {/* Right: Academic Year pill, Language Switcher, Theme Toggle */}
+          {/* Right: Language Switcher, Theme Toggle */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {currentAcademicYear && (
-              <span className="hidden md:inline-flex text-xs px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-semibold">
-                {currentAcademicYear.name}
-              </span>
-            )}
             <LanguageSwitcher variant="header" />
             <ThemeToggle />
           </div>

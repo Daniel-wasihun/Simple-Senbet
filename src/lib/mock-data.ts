@@ -65,11 +65,11 @@ export const INITIAL_USERS: UserAccount[] = [
 
 export const INITIAL_SCHOOL: School = {
   id: "sch-debre-mewi",
-  name: "ደብረ መዊዕ ቅዱስ ጊዮርጊስ ሰንበት ትምህርት ቤት",
-  code: "DEBRE-MEWI-01",
-  parish_name: "የደብረ መዊዕ ቅዱስ ጊዮርጊስ እና በዓታ ለማርያም ቤተክርስቲያን",
+  name: "ሰንበት ትምህርት ቤት",
+  code: "SENBET-01",
+  parish_name: "",
   phone: "+251 91 123 4567",
-  email: "contact@debremewi.senbet.org",
+  email: "contact@senbet.org",
   address: "አዲስ አበባ, ኢትዮጵያ (Addis Ababa, Ethiopia)",
   created_at: new Date().toISOString(),
 };
@@ -78,7 +78,7 @@ export const INITIAL_ACADEMIC_YEARS: AcademicYear[] = [
   {
     id: "ay-2017",
     school_id: "sch-debre-mewi",
-    name: "2017 ዓ.ም (2024-2025)",
+    name: "2017 ዓ.ም",
     is_active: true,
     start_date: "2024-09-11",
     end_date: "2025-06-30",
@@ -87,7 +87,7 @@ export const INITIAL_ACADEMIC_YEARS: AcademicYear[] = [
   {
     id: "ay-2016",
     school_id: "sch-debre-mewi",
-    name: "2016 ዓ.ም (2023-2024)",
+    name: "2016 ዓ.ም",
     is_active: false,
     start_date: "2023-09-12",
     end_date: "2024-06-25",

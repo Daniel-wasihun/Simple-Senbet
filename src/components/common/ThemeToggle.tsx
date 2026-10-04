@@ -70,7 +70,7 @@ export function ThemeToggle({ variant = "icon", className = "" }: ThemeTogglePro
     <button
       type="button"
       onClick={toggleTheme}
-      className={`p-2 rounded-lg transition-colors border text-slate-200 hover:text-white hover:bg-white/10 border-white/10 dark:border-slate-700/60 ${className}`}
+      className={`p-2 rounded-lg transition-colors border bg-slate-100 hover:bg-slate-200/80 border-slate-300 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-slate-200 shadow-xs ${className}`}
       title={
         resolvedTheme === "dark"
           ? `${t("settings.darkTheme")} -> ${t("settings.lightTheme")}`
@@ -81,7 +81,7 @@ export function ThemeToggle({ variant = "icon", className = "" }: ThemeTogglePro
       {resolvedTheme === "dark" ? (
         <Sun className="h-4 w-4 text-amber-400 hover:rotate-45 transition-transform" />
       ) : (
-        <Moon className="h-4 w-4 text-blue-200 hover:-rotate-12 transition-transform" />
+        <Moon className="h-4 w-4 text-brand-blue hover:-rotate-12 transition-transform" />
       )}
     </button>
   );

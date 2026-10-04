@@ -93,9 +93,15 @@ export default function ClassRosterPage() {
           <h2 className="text-xl sm:text-2xl font-bold font-serif text-slate-900 dark:text-white print:text-black">
             {school?.name || t("common.appName")}
           </h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400 font-serif print:text-slate-600">
-            {school?.parish_name} · {t("roster.title")}
-          </p>
+          {school?.parish_name ? (
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-serif print:text-slate-600">
+              {school.parish_name} · {t("roster.title")}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-serif print:text-slate-600">
+              {t("roster.title")}
+            </p>
+          )}
           <div className="mt-2 inline-flex items-center gap-3 text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full print:bg-slate-100 print:text-black">
             <span>
               {t("classes.className")}:{" "}

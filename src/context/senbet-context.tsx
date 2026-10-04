@@ -34,6 +34,7 @@ import {
   INITIAL_ATTENDANCE,
   getTodayDateString,
 } from "@/lib/mock-data";
+import { calculateDeterministicRoster, calculateAttendanceMetrics } from "@/lib/calculations";
 
 interface SenbetContextType {
   // Auth state
@@ -324,7 +325,7 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
       newYear = {
         id: "ay-" + Date.now(),
         school_id: newSchool.id,
-        name: "2017 ዓ.ም (2024-2025)",
+        name: "2017 ዓ.ም",
         is_active: true,
         created_at: new Date().toISOString(),
       };
@@ -430,7 +431,7 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
     const newYear: AcademicYear = {
       id: "ay-" + Date.now(),
       school_id: newSchool.id,
-      name: "2017 ዓ.ም (2024-2025)",
+      name: "2017 ዓ.ም",
       is_active: true,
       created_at: new Date().toISOString(),
     };
@@ -753,135 +754,27 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
 
   // Compute Class Roster with Deterministic Ranking
   const getClassRoster = (classId: string): ClassRosterEntry[] => {
-    // 1. Get students enrolled in this class
     const classEnrollments = enrollments.filter((e) => e.class_id === classId);
     const enrolledStudentIds = new Set(classEnrollments.map((e) => e.student_id));
     const enrolledStudents = students.filter((s) => enrolledStudentIds.has(s.id));
-
-    // 2. Get courses for this class
     const classCourses = courses.filter((c) => c.class_id === classId);
 
-    // 3. For each student, compute attendance and course marks
-    const unrankedEntries: Array<Omit<ClassRosterEntry, "rank">> = enrolledStudents.map(
-      (student) => {
-        const enrollment = classEnrollments.find((e) => e.student_id === student.id)!;
-
-        // Attendance stats
-        const studentAtt = attendance.filter(
-          (a) => a.class_id === classId && a.student_id === student.id
-        );
-        const totalDays = studentAtt.length;
-        const present = studentAtt.filter((a) => a.status === "present").length;
-        const absent = studentAtt.filter((a) => a.status === "absent").length;
-        const late = studentAtt.filter((a) => a.status === "late").length;
-        const permission = studentAtt.filter((a) => a.status === "permission").length;
-        // present & late count towards positive attendance
-        const attendanceRate =
-          totalDays > 0 ? Math.round(((present + late * 0.5) / totalDays) * 100) : 100;
-
-        // Courses scores
-        const courseScores: ClassRosterEntry["courseScores"] = {};
-        let totalObtainedScore = 0;
-        let totalMaxScore = 0;
-
-        classCourses.forEach((c) => {
-          const courseAssessmentsList = assessments.filter((a) => a.course_id === c.id);
-          const assessmentBreakdown: Record<string, number> = {};
-          let courseObtained = 0;
-          let courseMax = 0;
-
-          courseAssessmentsList.forEach((asm) => {
-            const res = results.find(
-              (r) => r.assessment_id === asm.id && r.student_id === student.id
-            );
-            const score = res ? res.score : 0;
-            assessmentBreakdown[asm.id] = score;
-            courseObtained += score;
-            courseMax += asm.max_score;
-          });
-
-          // Course percentage
-          const coursePercentage =
-            courseMax > 0 ? Math.round((courseObtained / courseMax) * 100) : 0;
-
-          courseScores[c.id] = {
-            courseId: c.id,
-            courseName: c.name,
-            obtainedScore: courseObtained,
-            maxPossibleScore: courseMax,
-            percentage: coursePercentage,
-            assessmentBreakdown,
-          };
-
-          totalObtainedScore += courseObtained;
-          totalMaxScore += courseMax;
-        });
-
-        const overallAverage =
-          totalMaxScore > 0 ? Math.round((totalObtainedScore / totalMaxScore) * 1000) / 10 : 0;
-
-        let status: "Passed" | "Failed" | "In Progress" = "In Progress";
-        if (totalMaxScore > 0) {
-          status = overallAverage >= 50 ? "Passed" : "Failed";
-        }
-
-        return {
-          student,
-          enrollment,
-          attendance: {
-            totalDays,
-            present,
-            absent,
-            late,
-            permission,
-            attendanceRate,
-          },
-          courseScores,
-          totalObtainedScore,
-          totalMaxScore,
-          overallAverage,
-          status,
-        };
-      }
+    return calculateDeterministicRoster(
+      enrolledStudents,
+      classEnrollments,
+      classCourses,
+      assessments,
+      results,
+      attendance,
+      classId
     );
-
-    // 4. Deterministic Ranking Algorithm:
-    // Sort descending by totalObtainedScore, then by overallAverage
-    const sorted = [...unrankedEntries].sort((a, b) => {
-      if (b.totalObtainedScore !== a.totalObtainedScore) {
-        return b.totalObtainedScore - a.totalObtainedScore;
-      }
-      return b.overallAverage - a.overallAverage;
-    });
-
-    // Standard Competition Ranking (1224)
-    let currentRank = 1;
-    const rankedList: ClassRosterEntry[] = sorted.map((entry, index) => {
-      if (index > 0) {
-        const prev = sorted[index - 1];
-        if (entry.totalObtainedScore < prev.totalObtainedScore) {
-          currentRank = index + 1;
-        }
-      }
-      return {
-        ...entry,
-        rank: currentRank,
-      };
-    });
-
-    return rankedList;
   };
 
   // Dashboard Stats
   const getDashboardStats = (): DashboardStats => {
     const today = getTodayDateString();
     const todayRecords = attendance.filter((a) => a.date === today);
-    const totalMarked = todayRecords.length;
-    const present = todayRecords.filter((a) => a.status === "present").length;
-    const absent = todayRecords.filter((a) => a.status === "absent").length;
-    const late = todayRecords.filter((a) => a.status === "late").length;
-    const permission = todayRecords.filter((a) => a.status === "permission").length;
-    const rate = totalMarked > 0 ? Math.round(((present + late * 0.5) / totalMarked) * 100) : 100;
+    const todayMetrics = calculateAttendanceMetrics(todayRecords);
 
     const classSummary = classes.map((c) => {
       const roster = getClassRoster(c.id);
@@ -892,18 +785,14 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
           : 0;
 
       const attRecords = attendance.filter((a) => a.class_id === c.id);
-      const presCount = attRecords.filter(
-        (a) => a.status === "present" || a.status === "late"
-      ).length;
-      const attRate =
-        attRecords.length > 0 ? Math.round((presCount / attRecords.length) * 100) : 100;
+      const attMetrics = calculateAttendanceMetrics(attRecords);
 
       return {
         classId: c.id,
         className: c.name,
         studentCount,
         averageScore,
-        attendanceRate: attRate,
+        attendanceRate: attMetrics.rate,
       };
     });
 
@@ -912,12 +801,12 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
       totalClasses: classes.length,
       totalCourses: courses.length,
       todayAttendance: {
-        totalMarked,
-        present,
-        absent,
-        late,
-        permission,
-        rate,
+        totalMarked: todayMetrics.totalDays,
+        present: todayMetrics.present,
+        absent: todayMetrics.absent,
+        late: todayMetrics.late,
+        permission: todayMetrics.permission,
+        rate: todayMetrics.rate,
       },
       recentResultsCount: results.length,
       classSummary,

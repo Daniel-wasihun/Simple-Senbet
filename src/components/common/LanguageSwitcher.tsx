@@ -28,9 +28,9 @@ export function LanguageSwitcher({ className, variant = "header" }: LanguageSwit
             type="button"
             onClick={() => setLanguage(l.code)}
             className={cn(
-              "px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer",
+              "px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer",
               language === l.code
-                ? "bg-white dark:bg-[#141a29] text-[#0b529c] dark:text-[#fba81c] shadow-xs"
+                ? "bg-white dark:bg-slate-900 text-brand-blue dark:text-brand-gold shadow-xs"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             )}
           >
@@ -43,16 +43,20 @@ export function LanguageSwitcher({ className, variant = "header" }: LanguageSwit
 
   return (
     <div className={cn("relative inline-flex items-center", className)}>
-      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700 border border-white/15 dark:border-slate-700 transition-colors cursor-pointer text-xs font-medium text-white">
-        <Globe className="h-3.5 w-3.5 text-amber-300 dark:text-amber-400 shrink-0" />
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer text-xs font-semibold text-slate-800 dark:text-slate-100 shadow-xs">
+        <Globe className="h-3.5 w-3.5 text-brand-blue dark:text-brand-gold shrink-0" />
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
-          className="bg-transparent text-xs text-white outline-none cursor-pointer pr-1"
+          className="bg-transparent text-xs text-slate-800 dark:text-slate-100 font-semibold outline-none cursor-pointer pr-1"
           aria-label="Select Language"
         >
           {SUPPORTED_LANGUAGES.map((l) => (
-            <option key={l.code} value={l.code} className="bg-slate-900 text-white">
+            <option
+              key={l.code}
+              value={l.code}
+              className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white font-medium"
+            >
               {l.flag} {l.nativeName}
             </option>
           ))}

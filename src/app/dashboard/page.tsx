@@ -40,7 +40,7 @@ export default function DashboardPage() {
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-medium mb-3">
               <Sparkles className="h-3.5 w-3.5 text-brand-gold" />
-              <span>{school?.parish_name || "Orthodox Sunday School"}</span>
+              <span>{school?.parish_name || t("app.subtitle")}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold font-serif tracking-tight text-white">
               {school?.name || t("common.appName")}
