@@ -1,26 +1,84 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-blue: #0b529c;
+  --color-brand-blue-dark: #083a6e;
+  --color-brand-blue-light: #eff6ff;
+  --color-brand-yellow: #fba81c;
+  --color-brand-yellow-dark: #f59e0b;
+  --color-brand-yellow-light: #fffbeb;
+  --color-brand-green: #10b981;
+  --color-brand-red: #ef4444;
+
+  --font-sans:
+    "Poppins", "Outfit", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Noto Sans Ethiopic", "Nyala", sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: light;
+    --bg-body: #fafafa;
+    --bg-main: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --card-bg: #ffffff;
+    --card-hover: #f8fafc;
+    --card-border: #e2e8f0;
+    --form-bg: #ffffff;
+    --input-bg: #ffffff;
+    --input-border: #cbd5e1;
+    --accent: #0b529c;
+    --accent-hover: #083a6e;
+    --header-bg: #0b529c;
+    --header-text: #ffffff;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  .dark {
+    color-scheme: dark;
+    --bg-body: #0a0e1a;
+    --bg-main: #0a0e1a;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --card-bg: #141a29;
+    --card-hover: #1c2438;
+    --card-border: #1e293b;
+    --form-bg: #111624;
+    --input-bg: #1c2438;
+    --input-border: #334155;
+    --accent: #fba81c;
+    --accent-hover: #f59e0b;
+    --header-bg: #0e1626;
+    --header-text: #f1f5f9;
+  }
+
+  body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  /* Smooth scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.3);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.5);
+  }
 }

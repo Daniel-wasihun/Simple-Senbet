@@ -13,25 +13,17 @@ import {
   Phone,
 } from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { EmptyState } from "@/components/ui/empty-state";
+import { useLanguage } from "@/context/language-context";
+import { Button } from "@/components/common/Button";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { FormField } from "@/components/common/FormField";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { Modal } from "@/components/common/Modal";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { PageHeader } from "@/components/common/PageHeader";
+import { Card } from "@/components/common/Card";
+import { EmptyState } from "@/components/common/EmptyState";
 import { Student, StudentStatus } from "@/types";
 
 export default function StudentsPage() {
@@ -44,6 +36,8 @@ export default function StudentsPage() {
     moveStudentClass,
     deleteStudent,
   } = useSenbet();
+
+  const { t, tClass } = useLanguage();
 
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,6 +59,10 @@ export default function StudentsPage() {
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [studentToMove, setStudentToMove] = useState<Student | null>(null);
   const [targetClassId, setTargetClassId] = useState("");
+
+  // Delete Confirmation
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
   // Map students with their enrolled class
   const studentsWithClass = useMemo(() => {
@@ -169,360 +167,317 @@ export default function StudentsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl font-bold font-serif text-slate-900 flex items-center gap-2">
-            <Users className="h-6 w-6 text-blue-800" />
-            <span>Student Registration by Class</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            የተማሪዎች አጠቃላይ መዝገብ — የተመደቡበት ክፍል፣ መለያ ቁጥርና አድራሻ
-          </p>
-        </div>
-
-        <Button
-          onClick={openAddDialog}
-          className="bg-blue-800 hover:bg-blue-900 text-white shadow-sm flex items-center gap-1.5"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Register Student</span>
-        </Button>
-      </div>
+      <PageHeader
+        title={t("students.title")}
+        subtitle={t("students.subtitle")}
+        action={
+          <Button onClick={openAddDialog} variant="primary" className="flex items-center gap-1.5">
+            <Plus className="h-4 w-4" />
+            <span>{t("students.addStudent")}</span>
+          </Button>
+        }
+      />
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-        {/* Class Filter */}
-        <div className="flex items-center space-x-2">
-          <Filter className="h-4 w-4 text-slate-400 shrink-0" />
-          <select
-            value={selectedClassFilter}
-            onChange={(e) => setSelectedClassFilter(e.target.value)}
-            className="w-full text-xs sm:text-sm font-medium border border-slate-200 rounded-md p-1.5 bg-slate-50 text-slate-800 outline-none cursor-pointer"
-          >
-            <option value="all">All Classes (ሁሉም ክፍሎች) — {students.length} Total</option>
-            {classes.map((c) => {
-              const count = enrollments.filter((e) => e.class_id === c.id).length;
-              return (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({count} students)
-                </option>
-              );
-            })}
-          </select>
-        </div>
+      <Card className="p-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Class Filter */}
+          <div className="flex items-center space-x-2">
+            <Filter className="h-4 w-4 text-slate-400 shrink-0" />
+            <Select
+              value={selectedClassFilter}
+              onChange={(e) => setSelectedClassFilter(e.target.value)}
+              className="text-xs sm:text-sm py-1.5"
+            >
+              <option value="all">
+                {t("common.all")} {t("classes.title")} ({students.length})
+              </option>
+              {classes.map((c) => {
+                const count = enrollments.filter((e) => e.class_id === c.id).length;
+                return (
+                  <option key={c.id} value={c.id}>
+                    {tClass(c.name)} ({count})
+                  </option>
+                );
+              })}
+            </Select>
+          </div>
 
-        {/* Search */}
-        <div className="sm:col-span-2 relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by student name, ID (e.g. STU-2024-001), or guardian phone..."
-            className="pl-9 text-xs sm:text-sm bg-slate-50"
-          />
+          {/* Search Input */}
+          <div className="sm:col-span-2">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t("students.searchPlaceholder")}
+              icon={Search}
+              className="text-xs sm:text-sm"
+            />
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Students Table */}
       {filteredStudents.length === 0 ? (
         <EmptyState
-          icon={<Users className="h-8 w-8 text-slate-400" />}
-          title="No students found"
-          description={
-            searchQuery
-              ? "No students match your search criteria. Try a different query."
-              : "No students are enrolled in this selection. Register students to begin."
-          }
-          action={
-            <Button onClick={openAddDialog} className="bg-blue-800 text-white">
-              Register Student
-            </Button>
-          }
+          icon={Users}
+          title={t("students.noStudents")}
+          description={searchQuery ? t("common.noData") : t("students.subtitle")}
+          actionLabel={t("students.addStudent")}
+          onAction={openAddDialog}
         />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student ID</TableHead>
-              <TableHead>Full Name (ስም)</TableHead>
-              <TableHead>Gender</TableHead>
-              <TableHead>Class (ክፍል)</TableHead>
-              <TableHead>Parent / Contact</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredStudents.map((st) => (
-              <TableRow key={st.id}>
-                <TableCell className="font-mono text-xs font-semibold text-slate-700">
-                  {st.student_id}
-                </TableCell>
-                <TableCell className="font-medium text-slate-900">
-                  <div>{st.full_name}</div>
-                  {st.date_of_birth && (
-                    <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                      <Calendar className="h-3 w-3" /> DOB: {st.date_of_birth}
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="text-xs text-slate-600">
-                  {st.gender === "male" ? "ወንድ" : "ሴት"}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className="font-medium text-blue-900 border-blue-200 bg-blue-50/50"
-                  >
-                    {st.current_class_name}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-xs text-slate-600">
-                  {st.parent_name ? (
-                    <div>
-                      <p className="font-medium text-slate-800">{st.parent_name}</p>
-                      <p className="text-slate-400 font-mono flex items-center gap-1">
-                        <Phone className="h-2.5 w-2.5" /> {st.parent_phone}
-                      </p>
-                    </div>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      st.status === "active"
-                        ? "success"
-                        : st.status === "graduated"
-                          ? "secondary"
-                          : "destructive"
-                    }
-                    className="capitalize text-[10px]"
-                  >
-                    {st.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(st)}
-                      className="h-7 px-2 text-xs text-slate-600 hover:text-slate-900"
-                      title="Edit student"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setStudentToMove(st);
-                        setTargetClassId("");
-                        setMoveDialogOpen(true);
-                      }}
-                      className="h-7 px-2 text-xs text-blue-700 hover:bg-blue-50"
-                      title="Move student to another class"
-                    >
-                      <ArrowRightLeft className="h-3 w-3 mr-1" />
-                      Move
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (confirm(`Are you sure you want to delete ${st.full_name}?`)) {
-                          deleteStudent(st.id);
-                        }
-                      }}
-                      className="h-7 px-2 text-xs text-slate-400 hover:text-rose-600"
-                      title="Delete student"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th className="px-4 py-3">{t("students.studentId")}</th>
+                  <th className="px-4 py-3">{t("students.fullName")}</th>
+                  <th className="px-4 py-3">{t("students.gender")}</th>
+                  <th className="px-4 py-3">{t("classes.className")}</th>
+                  <th className="px-4 py-3">{t("students.parentContact")}</th>
+                  <th className="px-4 py-3">{t("common.status")}</th>
+                  <th className="px-4 py-3 text-right">{t("common.actions")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                {filteredStudents.map((st) => (
+                  <tr key={st.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {st.student_id}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                      <div>{st.full_name}</div>
+                      {st.date_of_birth && (
+                        <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <Calendar className="h-3 w-3" /> {st.date_of_birth}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 capitalize">
+                      {st.gender === "male" ? t("students.male") : t("students.female")}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 dark:bg-blue-950/60 text-brand-blue dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                        {tClass(st.current_class_name)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
+                      {st.parent_name ? (
+                        <div>
+                          <p className="font-medium text-slate-800 dark:text-slate-200">
+                            {st.parent_name}
+                          </p>
+                          <p className="text-slate-400 dark:text-slate-500 font-mono flex items-center gap-1">
+                            <Phone className="h-2.5 w-2.5" /> {st.parent_phone}
+                          </p>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={st.status} size="sm" />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(st)}
+                          className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300"
+                          title={t("common.edit")}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setStudentToMove(st);
+                            setTargetClassId("");
+                            setMoveDialogOpen(true);
+                          }}
+                          className="h-7 px-2 text-xs text-brand-blue dark:text-blue-400"
+                          title={t("students.moveStudent")}
+                        >
+                          <ArrowRightLeft className="h-3 w-3 mr-1" />
+                          {t("students.moveStudent")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setStudentToDelete(st);
+                            setDeleteConfirmOpen(true);
+                          }}
+                          className="h-7 px-2 text-xs text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"
+                          title={t("common.delete")}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
-      {/* Add / Edit Student Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogHeader>
-          <DialogTitle>
-            {editingStudent ? "Edit Student Details" : "Register New Student"}
-          </DialogTitle>
-          <DialogDescription>
-            Enter the student demographic details and assign them to an active class.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSaveStudent} className="space-y-4 py-2">
+      {/* Add / Edit Student Modal */}
+      <Modal
+        isOpen={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        title={editingStudent ? t("students.editStudent") : t("students.addStudent")}
+        description={t("students.subtitle")}
+      >
+        <form onSubmit={handleSaveStudent} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Student ID (መለያ ቁጥር) *
-              </label>
+            <FormField label={t("students.studentId")} required>
               <Input
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
                 placeholder="STU-2024-001"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Gender (ጾታ) *
-              </label>
-              <select
+            </FormField>
+
+            <FormField label={t("students.gender")} required>
+              <Select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as "male" | "female")}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
               >
-                <option value="male">ወንድ (Male)</option>
-                <option value="female">ሴት (Female)</option>
-              </select>
-            </div>
+                <option value="male">{t("students.male")}</option>
+                <option value="female">{t("students.female")}</option>
+              </Select>
+            </FormField>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Full Name (የተማሪው ሙሉ ስም) *
-            </label>
+          <FormField label={t("students.fullName")} required>
             <Input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="e.g. ዮሐንስ ተስፋዬ"
+              placeholder="e.g. ዮሐንስ ተስፋዬ / John Doe"
               required
             />
-          </div>
+          </FormField>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Assigned Class (ክፍል) *
-              </label>
-              <select
-                value={classId}
-                onChange={(e) => setClassId(e.target.value)}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
-                required
-              >
-                <option value="">— Select Class —</option>
+            <FormField label={t("classes.className")} required>
+              <Select value={classId} onChange={(e) => setClassId(e.target.value)} required>
+                <option value="">— {t("students.selectClass")} —</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {tClass(c.name)}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Date of Birth (የትውልድ ቀን)
-              </label>
+            <FormField label={t("students.dob")}>
               <Input
                 type="date"
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Parent / Guardian Name (የወላጅ ስም)
-              </label>
+            <FormField label={t("students.parentName")}>
               <Input
                 value={parentName}
                 onChange={(e) => setParentName(e.target.value)}
                 placeholder="ተስፋዬ ገብሬ"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Parent Phone (ስልክ ቁጥር)
-              </label>
+            </FormField>
+
+            <FormField label={t("students.parentPhone")}>
               <Input
                 value={parentPhone}
                 onChange={(e) => setParentPhone(e.target.value)}
                 placeholder="+251 91 234 5678"
               />
-            </div>
+            </FormField>
           </div>
 
           {editingStudent && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Enrollment Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as StudentStatus)}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
-              >
-                <option value="active">Active (በሂደት ላይ)</option>
-                <option value="graduated">Graduated (ተመርቋል)</option>
-                <option value="transferred">Transferred (የተዘዋወረ)</option>
-                <option value="suspended">Suspended (የታገደ)</option>
-              </select>
-            </div>
+            <FormField label={t("common.status")}>
+              <Select value={status} onChange={(e) => setStatus(e.target.value as StudentStatus)}>
+                <option value="active">{t("students.active")}</option>
+                <option value="graduated">{t("students.graduated")}</option>
+                <option value="transferred">{t("students.transferred")}</option>
+                <option value="suspended">{t("students.suspended")}</option>
+              </Select>
+            </FormField>
           )}
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
-            <Button type="submit" className="bg-blue-800 text-white hover:bg-blue-900">
-              {editingStudent ? "Save Changes" : "Register Student"}
+            <Button type="submit" variant="primary">
+              {t("common.save")}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </Dialog>
+      </Modal>
 
-      {/* Move Class Dialog */}
-      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
-        <DialogHeader>
-          <DialogTitle>Move Student to Another Class</DialogTitle>
-          <DialogDescription>
-            Change the assigned class for <strong>{studentToMove?.full_name}</strong>.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleMoveClass} className="space-y-4 py-2">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Select New Class *
-            </label>
-            <select
+      {/* Move Class Modal */}
+      <Modal
+        isOpen={moveDialogOpen}
+        onClose={() => setMoveDialogOpen(false)}
+        title={t("students.moveStudent")}
+        description={`${studentToMove?.full_name}`}
+      >
+        <form onSubmit={handleMoveClass} className="space-y-4">
+          <FormField label={t("students.targetClass")} required>
+            <Select
               value={targetClassId}
               onChange={(e) => setTargetClassId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
               required
             >
-              <option value="">— Select Target Class —</option>
+              <option value="">— {t("students.selectClass")} —</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.level_category || "General"})
+                  {tClass(c.name)} ({c.level_category || "General"})
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </FormField>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setMoveDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
-            <Button type="submit" className="bg-blue-800 text-white hover:bg-blue-900">
-              Confirm Move
+            <Button type="submit" variant="primary">
+              {t("students.moveStudent")}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </Dialog>
+      </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setStudentToDelete(null);
+        }}
+        onConfirm={() => {
+          if (studentToDelete) {
+            deleteStudent(studentToDelete.id);
+            setDeleteConfirmOpen(false);
+            setStudentToDelete(null);
+          }
+        }}
+        title={t("common.delete")}
+        description={t("students.deleteConfirm", { name: studentToDelete?.full_name || "" })}
+        confirmText={t("common.delete")}
+        variant="danger"
+      />
     </div>
   );
 }

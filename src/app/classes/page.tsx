@@ -2,14 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  GraduationCap,
-  Plus,
-  Users,
-  BookOpen,
-  Trash2,
-} from "lucide-react";
+import { GraduationCap, Plus, Users, BookOpen, Trash2 } from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
+import { useLanguage } from "@/context/language-context";
 import {
   Card,
   CardHeader,
@@ -17,27 +12,28 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/ui/empty-state";
+} from "@/components/common/Card";
+import { Button } from "@/components/common/Button";
+import { Modal } from "@/components/common/Modal";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { FormField } from "@/components/common/FormField";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { PageHeader } from "@/components/common/PageHeader";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export default function ClassesPage() {
   const { classes, enrollments, courses, createClass, deleteClass, currentAcademicYear } =
     useSenbet();
+  const { t, tClass } = useLanguage();
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [name, setName] = useState("");
-  const [levelCategory, setLevelCategory] = useState("ህጻናት (Children)");
+  const [levelCategory, setLevelCategory] = useState("children");
   const [roomNumber, setRoomNumber] = useState("");
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [classToDelete, setClassToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,37 +59,29 @@ export default function ClassesPage() {
   return (
     <div className="space-y-6">
       {/* Page Title & Add Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl font-bold font-serif text-slate-900 flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-blue-800" />
-            <span>Class Management</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            የክፍሎች ዝርዝር እና አደረጃጀት — {currentAcademicYear?.name || "2017 ዓ.ም"}
-          </p>
-        </div>
-
-        <Button
-          onClick={() => setAddDialogOpen(true)}
-          className="bg-blue-800 hover:bg-blue-900 text-white shadow-sm flex items-center gap-1.5"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add New Class</span>
-        </Button>
-      </div>
+      <PageHeader
+        title={t("classes.title")}
+        subtitle={`${t("classes.subtitle")} — ${currentAcademicYear?.name || "2017 ዓ.ም"}`}
+        action={
+          <Button
+            onClick={() => setAddDialogOpen(true)}
+            variant="primary"
+            className="flex items-center gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{t("classes.addClass")}</span>
+          </Button>
+        }
+      />
 
       {/* Class Cards Grid */}
       {classes.length === 0 ? (
         <EmptyState
-          icon={<GraduationCap className="h-8 w-8 text-slate-400" />}
-          title="No classes created yet"
-          description="Create your first class to begin enrolling students, assigning courses, and marking attendance."
-          action={
-            <Button onClick={() => setAddDialogOpen(true)} className="bg-blue-800 text-white">
-              Create First Class
-            </Button>
-          }
+          icon={GraduationCap}
+          title={t("classes.noClasses")}
+          description={t("classes.subtitle")}
+          actionLabel={t("classes.addClass")}
+          onAction={() => setAddDialogOpen(true)}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -104,37 +92,35 @@ export default function ClassesPage() {
             return (
               <Card
                 key={cls.id}
-                className="border-slate-200 hover:shadow-md transition-all flex flex-col justify-between"
+                className="hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <Badge variant="secondary" className="mb-2 text-[10px]">
+                      <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 mb-2">
                         {cls.level_category || "General"}
-                      </Badge>
-                      <CardTitle className="text-lg text-slate-900">
+                      </span>
+                      <CardTitle className="text-lg">
                         <Link
                           href={`/classes/${cls.id}`}
-                          className="hover:text-blue-800 hover:underline"
+                          className="hover:text-brand-blue dark:hover:text-blue-400 hover:underline"
                         >
-                          {cls.name}
+                          {tClass(cls.name)}
                         </Link>
                       </CardTitle>
                       {cls.room_number && (
-                        <CardDescription className="mt-0.5 text-xs text-slate-500">
-                          Room: {cls.room_number}
-                        </CardDescription>
+                        <CardDescription className="mt-0.5">{cls.room_number}</CardDescription>
                       )}
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => {
-                        if (confirm(`Are you sure you want to delete ${cls.name}?`)) {
-                          deleteClass(cls.id);
-                        }
+                        setClassToDelete({ id: cls.id, name: tClass(cls.name) });
+                        setDeleteConfirmOpen(true);
                       }}
-                      className="text-slate-400 hover:text-rose-600 p-1 rounded-md transition-colors"
-                      title="Delete Class"
+                      className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors"
+                      title={t("common.delete")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -143,33 +129,34 @@ export default function ClassesPage() {
 
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-2 gap-2 text-center">
-                    <div className="rounded-lg bg-blue-50/60 border border-blue-100 p-2">
-                      <div className="text-base font-bold text-blue-900">{studentCount}</div>
-                      <div className="text-[11px] text-blue-600 flex items-center justify-center gap-1">
-                        <Users className="h-3 w-3" /> Students
+                    <div className="rounded-xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 p-2.5">
+                      <div className="text-lg font-bold text-brand-blue dark:text-blue-400">
+                        {studentCount}
+                      </div>
+                      <div className="text-[11px] text-blue-600 dark:text-blue-400/80 flex items-center justify-center gap-1 font-medium">
+                        <Users className="h-3 w-3" /> {t("classes.students")}
                       </div>
                     </div>
-                    <div className="rounded-lg bg-amber-50/60 border border-amber-100 p-2">
-                      <div className="text-base font-bold text-amber-900">{courseCount}</div>
-                      <div className="text-[11px] text-amber-700 flex items-center justify-center gap-1">
-                        <BookOpen className="h-3 w-3" /> Courses
+                    <div className="rounded-xl bg-amber-50/60 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 p-2.5">
+                      <div className="text-lg font-bold text-amber-900 dark:text-amber-400">
+                        {courseCount}
+                      </div>
+                      <div className="text-[11px] text-amber-700 dark:text-amber-400/80 flex items-center justify-center gap-1 font-medium">
+                        <BookOpen className="h-3 w-3" /> {t("classes.courses")}
                       </div>
                     </div>
                   </div>
                 </CardContent>
 
-                <CardFooter className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
+                <CardFooter className="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2">
                   <Link href={`/classes/${cls.id}`} className="w-full">
                     <Button variant="outline" size="sm" className="w-full text-xs h-8">
-                      Class Details
+                      {t("common.details")}
                     </Button>
                   </Link>
                   <Link href={`/roster?classId=${cls.id}`} className="w-full">
-                    <Button
-                      size="sm"
-                      className="w-full bg-blue-800 hover:bg-blue-900 text-white text-xs h-8"
-                    >
-                      View Roster
+                    <Button variant="primary" size="sm" className="w-full text-xs h-8">
+                      {t("roster.title")}
                     </Button>
                   </Link>
                 </CardFooter>
@@ -179,70 +166,72 @@ export default function ClassesPage() {
         </div>
       )}
 
-      {/* Add Class Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogHeader>
-          <DialogTitle>Add New Class (አዲስ ክፍል ፍጠር)</DialogTitle>
-          <DialogDescription>
-            Specify the grade level or section for{" "}
-            {currentAcademicYear?.name || "this academic year"}.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleCreate} className="space-y-4 py-2">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Class Name (የክፍሉ ስም) *
-            </label>
+      {/* Add Class Modal */}
+      <Modal
+        isOpen={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+        title={t("classes.addClass")}
+        description={`${t("classes.academicYear")}: ${currentAcademicYear?.name || "2017 ዓ.ም"}`}
+      >
+        <form onSubmit={handleCreate} className="space-y-4">
+          <FormField label={t("classes.className")} required>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. 2ኛ ክፍል (Grade 2), 6ኛ ክፍል..."
+              placeholder="e.g. 1ኛ ክፍል / Grade 1 / Kutaa 1ffaa"
               required
               autoFocus
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Level Category (ደረጃ)
-            </label>
-            <select
-              value={levelCategory}
-              onChange={(e) => setLevelCategory(e.target.value)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
-            >
-              <option value="ቅድመ መደበኛ (Preschool)">ቅድመ መደበኛ (Preschool)</option>
-              <option value="ህጻናት (Children)">ህጻናት (Children - Grades 1-4)</option>
-              <option value="መካከለኛ (Intermediate)">መካከለኛ (Intermediate - Grades 5-8)</option>
-              <option value="ወጣቶች (Youth)">ወጣቶች (Youth - Grades 9-12)</option>
-              <option value="ማህበራትና አበው (Adults/Fellowship)">
-                ማህበራትና አበው (Adults / Fellowship)
-              </option>
-            </select>
-          </div>
+          <FormField label={t("classes.levelCategory")}>
+            <Select value={levelCategory} onChange={(e) => setLevelCategory(e.target.value)}>
+              <option value="preschool">ቅድመ መደበኛ (Preschool / Oolmaa Daa'immanii)</option>
+              <option value="children">ህጻናት (Children - Grades 1-4)</option>
+              <option value="intermediate">መካከለኛ (Intermediate - Grades 5-8)</option>
+              <option value="youth">ወጣቶች (Youth - Grades 9-12)</option>
+              <option value="adults">ማህበራትና አበው (Adults / Fellowship)</option>
+            </Select>
+          </FormField>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Room / Location (የክፍል ቁጥር ወይም አዳራሽ)
-            </label>
+          <FormField label={t("classes.roomNumber")}>
             <Input
               value={roomNumber}
               onChange={(e) => setRoomNumber(e.target.value)}
-              placeholder="e.g. ክፍል 201, ዋና አዳራሽ..."
+              placeholder="e.g. ክፍል 101 / Hall A"
             />
-          </div>
+          </FormField>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
-            <Button type="submit" className="bg-blue-800 text-white hover:bg-blue-900">
-              Create Class
+            <Button type="submit" variant="primary">
+              {t("common.save")}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </Dialog>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setClassToDelete(null);
+        }}
+        onConfirm={() => {
+          if (classToDelete) {
+            deleteClass(classToDelete.id);
+            setDeleteConfirmOpen(false);
+            setClassToDelete(null);
+          }
+        }}
+        title={t("common.delete")}
+        description={t("classes.deleteConfirm", { name: classToDelete?.name || "" })}
+        confirmText={t("common.delete")}
+        variant="danger"
+      />
     </div>
   );
 }

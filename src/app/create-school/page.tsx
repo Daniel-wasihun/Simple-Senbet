@@ -3,14 +3,19 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Church, Phone, MapPin, ArrowRight, Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/common/Button";
+import { Input } from "@/components/common/Input";
+import { FormField } from "@/components/common/FormField";
+import { InlineAlert } from "@/components/common/InlineAlert";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { useSenbet } from "@/context/senbet-context";
+import { useLanguage } from "@/context/language-context";
 
 export default function CreateSchoolPage() {
   const router = useRouter();
   const { createSchool, user } = useSenbet();
+  const { t } = useLanguage();
 
   const [name, setName] = useState("");
   const [parishName, setParishName] = useState("");
@@ -36,7 +41,6 @@ export default function CreateSchoolPage() {
         phone,
         address,
       });
-      // Redirect to school dashboard
       router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create school");
@@ -46,133 +50,124 @@ export default function CreateSchoolPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-slate-900 dark:bg-slate-950 flex flex-col justify-center items-center p-4 relative">
+      {/* Top right quick controls */}
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        <LanguageSwitcher variant="header" />
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-lg">
         <div className="text-center mb-6">
-          <div className="inline-flex h-12 w-12 rounded-2xl bg-amber-500 items-center justify-center text-blue-950 font-black shadow-lg text-2xl mb-2">
+          <div className="inline-flex h-12 w-12 rounded-2xl bg-brand-gold items-center justify-center text-brand-blue-dark font-black shadow-lg text-2xl mb-2">
             ✝
           </div>
-          <h2 className="text-2xl font-bold text-white font-serif">Setup Your Senbet School</h2>
+          <h2 className="text-2xl font-bold text-white font-serif">{t("auth.createSchool")}</h2>
           <p className="text-xs text-slate-400">የሰንበት ትምህርት ቤትዎን መረጃ እዚህ ያቋቁሙ</p>
         </div>
 
-        <Card className="border-slate-800 bg-slate-950/80 backdrop-blur-md text-white shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-white text-base">School Profile & Parish Identity</CardTitle>
-            <CardDescription className="text-slate-400">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 backdrop-blur-md text-white shadow-2xl p-6 sm:p-8">
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-white">{t("settings.schoolProfile")}</h3>
+            <p className="text-xs text-slate-400 mt-1">
               Create your Sunday School and establish your Owner / Admin privileges
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <div className="mb-4 rounded-lg bg-rose-950/60 border border-rose-800 p-3 text-xs text-rose-200">
-                {error}
-              </div>
-            )}
+            </p>
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="mb-4">
+              <InlineAlert
+                variant="error"
+                title={t("common.error")}
+                message={error}
+                onClose={() => setError(null)}
+              />
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <FormField label={t("settings.schoolName")} required>
+              <Input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ደብረ መዊዕ ቅዱስ ጊዮርጊስ ሰንበት ት/ቤት"
+                icon={Building2}
+                className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                required
+              />
+            </FormField>
+
+            <FormField label={t("settings.parishChurch")} required>
+              <Input
+                type="text"
+                value={parishName}
+                onChange={(e) => setParishName(e.target.value)}
+                placeholder="የደብረ መዊዕ ቅዱስ ጊዮርጊስ እና በዓታ ለማርያም ቤተክርስቲያን"
+                icon={Church}
+                className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                required
+              />
+            </FormField>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormField label={t("settings.schoolCode")}>
+                <Input
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="DM-01"
+                  className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                />
+              </FormField>
+
+              <FormField label={t("students.parentPhone")}>
+                <Input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+251 91 123 4567"
+                  icon={Phone}
+                  className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                />
+              </FormField>
+            </div>
+
+            <FormField label={t("settings.address")}>
+              <Input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="አዲስ አበባ (Addis Ababa), Ethiopia"
+                icon={MapPin}
+                className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+              />
+            </FormField>
+
+            <div className="rounded-xl bg-blue-950/50 border border-blue-800/80 p-3.5 text-xs text-blue-200 flex items-start gap-2.5">
+              <Shield className="h-4 w-4 text-brand-gold shrink-0 mt-0.5" />
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Sunday School Name (የሰንበት ትምህርት ቤቱ ስም) *
-                </label>
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="ደብረ መዊዕ ቅዱስ ጊዮርጊስ ሰንበት ት/ቤት"
-                    className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-                    required
-                  />
-                </div>
+                <p className="font-semibold text-white">Owner Role Assignment</p>
+                <p className="text-[11px] text-blue-300">
+                  Administrator: <strong>{user?.full_name || "You"}</strong> (
+                  {user?.email || "admin"}).
+                </p>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Parish / Church Name (የደብሩ / ቤተክርስቲያን ስም) *
-                </label>
-                <div className="relative">
-                  <Church className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    type="text"
-                    value={parishName}
-                    onChange={(e) => setParishName(e.target.value)}
-                    placeholder="የደብረ መዊዕ ቅዱስ ጊዮርጊስ እና በዓታ ለማርያም ቤተክርስቲያን"
-                    className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    School Code (መለያ ኮድ)
-                  </label>
-                  <Input
-                    type="text"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="DM-01"
-                    className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Contact Phone (ስልክ ቁጥር)
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <Input
-                      type="text"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+251 91 123 4567"
-                      className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Location / Address (አድራሻ / ከተማ)
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                  <Input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="አዲስ አበባ (Addis Ababa), Ethiopia"
-                    className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-lg bg-blue-950/50 border border-blue-800/80 p-3 text-xs text-blue-200 flex items-start gap-2">
-                <Shield className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-white">Owner Role Assignment</p>
-                  <p className="text-[11px] text-blue-300">
-                    Administrator: <strong>{user?.full_name || "You"}</strong> (
-                    {user?.email || "admin"}).
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-blue-950 font-bold h-11 text-sm shadow-lg flex items-center justify-center gap-2 mt-4"
-              >
-                {loading ? "Creating School..." : "Finish Setup & Open Dashboard"}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            <Button
+              type="submit"
+              variant="gold"
+              isLoading={loading}
+              className="w-full h-11 text-sm font-bold shadow-lg flex items-center justify-center gap-2 mt-4"
+            >
+              <span>
+                {t("common.save")} & {t("nav.dashboard")}
+              </span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

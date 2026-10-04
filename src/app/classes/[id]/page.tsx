@@ -14,26 +14,16 @@ import {
   Award,
 } from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/ui/empty-state";
+import { useLanguage } from "@/context/language-context";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/common/Card";
+import { Button } from "@/components/common/Button";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { Modal } from "@/components/common/Modal";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { FormField } from "@/components/common/FormField";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export default function ClassDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -51,6 +41,8 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
     deleteStudent,
     deleteCourse,
   } = useSenbet();
+
+  const { t, tClass, tCourse } = useLanguage();
 
   const cls = classes.find((c) => c.id === classId);
 
@@ -74,15 +66,23 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
   const [courseName, setCourseName] = useState("");
   const [courseCode, setCourseCode] = useState("");
 
+  // Delete confirmations
+  const [deleteStudentTarget, setDeleteStudentTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deleteCourseTarget, setDeleteCourseTarget] = useState<{ id: string; name: string } | null>(
+    null
+  );
+
   if (!cls) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-xl font-bold text-slate-800">Class Not Found</h2>
-        <p className="text-sm text-slate-500 mt-2">
-          The requested class does not exist or has been removed.
-        </p>
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">
+          {t("classes.noClasses")}
+        </h2>
         <Link href="/classes" className="mt-4 inline-block">
-          <Button variant="outline">Back to Classes</Button>
+          <Button variant="outline">{t("classes.title")}</Button>
         </Link>
       </div>
     );
@@ -146,206 +146,216 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
       <div>
         <Link
           href="/classes"
-          className="inline-flex items-center text-xs font-medium text-slate-500 hover:text-blue-800 mb-2 transition-colors"
+          className="inline-flex items-center text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-brand-blue dark:hover:text-blue-400 mb-2 transition-colors"
         >
-          <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Back to Classes
+          <ArrowLeft className="h-3.5 w-3.5 mr-1" /> {t("classes.title")}
         </Link>
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold font-serif text-slate-900">{cls.name}</h1>
-              <Badge variant="secondary">{cls.level_category || "General"}</Badge>
+              <h1 className="text-2xl font-bold font-serif text-slate-900 dark:text-white">
+                {tClass(cls.name)}
+              </h1>
+              <span className="inline-block px-2.5 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {cls.level_category || "General"}
+              </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Room: <strong>{cls.room_number || "Main Sanctuary Hall"}</strong> ·{" "}
-              {classStudents.length} Students Enrolled · {classCourses.length} Courses
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {cls.room_number ? `${t("classes.roomNumber")}: ${cls.room_number} · ` : ""}
+              {t("students.activeCount", { count: classStudents.length })} · {classCourses.length}{" "}
+              {t("classes.courses")}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/attendance?classId=${cls.id}`}>
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100 text-xs"
-              >
-                <CalendarCheck className="h-3.5 w-3.5 mr-1.5 text-amber-700" />
-                Roll-Call
+              <Button variant="secondary" size="sm" className="text-xs">
+                <CalendarCheck className="h-3.5 w-3.5 mr-1.5 text-amber-600 dark:text-amber-400" />
+                {t("dashboard.takeAttendance")}
               </Button>
             </Link>
             <Link href={`/roster?classId=${cls.id}`}>
-              <Button size="sm" className="bg-blue-800 hover:bg-blue-900 text-white text-xs">
+              <Button variant="primary" size="sm" className="text-xs">
                 <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
-                Class Roster
+                {t("roster.title")}
               </Button>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Tabs Switcher: Students vs Courses */}
-      <div className="flex border-b border-slate-200">
+      {/* Tabs Switcher */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800">
         <button
+          type="button"
           onClick={() => setActiveTab("students")}
           className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
             activeTab === "students"
-              ? "border-blue-800 text-blue-900"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "border-brand-blue text-brand-blue dark:border-blue-500 dark:text-blue-400"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           <Users className="h-4 w-4" />
-          <span>Enrolled Students ({classStudents.length})</span>
+          <span>
+            {t("classes.students")} ({classStudents.length})
+          </span>
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab("courses")}
           className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
             activeTab === "courses"
-              ? "border-blue-800 text-blue-900"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "border-brand-blue text-brand-blue dark:border-blue-500 dark:text-blue-400"
+              : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           <BookOpen className="h-4 w-4" />
-          <span>Class Courses ({classCourses.length})</span>
+          <span>
+            {t("classes.courses")} ({classCourses.length})
+          </span>
         </button>
       </div>
 
-      {/* Tab Content: Enrolled Students */}
+      {/* Tab 1: Enrolled Students */}
       {activeTab === "students" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900">Student Roster</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              {t("students.title")}
+            </h3>
             <Button
               size="sm"
+              variant="primary"
               onClick={() => {
                 setStudentId(`STU-2024-${String(students.length + 1).padStart(3, "0")}`);
                 setAddStudentOpen(true);
               }}
-              className="bg-blue-800 hover:bg-blue-900 text-white text-xs"
+              className="text-xs"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Enroll Student
+              {t("students.addStudent")}
             </Button>
           </div>
 
           {classStudents.length === 0 ? (
             <EmptyState
-              icon={<Users className="h-8 w-8 text-slate-400" />}
-              title="No students enrolled in this class"
-              description="Register new students or transfer existing students into this grade."
-              action={
-                <Button
-                  onClick={() => {
-                    setStudentId(`STU-2024-${String(students.length + 1).padStart(3, "0")}`);
-                    setAddStudentOpen(true);
-                  }}
-                  className="bg-blue-800 text-white"
-                >
-                  Enroll First Student
-                </Button>
-              }
+              icon={Users}
+              title={t("students.noStudents")}
+              description={t("students.subtitle")}
+              actionLabel={t("students.addStudent")}
+              onAction={() => {
+                setStudentId(`STU-2024-${String(students.length + 1).padStart(3, "0")}`);
+                setAddStudentOpen(true);
+              }}
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student ID</TableHead>
-                  <TableHead>Full Name (ስም)</TableHead>
-                  <TableHead>Gender</TableHead>
-                  <TableHead>Parent / Guardian</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {classStudents.map((st) => (
-                  <TableRow key={st.id}>
-                    <TableCell className="font-mono text-xs font-semibold text-slate-600">
-                      {st.student_id}
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-900">{st.full_name}</TableCell>
-                    <TableCell className="capitalize text-slate-600 text-xs">
-                      {st.gender === "male" ? "ወንድ (Male)" : "ሴት (Female)"}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-600">
-                      {st.parent_name ? (
-                        <div>
-                          <p className="font-medium text-slate-800">{st.parent_name}</p>
-                          <p className="text-slate-400">{st.parent_phone}</p>
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="success" className="capitalize text-[11px]">
-                        {st.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setStudentToMove({ id: st.id, name: st.full_name });
-                            setTargetClassId("");
-                            setMoveStudentOpen(true);
-                          }}
-                          className="h-7 text-xs px-2 text-slate-600 hover:text-blue-800"
-                          title="Move to another class"
-                        >
-                          <ArrowRightLeft className="h-3 w-3 mr-1" />
-                          Move
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (confirm(`Remove ${st.full_name} from records?`)) {
-                              deleteStudent(st.id);
-                            }
-                          }}
-                          className="h-7 text-xs px-2 text-slate-400 hover:text-rose-600"
-                          title="Delete student"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                    <tr>
+                      <th className="px-4 py-3">{t("students.studentId")}</th>
+                      <th className="px-4 py-3">{t("students.fullName")}</th>
+                      <th className="px-4 py-3">{t("students.gender")}</th>
+                      <th className="px-4 py-3">{t("students.parentContact")}</th>
+                      <th className="px-4 py-3">{t("common.status")}</th>
+                      <th className="px-4 py-3 text-right">{t("common.actions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {classStudents.map((st) => (
+                      <tr key={st.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+                        <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-600 dark:text-slate-400">
+                          {st.student_id}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
+                          {st.full_name}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 capitalize">
+                          {st.gender === "male" ? t("students.male") : t("students.female")}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
+                          {st.parent_name ? (
+                            <div>
+                              <p className="font-medium text-slate-800 dark:text-slate-200">
+                                {st.parent_name}
+                              </p>
+                              <p className="text-slate-400 dark:text-slate-500">
+                                {st.parent_phone}
+                              </p>
+                            </div>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={st.status} size="sm" />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setStudentToMove({ id: st.id, name: st.full_name });
+                                setTargetClassId("");
+                                setMoveStudentOpen(true);
+                              }}
+                              className="h-7 text-xs px-2 text-slate-600 dark:text-slate-300"
+                              title={t("students.moveStudent")}
+                            >
+                              <ArrowRightLeft className="h-3 w-3 mr-1" />
+                              {t("students.moveStudent")}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDeleteStudentTarget({ id: st.id, name: st.full_name });
+                              }}
+                              className="h-7 text-xs px-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400"
+                              title={t("common.delete")}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
         </div>
       )}
 
-      {/* Tab Content: Courses */}
+      {/* Tab 2: Courses */}
       {activeTab === "courses" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900">Class Subjects & Courses</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              {t("courses.title")}
+            </h3>
             <Button
               size="sm"
+              variant="primary"
               onClick={() => setAddCourseOpen(true)}
-              className="bg-blue-800 hover:bg-blue-900 text-white text-xs"
+              className="text-xs"
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Add Course
+              {t("courses.addCourse")}
             </Button>
           </div>
 
           {classCourses.length === 0 ? (
             <EmptyState
-              icon={<BookOpen className="h-8 w-8 text-slate-400" />}
-              title="No courses configured for this class"
-              description="Add Sunday school courses like Bible Study, Mezmur, Church History, or Faith."
-              action={
-                <Button onClick={() => setAddCourseOpen(true)} className="bg-blue-800 text-white">
-                  Add First Course
-                </Button>
-              }
+              icon={BookOpen}
+              title={t("courses.noCourses")}
+              description={t("courses.subtitle")}
+              actionLabel={t("courses.addCourse")}
+              onAction={() => setAddCourseOpen(true)}
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -357,47 +367,52 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
                 );
 
                 return (
-                  <Card key={crs.id} className="border-slate-200">
+                  <Card key={crs.id}>
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
                         <div>
-                          <Badge variant="outline" className="text-[10px] font-mono mb-1">
+                          <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 mb-1">
                             {crs.code || "COURSE"}
-                          </Badge>
-                          <CardTitle className="text-base text-slate-900">{crs.name}</CardTitle>
+                          </span>
+                          <CardTitle className="text-base">{tCourse(crs.name)}</CardTitle>
                         </div>
                         <button
+                          type="button"
                           onClick={() => {
-                            if (confirm(`Delete course ${crs.name}?`)) {
-                              deleteCourse(crs.id);
-                            }
+                            setDeleteCourseTarget({ id: crs.id, name: tCourse(crs.name) });
                           }}
-                          className="text-slate-400 hover:text-rose-600 p-1 rounded-md"
+                          className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1.5 rounded-lg"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="flex items-center justify-between text-xs text-slate-600">
-                        <span>Assessments configured:</span>
-                        <span className="font-semibold text-slate-900">
+                      <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                        <span>{t("assessments.title")}:</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">
                           {courseAssessments.length}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-xs text-slate-600">
-                        <span>Total weight:</span>
-                        <Badge
-                          variant={totalWeight === 100 ? "success" : "warning"}
-                          className="text-[10px]"
+                      <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                        <span>{t("assessments.totalWeight")}:</span>
+                        <span
+                          className={`font-semibold px-2 py-0.5 rounded text-xs ${
+                            totalWeight === 100
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400"
+                          }`}
                         >
-                          {totalWeight}% {totalWeight === 100 ? "✓ Complete" : "(Incomplete)"}
-                        </Badge>
+                          {totalWeight}%{" "}
+                          {totalWeight === 100
+                            ? `✓ ${t("assessments.validTotal")}`
+                            : `(${t("assessments.invalidTotal")})`}
+                        </span>
                       </div>
                       <Link href={`/courses/${crs.id}/assessments`}>
                         <Button variant="outline" size="sm" className="w-full text-xs mt-2">
-                          <Award className="h-3.5 w-3.5 mr-1 text-amber-600" />
-                          Configure Breakdown
+                          <Award className="h-3.5 w-3.5 mr-1 text-amber-600 dark:text-amber-400" />
+                          {t("assessments.title")}
                         </Button>
                       </Link>
                     </CardContent>
@@ -409,174 +424,176 @@ export default function ClassDetailsPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Add Student Dialog */}
-      <Dialog open={addStudentOpen} onOpenChange={setAddStudentOpen}>
-        <DialogHeader>
-          <DialogTitle>Enroll Student in {cls.name}</DialogTitle>
-          <DialogDescription>
-            Register a student directly into this class with identification and contact details.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleCreateStudent} className="space-y-4 py-2">
+      {/* Add Student Modal */}
+      <Modal
+        isOpen={addStudentOpen}
+        onClose={() => setAddStudentOpen(false)}
+        title={`${t("students.addStudent")} — ${tClass(cls.name)}`}
+        description={t("students.subtitle")}
+      >
+        <form onSubmit={handleCreateStudent} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Student ID (መለያ ቁጥር) *
-              </label>
+            <FormField label={t("students.studentId")} required>
               <Input
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
                 placeholder="STU-2024-001"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Gender (ጾታ) *
-              </label>
-              <select
+            </FormField>
+
+            <FormField label={t("students.gender")} required>
+              <Select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as "male" | "female")}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
               >
-                <option value="male">ወንድ (Male)</option>
-                <option value="female">ሴት (Female)</option>
-              </select>
-            </div>
+                <option value="male">{t("students.male")}</option>
+                <option value="female">{t("students.female")}</option>
+              </Select>
+            </FormField>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Full Name (የተማሪው ሙሉ ስም) *
-            </label>
+          <FormField label={t("students.fullName")} required>
             <Input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="e.g. ዮሐንስ ተስፋዬ"
+              placeholder="e.g. ዮሐንስ ተስፋዬ / John Doe"
               required
             />
-          </div>
+          </FormField>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Parent/Guardian Name (የወላጅ ስም)
-              </label>
+            <FormField label={t("students.parentName")}>
               <Input
                 value={parentName}
                 onChange={(e) => setParentName(e.target.value)}
                 placeholder="ተስፋዬ ገብሬ"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Parent Phone (ስልክ ቁጥር)
-              </label>
+            </FormField>
+
+            <FormField label={t("students.parentPhone")}>
               <Input
                 value={parentPhone}
                 onChange={(e) => setParentPhone(e.target.value)}
                 placeholder="+251 91 ..."
               />
-            </div>
+            </FormField>
           </div>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setAddStudentOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
-            <Button type="submit" className="bg-blue-800 text-white hover:bg-blue-900">
-              Save & Enroll
+            <Button type="submit" variant="primary">
+              {t("common.save")}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </Dialog>
+      </Modal>
 
-      {/* Move Student Dialog */}
-      <Dialog open={moveStudentOpen} onOpenChange={setMoveStudentOpen}>
-        <DialogHeader>
-          <DialogTitle>Move Student to Another Class</DialogTitle>
-          <DialogDescription>
-            Transfer <strong>{studentToMove?.name}</strong> to a different class or grade.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleMoveStudent} className="space-y-4 py-2">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Select Destination Class (ዒላማ ክፍል) *
-            </label>
-            <select
+      {/* Move Student Modal */}
+      <Modal
+        isOpen={moveStudentOpen}
+        onClose={() => setMoveStudentOpen(false)}
+        title={t("students.moveStudent")}
+        description={`${studentToMove?.name}`}
+      >
+        <form onSubmit={handleMoveStudent} className="space-y-4">
+          <FormField label={t("students.targetClass")} required>
+            <Select
               value={targetClassId}
               onChange={(e) => setTargetClassId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"
               required
             >
-              <option value="">— Select Target Class —</option>
+              <option value="">— {t("students.selectClass")} —</option>
               {classes
                 .filter((c) => c.id !== classId)
                 .map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name} ({c.level_category || "General"})
+                    {tClass(c.name)} ({c.level_category || "General"})
                   </option>
                 ))}
-            </select>
-          </div>
+            </Select>
+          </FormField>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setMoveStudentOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
-            <Button type="submit" className="bg-blue-800 text-white hover:bg-blue-900">
-              Transfer Student
+            <Button type="submit" variant="primary">
+              {t("students.moveStudent")}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </Dialog>
+      </Modal>
 
-      {/* Add Course Dialog */}
-      <Dialog open={addCourseOpen} onOpenChange={setAddCourseOpen}>
-        <DialogHeader>
-          <DialogTitle>Add Course to {cls.name}</DialogTitle>
-          <DialogDescription>
-            Create a course for this class (e.g. Bible Study, Mezmur, History).
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleCreateCourse} className="space-y-4 py-2">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Course Name (የትምህርቱ ስም) *
-            </label>
+      {/* Add Course Modal */}
+      <Modal
+        isOpen={addCourseOpen}
+        onClose={() => setAddCourseOpen(false)}
+        title={`${t("courses.addCourse")} — ${tClass(cls.name)}`}
+        description={t("courses.subtitle")}
+      >
+        <form onSubmit={handleCreateCourse} className="space-y-4">
+          <FormField label={t("courses.courseName")} required>
             <Input
               value={courseName}
               onChange={(e) => setCourseName(e.target.value)}
-              placeholder="e.g. መጽሐፍ ቅዱስ ጥናት (Bible Study)"
+              placeholder="e.g. መጽሐፍ ቅዱስ ጥናት / Bible Study"
               required
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Course Code (ኮድ)
-            </label>
+          <FormField label={t("courses.courseCode")}>
             <Input
               value={courseCode}
               onChange={(e) => setCourseCode(e.target.value)}
-              placeholder="e.g. BIB-501"
+              placeholder="e.g. BIB-101"
             />
-          </div>
+          </FormField>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setAddCourseOpen(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
-            <Button type="submit" className="bg-blue-800 text-white hover:bg-blue-900">
-              Create Course
+            <Button type="submit" variant="primary">
+              {t("common.save")}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </Dialog>
+      </Modal>
+
+      {/* Delete Student Confirmation */}
+      <ConfirmDialog
+        isOpen={!!deleteStudentTarget}
+        onClose={() => setDeleteStudentTarget(null)}
+        onConfirm={() => {
+          if (deleteStudentTarget) {
+            deleteStudent(deleteStudentTarget.id);
+            setDeleteStudentTarget(null);
+          }
+        }}
+        title={t("common.delete")}
+        description={t("students.deleteConfirm", { name: deleteStudentTarget?.name || "" })}
+        confirmText={t("common.delete")}
+        variant="danger"
+      />
+
+      {/* Delete Course Confirmation */}
+      <ConfirmDialog
+        isOpen={!!deleteCourseTarget}
+        onClose={() => setDeleteCourseTarget(null)}
+        onConfirm={() => {
+          if (deleteCourseTarget) {
+            deleteCourse(deleteCourseTarget.id);
+            setDeleteCourseTarget(null);
+          }
+        }}
+        title={t("common.delete")}
+        description={t("courses.deleteConfirm", { name: deleteCourseTarget?.name || "" })}
+        confirmText={t("common.delete")}
+        variant="danger"
+      />
     </div>
   );
 }

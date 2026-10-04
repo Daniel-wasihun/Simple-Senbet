@@ -4,21 +4,19 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, User, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Button } from "@/components/common/Button";
+import { Input } from "@/components/common/Input";
+import { FormField } from "@/components/common/FormField";
+import { InlineAlert } from "@/components/common/InlineAlert";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { useSenbet } from "@/context/senbet-context";
+import { useLanguage } from "@/context/language-context";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useSenbet();
+  const { t } = useLanguage();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,7 +35,6 @@ export default function RegisterPage() {
     setError(null);
     try {
       await register(email, password, fullName);
-      // Move to verified / school setup step
       setVerifiedStep(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to register");
@@ -51,137 +48,132 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-slate-900 dark:bg-slate-950 flex flex-col justify-center items-center p-4 relative">
+      {/* Top right quick controls */}
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        <LanguageSwitcher variant="header" />
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <Link href="/" className="inline-flex items-center space-x-2.5">
-            <div className="h-12 w-12 rounded-2xl bg-amber-500 flex items-center justify-center text-blue-950 font-black shadow-lg text-2xl">
+            <div className="h-12 w-12 rounded-2xl bg-brand-gold flex items-center justify-center text-brand-blue-dark font-black shadow-lg text-2xl">
               ✝
             </div>
           </Link>
-          <h2 className="mt-3 text-2xl font-bold text-white font-serif">Create Admin Account</h2>
+          <h2 className="mt-3 text-2xl font-bold text-white font-serif">{t("auth.register")}</h2>
           <p className="text-xs text-slate-400">የሰንበት ትምህርት ቤት አስተዳዳሪ አካውንት መመዝገቢያ</p>
         </div>
 
-        <Card className="border-slate-800 bg-slate-950/80 backdrop-blur-md text-white shadow-2xl">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/80 backdrop-blur-md text-white shadow-2xl p-6 sm:p-8">
           {!verifiedStep ? (
             <>
-              <CardHeader>
-                <CardTitle className="text-white text-base">Step 1: Admin Registration</CardTitle>
-                <CardDescription className="text-slate-400">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-white">Step 1: Admin Registration</h3>
+                <p className="text-xs text-slate-400 mt-1">
                   Register as the school owner/admin to manage your Sunday School
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {error && (
-                  <div className="mb-4 rounded-lg bg-rose-950/60 border border-rose-800 p-3 text-xs text-rose-200">
-                    {error}
-                  </div>
-                )}
+                </p>
+              </div>
 
-                <form onSubmit={handleRegister} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Full Name (ሙሉ ስም)
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <Input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="መምህር ተክለ ማርያም"
-                        className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <Input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="admin@senbet.org"
-                        className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Password (ቢያንስ 6 ፊደላት)
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <Input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="pl-9 bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-blue-950 font-bold h-10 mt-2"
-                  >
-                    {loading ? "Registering..." : "Create Account & Verify"}
-                  </Button>
-                </form>
-              </CardContent>
-              <CardFooter className="flex justify-between items-center text-xs text-slate-400">
-                <span>Already registered?</span>
-                <Link href="/login" className="text-amber-400 hover:underline font-medium">
-                  Sign In
-                </Link>
-              </CardFooter>
-            </>
-          ) : (
-            <>
-              <CardHeader className="text-center">
-                <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
-                  <CheckCircle2 className="h-6 w-6" />
+              {error && (
+                <div className="mb-4">
+                  <InlineAlert
+                    variant="error"
+                    title={t("common.error")}
+                    message={error}
+                    onClose={() => setError(null)}
+                  />
                 </div>
-                <CardTitle className="text-white text-base">Email Verified Successfully!</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Welcome, <strong>{fullName}</strong>. Your account is authenticated.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-lg bg-blue-950/60 border border-blue-800 p-4 text-xs text-blue-200">
-                  <div className="flex items-center gap-2 font-semibold text-white mb-1">
-                    <ShieldCheck className="h-4 w-4 text-amber-400" />
-                    <span>Role Granted: School Owner / Admin</span>
-                  </div>
-                  <p>
-                    You are now ready to set up your Sunday School (ሰንበት ትምህርት ቤት) profile and begin
-                    registering classes.
-                  </p>
-                </div>
+              )}
+
+              <form onSubmit={handleRegister} className="space-y-4">
+                <FormField label={t("students.fullName")} required>
+                  <Input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="መምህር ተክለ ማርያም"
+                    icon={User}
+                    className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                    required
+                  />
+                </FormField>
+
+                <FormField label={t("auth.email")} required>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@senbet.org"
+                    icon={Mail}
+                    className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                    required
+                  />
+                </FormField>
+
+                <FormField label={t("auth.password")} required>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    icon={Lock}
+                    className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500"
+                    required
+                    minLength={6}
+                  />
+                </FormField>
 
                 <Button
-                  onClick={handleProceedToCreateSchool}
-                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-blue-950 font-bold h-11 text-sm flex items-center justify-center gap-2"
+                  type="submit"
+                  variant="gold"
+                  isLoading={loading}
+                  className="w-full h-10 mt-2 font-bold"
                 >
-                  <span>Step 2: Create Senbet School</span>
-                  <ArrowRight className="h-4 w-4" />
+                  {t("auth.register")}
                 </Button>
-              </CardContent>
+              </form>
+
+              <div className="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                <span>Already registered?</span>
+                <Link href="/login" className="text-amber-400 hover:underline font-medium">
+                  {t("auth.login")}
+                </Link>
+              </div>
             </>
+          ) : (
+            <div className="space-y-4 text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Email Verified Successfully!</h3>
+              <p className="text-xs text-slate-400">
+                Welcome, <strong>{fullName}</strong>. Your account is authenticated.
+              </p>
+
+              <div className="rounded-xl bg-blue-950/60 border border-blue-800 p-4 text-xs text-blue-200 text-left">
+                <div className="flex items-center gap-2 font-semibold text-white mb-1">
+                  <ShieldCheck className="h-4 w-4 text-brand-gold" />
+                  <span>Role Granted: School Owner / Admin</span>
+                </div>
+                <p>
+                  You are now ready to establish your Sunday School (ሰንበት ትምህርት ቤት) profile and
+                  configure classes.
+                </p>
+              </div>
+
+              <Button
+                onClick={handleProceedToCreateSchool}
+                variant="gold"
+                className="w-full h-11 text-sm font-bold flex items-center justify-center gap-2"
+              >
+                <span>Step 2: Create Senbet School</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

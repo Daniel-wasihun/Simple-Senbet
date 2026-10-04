@@ -13,11 +13,15 @@ import {
   Building2,
   Sparkles,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/common/Button";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { useSenbet } from "@/context/senbet-context";
+import { useLanguage } from "@/context/language-context";
 
 export default function LandingPage() {
   const { school } = useSenbet();
+  const { t, tClass } = useLanguage();
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-900 via-blue-950 to-slate-900 text-white flex flex-col">
@@ -30,7 +34,7 @@ export default function LandingPage() {
             </div>
             <div>
               <span className="font-bold text-lg tracking-tight text-white flex items-center gap-2">
-                Senbet School{" "}
+                {t("common.appName")}{" "}
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
                   MVP
                 </span>
@@ -38,18 +42,24 @@ export default function LandingPage() {
               <p className="text-[11px] text-blue-300 font-serif">የሰንበት ትምህርት ቤት መረጃ አስተዳደር</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <LanguageSwitcher variant="header" />
+            <ThemeToggle />
             <Link href="/login">
               <Button
                 variant="ghost"
-                className="text-blue-200 hover:text-white hover:bg-blue-900/50"
+                className="text-blue-200 hover:text-white hover:bg-blue-900/50 text-xs sm:text-sm"
               >
-                Sign In
+                {t("auth.login")}
               </Button>
             </Link>
             <Link href="/dashboard">
-              <Button className="bg-amber-500 hover:bg-amber-600 text-blue-950 font-semibold shadow-md">
-                Open Dashboard
+              <Button
+                variant="gold"
+                size="sm"
+                className="font-semibold shadow-md text-xs sm:text-sm"
+              >
+                {t("nav.dashboard")}
               </Button>
             </Link>
           </div>
@@ -58,7 +68,6 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden py-16 sm:py-24">
-        {/* Subtle patterned backdrop */}
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
@@ -70,7 +79,7 @@ export default function LandingPage() {
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight font-serif">
             Simplify Sunday School Management <br className="hidden sm:inline" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-200 to-yellow-400">
-              Classes, Students & Results
+              {t("classes.title")}, {t("students.title")} & {t("results.title")}
             </span>
           </h1>
 
@@ -85,9 +94,10 @@ export default function LandingPage() {
             <Link href="/dashboard">
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-blue-950 font-bold px-8 shadow-xl text-base flex items-center gap-2"
+                variant="gold"
+                className="font-bold px-8 shadow-xl text-base flex items-center gap-2"
               >
-                <span>Enter School Dashboard</span>
+                <span>{t("nav.dashboard")}</span>
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
@@ -97,7 +107,7 @@ export default function LandingPage() {
                 variant="outline"
                 className="border-blue-700 bg-blue-950/60 text-blue-100 hover:bg-blue-900 text-base"
               >
-                Create New School
+                {t("auth.createSchool")}
               </Button>
             </Link>
           </div>
@@ -107,23 +117,23 @@ export default function LandingPage() {
             <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-900/40 border border-blue-800 text-xs text-blue-200">
               <Building2 className="h-4 w-4 text-amber-400" />
               <span>
-                Current School: <strong>{school.name}</strong> ({school.parish_name})
+                {school.name} ({school.parish_name})
               </span>
             </div>
           )}
         </div>
       </section>
 
-      {/* The 10 Core MVP Workflows */}
+      {/* The 6 Core MVP Workflows */}
       <section className="py-16 bg-slate-900/80 border-t border-blue-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-serif">
-              Core End-to-End Senbet Workflow
+              Core End-to-End {t("common.appName")} Workflow
             </h2>
             <p className="mt-3 text-sm text-slate-400">
-              Designed around the exact operational needs of Sunday School teachers, administrators,
-              and clergy.
+              Designed around the operational needs of Sunday School teachers, administrators, and
+              clergy.
             </p>
           </div>
 
@@ -133,10 +143,9 @@ export default function LandingPage() {
               <div className="h-10 w-10 rounded-lg bg-blue-900/60 text-amber-400 flex items-center justify-center mb-4">
                 <GraduationCap className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Class Management</h3>
+              <h3 className="text-base font-bold text-white mb-2">{t("classes.title")}</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Configure grade levels from Preschool to Grade 12 (ቅድመ መደበኛ እስከ 12ኛ ክፍል), assign
-                homeroom teachers, and link to academic terms.
+                {t("classes.subtitle")} — {tClass("Preschool")} to {tClass("Grade 12")}.
               </p>
             </div>
 
@@ -145,11 +154,8 @@ export default function LandingPage() {
               <div className="h-10 w-10 rounded-lg bg-blue-900/60 text-amber-400 flex items-center justify-center mb-4">
                 <Users className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Class-Based Student Registry</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Add students directly into classes with unique Student IDs, contact details, date of
-                birth, guardian phone, and easy class transfers.
-              </p>
+              <h3 className="text-base font-bold text-white mb-2">{t("students.title")}</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">{t("students.subtitle")}</p>
             </div>
 
             {/* Feature 3 */}
@@ -157,11 +163,8 @@ export default function LandingPage() {
               <div className="h-10 w-10 rounded-lg bg-blue-900/60 text-amber-400 flex items-center justify-center mb-4">
                 <BookOpen className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Courses per Class</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Assign subjects per class such as Bible Study (መጽሐፍ ቅዱስ), Mezmur & Zema (ዝማሬ),
-                Church History (ታሪክ), and Faith (ሃይማኖት).
-              </p>
+              <h3 className="text-base font-bold text-white mb-2">{t("courses.title")}</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">{t("courses.subtitle")}</p>
             </div>
 
             {/* Feature 4 */}
@@ -169,10 +172,9 @@ export default function LandingPage() {
               <div className="h-10 w-10 rounded-lg bg-blue-900/60 text-amber-400 flex items-center justify-center mb-4">
                 <Award className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Assessment Breakdown</h3>
+              <h3 className="text-base font-bold text-white mb-2">{t("assessments.title")}</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Define course evaluations (Quiz, Midterm, Attendance, Final Exam) with strict 100%
-                percentage validation or points weights.
+                {t("assessments.validTotal")}
               </p>
             </div>
 
@@ -181,11 +183,8 @@ export default function LandingPage() {
               <div className="h-10 w-10 rounded-lg bg-blue-900/60 text-amber-400 flex items-center justify-center mb-4">
                 <CalendarCheck className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">Daily Attendance</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Fast daily roll-call with Present, Absent, Late, and Permission status. One-click
-                "Mark All Present" for rapid batch entry.
-              </p>
+              <h3 className="text-base font-bold text-white mb-2">{t("attendance.title")}</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">{t("attendance.subtitle")}</p>
             </div>
 
             {/* Feature 6 */}
@@ -193,13 +192,8 @@ export default function LandingPage() {
               <div className="h-10 w-10 rounded-lg bg-blue-900/60 text-amber-400 flex items-center justify-center mb-4">
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white mb-2">
-                Roster & Deterministic Ranking
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Automated sum, average %, and standard competition ranking (1, 2, 2, 4) with clear
-                tie handling and pass/fail indicators.
-              </p>
+              <h3 className="text-base font-bold text-white mb-2">{t("roster.title")}</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">{t("roster.subtitle")}</p>
             </div>
           </div>
         </div>
@@ -231,7 +225,9 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="mt-auto border-t border-blue-950 py-8 text-center text-xs text-slate-500">
-        <p>© {new Date().getFullYear()} Senbet School Management MVP. All rights reserved.</p>
+        <p>
+          © {new Date().getFullYear()} {t("common.appName")} MVP. All rights reserved.
+        </p>
         <p className="mt-1 font-serif">የሰንበት ትምህርት ቤት መረጃና ትምህርት ክፍል ዲጂታል አደረጃጀት</p>
       </footer>
     </div>

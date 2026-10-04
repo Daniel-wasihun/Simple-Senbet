@@ -4,21 +4,17 @@ import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { FileSpreadsheet, Printer, GraduationCap } from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
-import { EmptyState } from "@/components/ui/empty-state";
+import { useLanguage } from "@/context/language-context";
+import { Button } from "@/components/common/Button";
+import { Select } from "@/components/common/Select";
+import { StatusBadge } from "@/components/common/StatusBadge";
+import { PageHeader } from "@/components/common/PageHeader";
+import { EmptyState } from "@/components/common/EmptyState";
 import { formatScore, getOrdinalRank } from "@/lib/utils";
 
 export default function ClassRosterPage() {
   const { classes, courses, getClassRoster, currentAcademicYear, school } = useSenbet();
+  const { t, tClass, tCourse, tResult } = useLanguage();
 
   const [selectedClassId, setSelectedClassId] = useState<string>("");
 
@@ -51,172 +47,176 @@ export default function ClassRosterPage() {
   return (
     <div className="space-y-6">
       {/* Page Header (Hidden when printing) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200 print:hidden">
-        <div>
-          <h1 className="text-2xl font-bold font-serif text-slate-900 flex items-center gap-2">
-            <FileSpreadsheet className="h-6 w-6 text-blue-800" />
-            <span>Class Performance Roster & Deterministic Ranking</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            የክፍል ደረጃ ሮስተር — ድምር ውጤት፣ አማካይ በመቶኛ፣ ደረጃ እና የክትትል ማጠቃለያ
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={handlePrint}
-            variant="outline"
-            className="border-slate-300 text-slate-700 hover:bg-slate-100 text-xs h-9 flex items-center gap-1.5"
-          >
-            <Printer className="h-4 w-4" />
-            <span>Print Official Roster</span>
-          </Button>
-          <Link href="/results">
-            <Button size="sm" className="bg-blue-800 hover:bg-blue-900 text-white text-xs h-9">
-              Enter Results
-            </Button>
-          </Link>
-        </div>
+      <div className="print:hidden">
+        <PageHeader
+          title={t("roster.title")}
+          subtitle={t("roster.subtitle")}
+          action={
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handlePrint}
+                variant="outline"
+                className="text-xs h-9 flex items-center gap-1.5"
+              >
+                <Printer className="h-4 w-4" />
+                <span>{t("roster.printRoster")}</span>
+              </Button>
+              <Link href="/results">
+                <Button variant="primary" size="sm" className="text-xs h-9">
+                  {t("results.title")}
+                </Button>
+              </Link>
+            </div>
+          }
+        />
       </div>
 
       {/* Class Selector Filter (Hidden when printing) */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs max-w-md print:hidden flex items-center space-x-2">
+      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs max-w-md print:hidden flex items-center space-x-2">
         <GraduationCap className="h-4 w-4 text-slate-400 shrink-0" />
-        <select
+        <Select
           value={selectedClassId}
           onChange={(e) => setSelectedClassId(e.target.value)}
-          className="w-full text-xs sm:text-sm font-semibold border border-slate-200 rounded-md p-1.5 bg-slate-50 text-slate-800 outline-none cursor-pointer"
+          className="text-xs sm:text-sm py-1 font-semibold"
         >
           {classes.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name} ({c.level_category || "General"})
+              {tClass(c.name)} ({c.level_category || "General"})
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {/* Printable Sheet Header (Visible on screen and in print) */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs">
-        <div className="text-center pb-4 mb-4 border-b border-slate-200">
-          <h2 className="text-xl sm:text-2xl font-bold font-serif text-slate-900">
-            {school?.name || "ደብረ መዊዕ ቅዱስ ጊዮርጊስ ሰንበት ትምህርት ቤት"}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs print:border-none print:shadow-none print:p-0">
+        <div className="text-center pb-4 mb-4 border-b border-slate-200 dark:border-slate-800 print:border-slate-300">
+          <h2 className="text-xl sm:text-2xl font-bold font-serif text-slate-900 dark:text-white print:text-black">
+            {school?.name || t("common.appName")}
           </h2>
-          <p className="text-xs text-slate-600 font-serif">{school?.parish_name} · የትምህርት ክፍል</p>
-          <div className="mt-2 inline-flex items-center gap-3 text-xs text-slate-700 bg-slate-100 px-3 py-1 rounded-full">
+          <p className="text-xs text-slate-600 dark:text-slate-400 font-serif print:text-slate-600">
+            {school?.parish_name} · {t("roster.title")}
+          </p>
+          <div className="mt-2 inline-flex items-center gap-3 text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full print:bg-slate-100 print:text-black">
             <span>
-              Class: <strong>{selectedClass?.name}</strong>
+              {t("classes.className")}:{" "}
+              <strong>{selectedClass ? tClass(selectedClass.name) : ""}</strong>
             </span>
             <span>·</span>
             <span>
-              Academic Year: <strong>{currentAcademicYear?.name}</strong>
+              {t("classes.academicYear")}: <strong>{currentAcademicYear?.name}</strong>
             </span>
             <span>·</span>
             <span>
-              Total Students: <strong>{rosterEntries.length}</strong>
+              {t("classes.students")}: <strong>{rosterEntries.length}</strong>
             </span>
           </div>
         </div>
 
         {rosterEntries.length === 0 ? (
           <EmptyState
-            icon={<FileSpreadsheet className="h-8 w-8 text-slate-400" />}
-            title="No students found for this class"
-            description="Enroll students into this class to generate performance rosters and deterministic rank reports."
-            action={
-              <Link href="/students">
-                <Button className="bg-blue-800 text-white">Enroll Students</Button>
-              </Link>
-            }
+            icon={FileSpreadsheet}
+            title={t("roster.noData")}
+            description={t("roster.subtitle")}
+            actionLabel={t("students.addStudent")}
+            onAction={() => {}}
           />
         ) : (
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-100/80">
-                  <TableHead className="w-16 text-center font-bold text-slate-900">Rank</TableHead>
-                  <TableHead className="w-28">Student ID</TableHead>
-                  <TableHead className="min-w-[160px]">Student Name (ስም)</TableHead>
-                  <TableHead className="w-24 text-center">Attendance</TableHead>
+            <table className="w-full text-left text-sm print:text-xs">
+              <thead className="bg-slate-100/80 dark:bg-slate-800/60 text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 print:bg-slate-100 print:text-black">
+                <tr>
+                  <th className="w-16 px-3 py-3 text-center font-bold text-slate-900 dark:text-white print:text-black">
+                    {t("roster.rank")}
+                  </th>
+                  <th className="w-28 px-3 py-3">{t("students.studentId")}</th>
+                  <th className="min-w-[160px] px-3 py-3">{t("students.fullName")}</th>
+                  <th className="w-24 px-3 py-3 text-center">{t("attendance.title")}</th>
 
                   {/* Dynamic course columns */}
                   {classCourses.map((c) => (
-                    <TableHead key={c.id} className="text-center min-w-[90px]">
+                    <th key={c.id} className="text-center min-w-[90px] px-2 py-3">
                       <div className="truncate max-w-[110px]" title={c.name}>
-                        {c.name.split(" ")[0]}
+                        {tCourse(c.name).split(" ")[0]}
                       </div>
-                      <span className="text-[10px] text-slate-400 font-normal">Score</span>
-                    </TableHead>
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        {t("results.score")}
+                      </span>
+                    </th>
                   ))}
 
-                  <TableHead className="w-24 text-center font-bold text-slate-900">
-                    Total Marks
-                  </TableHead>
-                  <TableHead className="w-24 text-center font-bold text-slate-900">
-                    Average %
-                  </TableHead>
-                  <TableHead className="w-24 text-center">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                  <th className="w-24 px-3 py-3 text-center font-bold text-slate-900 dark:text-white print:text-black">
+                    {t("roster.total")}
+                  </th>
+                  <th className="w-24 px-3 py-3 text-center font-bold text-slate-900 dark:text-white print:text-black">
+                    {t("roster.average")} %
+                  </th>
+                  <th className="w-24 px-3 py-3 text-center">{t("common.status")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {rosterEntries.map((row) => {
                   const isTopOne = row.rank === 1;
                   const isTopTwo = row.rank === 2;
                   const isTopThree = row.rank === 3;
 
                   return (
-                    <TableRow
+                    <tr
                       key={row.student.id}
-                      className={isTopOne ? "bg-amber-50/50 hover:bg-amber-50" : ""}
+                      className={
+                        isTopOne
+                          ? "bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-50/80"
+                          : "hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
+                      }
                     >
                       {/* Deterministic Rank */}
-                      <TableCell className="text-center font-bold">
+                      <td className="px-3 py-3 text-center font-bold">
                         {isTopOne ? (
-                          <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-blue-950 font-black shadow-xs text-xs">
-                            1st 🥇
+                          <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-gradient-to-r from-brand-gold to-amber-500 text-brand-blue-dark font-black shadow-xs text-xs">
+                            1 🥇
                           </span>
                         ) : isTopTwo ? (
-                          <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-slate-200 text-slate-800 font-bold text-xs">
-                            2nd 🥈
+                          <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs">
+                            2 🥈
                           </span>
                         ) : isTopThree ? (
-                          <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-amber-100 text-amber-900 font-bold text-xs">
-                            3rd 🥉
+                          <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-bold text-xs">
+                            3 🥉
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-600 font-mono">
+                          <span className="text-xs text-slate-600 dark:text-slate-400 font-mono">
                             {getOrdinalRank(row.rank)}
                           </span>
                         )}
-                      </TableCell>
+                      </td>
 
                       {/* Student ID */}
-                      <TableCell className="font-mono text-xs font-semibold text-slate-600">
+                      <td className="px-3 py-3 font-mono text-xs font-semibold text-slate-600 dark:text-slate-400">
                         {row.student.student_id}
-                      </TableCell>
+                      </td>
 
                       {/* Student Name */}
-                      <TableCell className="font-semibold text-slate-900">
+                      <td className="px-3 py-3 font-semibold text-slate-900 dark:text-slate-100">
                         {row.student.full_name}
-                      </TableCell>
+                      </td>
 
                       {/* Attendance Summary */}
-                      <TableCell className="text-center text-xs">
-                        <span className="font-medium text-slate-800">
+                      <td className="px-3 py-3 text-center text-xs">
+                        <span className="font-medium text-slate-800 dark:text-slate-200">
                           {row.attendance.attendanceRate}%
                         </span>
                         <div className="text-[10px] text-slate-400">
                           {row.attendance.present}p / {row.attendance.totalDays}d
                         </div>
-                      </TableCell>
+                      </td>
 
                       {/* Course Scores */}
                       {classCourses.map((c) => {
                         const scoreData = row.courseScores[c.id];
                         return (
-                          <TableCell key={c.id} className="text-center font-mono text-xs">
+                          <td key={c.id} className="px-2 py-3 text-center font-mono text-xs">
                             {scoreData && scoreData.maxPossibleScore > 0 ? (
                               <div>
-                                <span className="font-bold text-slate-900">
+                                <span className="font-bold text-slate-900 dark:text-slate-100">
                                   {formatScore(scoreData.obtainedScore)}
                                 </span>
                                 <span className="text-[10px] text-slate-400">
@@ -224,57 +224,52 @@ export default function ClassRosterPage() {
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-slate-300">—</span>
+                              <span className="text-slate-300 dark:text-slate-600">—</span>
                             )}
-                          </TableCell>
+                          </td>
                         );
                       })}
 
                       {/* Total Obtained */}
-                      <TableCell className="text-center font-bold font-mono text-slate-900 bg-slate-50/70">
+                      <td className="px-3 py-3 text-center font-bold font-mono text-slate-900 dark:text-slate-100 bg-slate-50/70 dark:bg-slate-800/40">
                         {formatScore(row.totalObtainedScore)}
                         {row.totalMaxScore > 0 && (
                           <span className="text-[10px] text-slate-400 font-normal">
                             /{row.totalMaxScore}
                           </span>
                         )}
-                      </TableCell>
+                      </td>
 
                       {/* Overall Average */}
-                      <TableCell className="text-center font-black text-slate-900 text-sm">
+                      <td className="px-3 py-3 text-center font-black text-slate-900 dark:text-slate-100 text-sm">
                         {row.totalMaxScore > 0 ? `${row.overallAverage}%` : "—"}
-                      </TableCell>
+                      </td>
 
                       {/* Status */}
-                      <TableCell className="text-center">
-                        <Badge
-                          variant={
+                      <td className="px-3 py-3 text-center">
+                        <StatusBadge
+                          status={
                             row.status === "Passed"
-                              ? "success"
+                              ? "pass"
                               : row.status === "Failed"
-                                ? "destructive"
-                                : "secondary"
+                                ? "fail"
+                                : "active"
                           }
-                          className="text-[10px]"
-                        >
-                          {row.status === "Passed"
-                            ? "Passed (አልፏል)"
-                            : row.status === "Failed"
-                              ? "Failed (ወድቋል)"
-                              : "In Progress"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
+                          label={tResult(row.status)}
+                          size="sm"
+                        />
+                      </td>
+                    </tr>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
 
             {/* Explanatory notes */}
-            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-slate-500">
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-slate-500 dark:text-slate-400 print:text-black">
               <p>
                 * <strong>Deterministic Ranking Algorithm:</strong> Computed from total obtained
-                score across all assigned class courses. Equal scores share the identical rank with
+                score across all assigned class courses. Equal scores share identical rank with
                 standard competition skipping (1, 2, 2, 4).
               </p>
               <p className="mt-1 sm:mt-0 font-serif">

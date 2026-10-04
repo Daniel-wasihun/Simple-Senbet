@@ -1,26 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Settings,
-  Building2,
-  Calendar,
-  Shield,
-  RotateCcw,
-  CheckCircle2,
-  Plus,
-} from "lucide-react";
+import { Building2, Calendar, Shield, RotateCcw, Plus, Globe, Sun } from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
+import { useLanguage } from "@/context/language-context";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+} from "@/components/common/Card";
+import { Button } from "@/components/common/Button";
+import { Input } from "@/components/common/Input";
+import { PageHeader } from "@/components/common/PageHeader";
+import { InlineAlert } from "@/components/common/InlineAlert";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
+import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 import { UserRole } from "@/types";
 
 export default function SettingsPage() {
@@ -36,7 +33,10 @@ export default function SettingsPage() {
     user,
   } = useSenbet();
 
+  const { t, tRole } = useLanguage();
+
   const [savedAlert, setSavedAlert] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   // New Academic Year state
   const [newYearName, setNewYearName] = useState("");
@@ -53,68 +53,118 @@ export default function SettingsPage() {
   };
 
   const handleResetData = () => {
-    if (confirm("Reset all classes, students, and attendance back to the demo sample dataset?")) {
-      resetToSampleData();
-      alert("Sample data restored successfully!");
-    }
+    resetToSampleData();
+    setResetConfirmOpen(false);
+    setSavedAlert(true);
+    setTimeout(() => setSavedAlert(false), 3000);
   };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Page Header */}
-      <div className="pb-2 border-b border-slate-200">
-        <h1 className="text-2xl font-bold font-serif text-slate-900 flex items-center gap-2">
-          <Settings className="h-6 w-6 text-blue-800" />
-          <span>School & System Settings</span>
-        </h1>
-        <p className="text-xs text-slate-500 mt-0.5">
-          የሰንበት ትምህርት ቤት መረጃ፣ የትምህርት ዘመን እና የተጠቃሚ ፈቃድ ቅንብሮች
-        </p>
-      </div>
+      <PageHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
 
       {savedAlert && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <span>Settings successfully updated!</span>
-        </div>
+        <InlineAlert
+          variant="success"
+          title={t("common.success")}
+          message={t("settings.savedSuccess")}
+          onClose={() => setSavedAlert(false)}
+        />
       )}
 
+      {/* Language & Appearance */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Language Selection */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-brand-blue dark:text-blue-400 flex items-center justify-center">
+                <Globe className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base">{t("settings.language")}</CardTitle>
+                <CardDescription>English · አማርኛ · Afaan Oromoo</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <LanguageSwitcher variant="full" />
+          </CardContent>
+        </Card>
+
+        {/* Theme Selection */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 flex items-center justify-center">
+                <Sun className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base">{t("settings.theme")}</CardTitle>
+                <CardDescription>
+                  {t("settings.lightTheme")} / {t("settings.darkTheme")} /{" "}
+                  {t("settings.systemTheme")}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="flex items-center pt-1">
+            <ThemeToggle variant="segmented" className="w-full justify-between" />
+          </CardContent>
+        </Card>
+      </div>
+
       {/* School Profile Info */}
-      <Card className="border-slate-200">
+      <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-brand-blue dark:text-blue-400 flex items-center justify-center">
               <Building2 className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle className="text-base text-slate-900">School Identity & Parish</CardTitle>
-              <CardDescription>Primary profile details for this Sunday school</CardDescription>
+              <CardTitle className="text-base">{t("settings.schoolProfile")}</CardTitle>
+              <CardDescription>{t("settings.subtitle")}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <span className="text-slate-500 block">School Name (የሰ/ት/ቤቱ ስም):</span>
-              <p className="font-semibold text-slate-900 text-sm mt-0.5">{school?.name}</p>
+              <span className="text-slate-500 dark:text-slate-400 block">
+                {t("settings.schoolName")}:
+              </span>
+              <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
+                {school?.name}
+              </p>
             </div>
             <div>
-              <span className="text-slate-500 block">Parish Church (ደብር/አጥቢያ):</span>
-              <p className="font-semibold text-slate-900 text-sm mt-0.5">{school?.parish_name}</p>
+              <span className="text-slate-500 dark:text-slate-400 block">
+                {t("settings.parishChurch")}:
+              </span>
+              <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm mt-0.5">
+                {school?.parish_name}
+              </p>
             </div>
             <div>
-              <span className="text-slate-500 block">Unique Code (መለያ ኮድ):</span>
-              <p className="font-mono text-slate-700 mt-0.5">{school?.code}</p>
+              <span className="text-slate-500 dark:text-slate-400 block">
+                {t("settings.schoolCode")}:
+              </span>
+              <p className="font-mono text-slate-700 dark:text-slate-300 mt-0.5">{school?.code}</p>
             </div>
             <div>
-              <span className="text-slate-500 block">Contact Phone:</span>
-              <p className="font-medium text-slate-700 mt-0.5">
+              <span className="text-slate-500 dark:text-slate-400 block">
+                {t("students.parentPhone")}:
+              </span>
+              <p className="font-medium text-slate-700 dark:text-slate-300 mt-0.5">
                 {school?.phone || "+251 91 123 4567"}
               </p>
             </div>
             <div className="sm:col-span-2">
-              <span className="text-slate-500 block">Address / Location:</span>
-              <p className="font-medium text-slate-700 mt-0.5">
+              <span className="text-slate-500 dark:text-slate-400 block">
+                {t("settings.address")}:
+              </span>
+              <p className="font-medium text-slate-700 dark:text-slate-300 mt-0.5">
                 {school?.address || "Addis Ababa, Ethiopia"}
               </p>
             </div>
@@ -123,17 +173,15 @@ export default function SettingsPage() {
       </Card>
 
       {/* Academic Years Management */}
-      <Card className="border-slate-200">
+      <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 flex items-center justify-center">
               <Calendar className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle className="text-base text-slate-900">
-                Academic Years (የትምህርት ዘመን)
-              </CardTitle>
-              <CardDescription>Configure and activate academic periods</CardDescription>
+              <CardTitle className="text-base">{t("settings.academicYears")}</CardTitle>
+              <CardDescription>{t("classes.academicYear")}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -146,16 +194,16 @@ export default function SettingsPage() {
                   key={ay.id}
                   className={`p-3 rounded-xl border flex items-center justify-between text-xs transition-colors ${
                     isCurrent
-                      ? "border-amber-300 bg-amber-50/60 text-amber-950 font-semibold"
-                      : "border-slate-200 bg-white text-slate-700"
+                      ? "border-amber-300 dark:border-amber-700 bg-amber-50/60 dark:bg-amber-950/30 text-amber-950 dark:text-amber-300 font-semibold"
+                      : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <span>{ay.name}</span>
                     {isCurrent && (
-                      <Badge variant="secondary" className="text-[10px]">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-200/60 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-medium">
                         Active Term
-                      </Badge>
+                      </span>
                     )}
                   </div>
                   {!isCurrent && (
@@ -176,7 +224,7 @@ export default function SettingsPage() {
           {/* Add New Academic Year Form */}
           <form
             onSubmit={handleAddYear}
-            className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row gap-2"
+            className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-2"
           >
             <Input
               value={newYearName}
@@ -185,7 +233,7 @@ export default function SettingsPage() {
               className="text-xs"
               required
             />
-            <Button type="submit" size="sm" className="bg-blue-800 text-white shrink-0 text-xs h-9">
+            <Button type="submit" variant="primary" size="sm" className="shrink-0 text-xs h-9">
               <Plus className="h-3.5 w-3.5 mr-1" /> Add Year
             </Button>
           </form>
@@ -193,17 +241,15 @@ export default function SettingsPage() {
       </Card>
 
       {/* Role-Based Access Control Simulation */}
-      <Card className="border-slate-200">
+      <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-400 flex items-center justify-center">
               <Shield className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle className="text-base text-slate-900">Active Role & Permissions</CardTitle>
-              <CardDescription>
-                Simulate role-based views (Owner/Admin, Teacher, Student, Staff)
-              </CardDescription>
+              <CardTitle className="text-base">{t("common.role")}</CardTitle>
+              <CardDescription>{t("common.role")}: Admin, Teacher, Student, Staff</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -214,46 +260,61 @@ export default function SettingsPage() {
                 key={role}
                 type="button"
                 onClick={() => switchRole(role)}
-                className={`px-4 py-2 rounded-lg text-xs font-semibold capitalize border transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                   currentRole === role
-                    ? "bg-blue-800 text-white border-blue-800 shadow-xs"
-                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                    ? "bg-brand-blue text-white border-brand-blue shadow-xs"
+                    : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
                 }`}
               >
-                {role === "admin" ? "Owner / Admin" : role}
+                {tRole(role)}
               </button>
             ))}
           </div>
-          <p className="text-xs text-slate-500">
-            Currently acting as:{" "}
-            <strong className="capitalize text-slate-900">{currentRole}</strong> (User:{" "}
-            {user?.full_name || "Admin"}).
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t("common.role")}:{" "}
+            <strong className="capitalize text-slate-900 dark:text-slate-100">
+              {tRole(currentRole)}
+            </strong>{" "}
+            ({user?.full_name || "Admin"}).
           </p>
         </CardContent>
       </Card>
 
       {/* Demo Reset */}
-      <Card className="border-rose-200 bg-rose-50/20">
+      <Card className="border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/20">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base text-rose-950">Reset Demo Data</CardTitle>
-              <CardDescription className="text-xs text-rose-700">
-                Restore default classes, students, assessment scores, and attendance records
+              <CardTitle className="text-base text-rose-950 dark:text-rose-300">
+                {t("common.reset")}
+              </CardTitle>
+              <CardDescription className="text-xs text-rose-700 dark:text-rose-400">
+                {t("settings.resetConfirm")}
               </CardDescription>
             </div>
             <Button
-              variant="destructive"
+              variant="danger"
               size="sm"
-              onClick={handleResetData}
+              onClick={() => setResetConfirmOpen(true)}
               className="text-xs h-8 flex items-center gap-1.5"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset to Sample Data</span>
+              <span>{t("common.reset")}</span>
             </Button>
           </div>
         </CardHeader>
       </Card>
+
+      {/* Reset Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={resetConfirmOpen}
+        onClose={() => setResetConfirmOpen(false)}
+        onConfirm={handleResetData}
+        title={t("common.reset")}
+        description={t("settings.resetConfirm")}
+        confirmText={t("common.reset")}
+        variant="danger"
+      />
     </div>
   );
 }
