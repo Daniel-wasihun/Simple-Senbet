@@ -196,7 +196,14 @@ export default function ClassRosterPage() {
 
                       {/* Student Name */}
                       <td className="px-3 py-3 font-semibold text-slate-900 dark:text-slate-100">
-                        {row.student.full_name}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{row.student.full_name}</span>
+                          {row.student.baptismal_name && (
+                            <span className="text-[11px] text-amber-700 dark:text-amber-300 font-serif">
+                              (✝ {row.student.baptismal_name})
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Attendance Summary */}

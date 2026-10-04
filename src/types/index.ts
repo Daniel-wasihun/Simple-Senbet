@@ -63,15 +63,29 @@ export interface ClassModel {
   course_count?: number;
 }
 
+export interface UserAccount {
+  id: string;
+  school_id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  is_owner: boolean;
+  phone?: string;
+  created_at: string;
+}
+
 export interface Student {
   id: string;
   school_id: string;
   student_id: string; // unique code e.g. "STU-001"
   full_name: string;
+  baptismal_name?: string; // Christian / Baptismal name (የክርስትና ስም)
   gender: "male" | "female";
   date_of_birth?: string;
+  address?: string; // Residence address
   parent_name?: string;
   parent_phone?: string;
+  parent_email?: string;
   status: StudentStatus;
   created_at: string;
   // Current Enrollment helper

@@ -3,28 +3,30 @@
 import React, { useState, useMemo } from "react";
 import {
   Users,
-  Plus,
   Search,
   Filter,
-  ArrowRightLeft,
-  Trash2,
+  Plus,
   Edit2,
+  Trash2,
+  ArrowRightLeft,
   Calendar,
   Phone,
+  MapPin,
+  Eye,
 } from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
 import { useLanguage } from "@/context/language-context";
+import { Student, StudentStatus } from "@/types";
 import { Button } from "@/components/common/Button";
+import { Card } from "@/components/common/Card";
 import { Input } from "@/components/common/Input";
 import { Select } from "@/components/common/Select";
 import { FormField } from "@/components/common/FormField";
-import { StatusBadge } from "@/components/common/StatusBadge";
 import { Modal } from "@/components/common/Modal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { PageHeader } from "@/components/common/PageHeader";
-import { Card } from "@/components/common/Card";
 import { EmptyState } from "@/components/common/EmptyState";
-import { Student, StudentStatus } from "@/types";
 
 export default function StudentsPage() {
   const {
@@ -36,7 +38,6 @@ export default function StudentsPage() {
     moveStudentClass,
     deleteStudent,
   } = useSenbet();
-
   const { t, tClass } = useLanguage();
 
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>("all");
@@ -48,12 +49,18 @@ export default function StudentsPage() {
 
   const [studentId, setStudentId] = useState("");
   const [fullName, setFullName] = useState("");
+  const [baptismalName, setBaptismalName] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [classId, setClassId] = useState("");
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
+  const [address, setAddress] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [status, setStatus] = useState<StudentStatus>("active");
+
+  // View Details Modal
+  const [detailsStudent, setDetailsStudent] = useState<Student | null>(null);
 
   // Move Class Dialog
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -86,9 +93,11 @@ export default function StudentsPage() {
       const matchesSearch =
         !q ||
         s.full_name.toLowerCase().includes(q) ||
+        (s.baptismal_name && s.baptismal_name.toLowerCase().includes(q)) ||
         s.student_id.toLowerCase().includes(q) ||
         (s.parent_name && s.parent_name.toLowerCase().includes(q)) ||
-        (s.parent_phone && s.parent_phone.includes(q));
+        (s.parent_phone && s.parent_phone.includes(q)) ||
+        (s.address && s.address.toLowerCase().includes(q));
 
       return matchesClass && matchesSearch;
     });
@@ -98,10 +107,13 @@ export default function StudentsPage() {
     setEditingStudent(null);
     setStudentId(`STU-2024-${String(students.length + 1).padStart(3, "0")}`);
     setFullName("");
+    setBaptismalName("");
     setGender("male");
     setClassId(selectedClassFilter !== "all" ? selectedClassFilter : classes[0]?.id || "");
     setParentName("");
     setParentPhone("");
+    setParentEmail("");
+    setAddress("");
     setDateOfBirth("");
     setStatus("active");
     setDialogOpen(true);
@@ -111,11 +123,14 @@ export default function StudentsPage() {
     setEditingStudent(s);
     setStudentId(s.student_id);
     setFullName(s.full_name);
+    setBaptismalName(s.baptismal_name || "");
     setGender(s.gender);
     const enr = enrollments.find((e) => e.student_id === s.id);
     setClassId(enr?.class_id || classes[0]?.id || "");
     setParentName(s.parent_name || "");
     setParentPhone(s.parent_phone || "");
+    setParentEmail(s.parent_email || "");
+    setAddress(s.address || "");
     setDateOfBirth(s.date_of_birth || "");
     setStatus(s.status);
     setDialogOpen(true);
@@ -129,9 +144,12 @@ export default function StudentsPage() {
       updateStudent(editingStudent.id, {
         student_id: studentId.trim(),
         full_name: fullName.trim(),
+        baptismal_name: baptismalName.trim() || undefined,
         gender,
-        parent_name: parentName.trim(),
-        parent_phone: parentPhone.trim(),
+        parent_name: parentName.trim() || undefined,
+        parent_phone: parentPhone.trim() || undefined,
+        parent_email: parentEmail.trim() || undefined,
+        address: address.trim() || undefined,
         date_of_birth: dateOfBirth || undefined,
         status,
       });
@@ -144,10 +162,13 @@ export default function StudentsPage() {
       createStudent({
         studentId: studentId.trim(),
         fullName: fullName.trim(),
+        baptismalName: baptismalName.trim() || undefined,
         gender,
         classId,
-        parentName: parentName.trim(),
-        parentPhone: parentPhone.trim(),
+        parentName: parentName.trim() || undefined,
+        parentPhone: parentPhone.trim() || undefined,
+        parentEmail: parentEmail.trim() || undefined,
+        address: address.trim() || undefined,
         dateOfBirth: dateOfBirth || undefined,
         status,
       });
@@ -171,9 +192,9 @@ export default function StudentsPage() {
         title={t("students.title")}
         subtitle={t("students.subtitle")}
         action={
-          <Button onClick={openAddDialog} variant="primary" className="flex items-center gap-1.5">
+          <Button onClick={openAddDialog} variant="primary" className="flex items-center gap-1.5 shadow-sm">
             <Plus className="h-4 w-4" />
-            <span>{t("students.addStudent")}</span>
+            <span>{t("students.registerNew")}</span>
           </Button>
         }
       />
@@ -206,53 +227,71 @@ export default function StudentsPage() {
           {/* Search Input */}
           <div className="sm:col-span-2">
             <Input
+              type="text"
+              placeholder={t("students.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("students.searchPlaceholder")}
               icon={Search}
-              className="text-xs sm:text-sm"
+              className="text-xs sm:text-sm py-1.5"
             />
           </div>
         </div>
       </Card>
 
-      {/* Students Table */}
+      {/* Students Data Table */}
       {filteredStudents.length === 0 ? (
         <EmptyState
           icon={Users}
           title={t("students.noStudents")}
-          description={searchQuery ? t("common.noData") : t("students.subtitle")}
-          actionLabel={t("students.addStudent")}
+          description={t("students.noStudentsDesc")}
+          actionLabel={t("students.registerNew")}
           onAction={openAddDialog}
         />
       ) : (
-        <Card>
+        <Card className="overflow-hidden p-0 border border-slate-200 dark:border-slate-800">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                 <tr>
-                  <th className="px-4 py-3">{t("students.studentId")}</th>
-                  <th className="px-4 py-3">{t("students.fullName")}</th>
-                  <th className="px-4 py-3">{t("students.gender")}</th>
-                  <th className="px-4 py-3">{t("classes.className")}</th>
-                  <th className="px-4 py-3">{t("students.parentContact")}</th>
-                  <th className="px-4 py-3">{t("common.status")}</th>
-                  <th className="px-4 py-3 text-right">{t("common.actions")}</th>
+                  <th className="px-4 py-3.5">{t("students.studentId")}</th>
+                  <th className="px-4 py-3.5">{t("students.fullName")}</th>
+                  <th className="px-4 py-3.5">{t("students.gender")}</th>
+                  <th className="px-4 py-3.5">{t("students.class")}</th>
+                  <th className="px-4 py-3.5">{t("students.parentContact")}</th>
+                  <th className="px-4 py-3.5">{t("common.status")}</th>
+                  <th className="px-4 py-3.5 text-right">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {filteredStudents.map((st) => (
-                  <tr key={st.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+                  <tr
+                    key={st.id}
+                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                  >
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
                       {st.student_id}
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                      <div>{st.full_name}</div>
-                      {st.date_of_birth && (
-                        <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                          <Calendar className="h-3 w-3" /> {st.date_of_birth}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span>{st.full_name}</span>
+                        {st.baptismal_name && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 font-serif">
+                            ✝ {st.baptismal_name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-400 flex items-center gap-3 mt-0.5">
+                        {st.date_of_birth && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" /> {st.date_of_birth}
+                          </span>
+                        )}
+                        {st.address && (
+                          <span className="flex items-center gap-1 truncate max-w-[150px]">
+                            <MapPin className="h-3 w-3" /> {st.address}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 capitalize">
                       {st.gender === "male" ? t("students.male") : t("students.female")}
@@ -268,9 +307,11 @@ export default function StudentsPage() {
                           <p className="font-medium text-slate-800 dark:text-slate-200">
                             {st.parent_name}
                           </p>
-                          <p className="text-slate-400 dark:text-slate-500 font-mono flex items-center gap-1">
-                            <Phone className="h-2.5 w-2.5" /> {st.parent_phone}
-                          </p>
+                          {st.parent_phone && (
+                            <p className="text-slate-400 dark:text-slate-500 font-mono flex items-center gap-1">
+                              <Phone className="h-2.5 w-2.5" /> {st.parent_phone}
+                            </p>
+                          )}
                         </div>
                       ) : (
                         "—"
@@ -280,7 +321,16 @@ export default function StudentsPage() {
                       <StatusBadge status={st.status} size="sm" />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDetailsStudent(st)}
+                          className="h-7 px-2 text-xs text-slate-600 dark:text-slate-300"
+                          title={t("students.profileDetails")}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -298,11 +348,11 @@ export default function StudentsPage() {
                             setTargetClassId("");
                             setMoveDialogOpen(true);
                           }}
-                          className="h-7 px-2 text-xs text-brand-blue dark:text-blue-400"
+                          className="h-7 px-2 text-xs text-brand-blue dark:text-blue-400 border-blue-200 dark:border-blue-900"
                           title={t("students.moveStudent")}
                         >
                           <ArrowRightLeft className="h-3 w-3 mr-1" />
-                          {t("students.moveStudent")}
+                          <span className="hidden xl:inline">{t("action.move")}</span>
                         </Button>
                         <Button
                           variant="ghost"
@@ -330,11 +380,11 @@ export default function StudentsPage() {
       <Modal
         isOpen={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        title={editingStudent ? t("students.editStudent") : t("students.addStudent")}
-        description={t("students.subtitle")}
+        title={editingStudent ? t("students.editModalTitle") : t("students.addModalTitle")}
+        description={t("students.modalDesc")}
       >
         <form onSubmit={handleSaveStudent} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label={t("students.studentId")} required>
               <Input
                 value={studentId}
@@ -355,19 +405,29 @@ export default function StudentsPage() {
             </FormField>
           </div>
 
-          <FormField label={t("students.fullName")} required>
-            <Input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="e.g. ዮሐንስ ተስፋዬ / John Doe"
-              required
-            />
-          </FormField>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label={t("students.fullName")} required>
+              <Input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="ዮሐንስ ተስፋዬ"
+                required
+              />
+            </FormField>
 
-          <div className="grid grid-cols-2 gap-3">
-            <FormField label={t("classes.className")} required>
+            <FormField label={t("students.baptismalName")}>
+              <Input
+                value={baptismalName}
+                onChange={(e) => setBaptismalName(e.target.value)}
+                placeholder="ወልደ ጊዮርጊስ"
+              />
+            </FormField>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label={t("classes.nameLabel")} required>
               <Select value={classId} onChange={(e) => setClassId(e.target.value)} required>
-                <option value="">— {t("students.selectClass")} —</option>
+                <option value="">— {t("classes.nameLabel")} —</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {tClass(c.name)}
@@ -376,7 +436,7 @@ export default function StudentsPage() {
               </Select>
             </FormField>
 
-            <FormField label={t("students.dob")}>
+            <FormField label={t("students.dateOfBirth")}>
               <Input
                 type="date"
                 value={dateOfBirth}
@@ -385,7 +445,7 @@ export default function StudentsPage() {
             </FormField>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <FormField label={t("students.parentName")}>
               <Input
                 value={parentName}
@@ -403,6 +463,25 @@ export default function StudentsPage() {
             </FormField>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label={t("students.address")}>
+              <Input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="አዲስ አበባ፣ ቀበሌ 04"
+              />
+            </FormField>
+
+            <FormField label={t("students.parentEmail")}>
+              <Input
+                type="email"
+                value={parentEmail}
+                onChange={(e) => setParentEmail(e.target.value)}
+                placeholder="parent@example.com"
+              />
+            </FormField>
+          </div>
+
           {editingStudent && (
             <FormField label={t("common.status")}>
               <Select value={status} onChange={(e) => setStatus(e.target.value as StudentStatus)}>
@@ -414,7 +493,7 @@ export default function StudentsPage() {
             </FormField>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
               {t("common.cancel")}
             </Button>
@@ -425,21 +504,98 @@ export default function StudentsPage() {
         </form>
       </Modal>
 
+      {/* Student Profile Details Modal */}
+      {detailsStudent && (
+        <Modal
+          isOpen={!!detailsStudent}
+          onClose={() => setDetailsStudent(null)}
+          title={detailsStudent.full_name}
+          description={`${detailsStudent.student_id} • ${detailsStudent.gender === "male" ? t("students.male") : t("students.female")}`}
+        >
+          <div className="space-y-4 text-xs sm:text-sm">
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60">
+              <div>
+                <p className="text-[11px] text-slate-400 font-medium">{t("students.studentId")}</p>
+                <p className="font-mono font-semibold text-slate-900 dark:text-white mt-0.5">
+                  {detailsStudent.student_id}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-400 font-medium">{t("students.baptismalName")}</p>
+                <p className="font-semibold text-amber-700 dark:text-amber-300 font-serif mt-0.5">
+                  {detailsStudent.baptismal_name || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-400 font-medium">{t("students.class")}</p>
+                <p className="font-semibold text-brand-blue dark:text-blue-400 mt-0.5">
+                  {tClass(
+                    classes.find((c) =>
+                      enrollments.some(
+                        (e) => e.student_id === detailsStudent.id && e.class_id === c.id
+                      )
+                    )?.name || "Unassigned"
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-400 font-medium">{t("students.dateOfBirth")}</p>
+                <p className="text-slate-800 dark:text-slate-200 mt-0.5">
+                  {detailsStudent.date_of_birth || "—"}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 space-y-2">
+              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                {t("students.parentContact")}
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[11px] text-slate-400">{t("students.parentName")}</p>
+                  <p className="font-medium text-slate-800 dark:text-slate-200 mt-0.5">
+                    {detailsStudent.parent_name || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-400">{t("students.parentPhone")}</p>
+                  <p className="font-mono text-slate-800 dark:text-slate-200 mt-0.5">
+                    {detailsStudent.parent_phone || "—"}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-400">{t("students.address")}</p>
+                <p className="text-slate-800 dark:text-slate-200 mt-0.5">
+                  {detailsStudent.address || "—"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button variant="outline" onClick={() => setDetailsStudent(null)}>
+                {t("action.close")}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Move Class Modal */}
       <Modal
         isOpen={moveDialogOpen}
         onClose={() => setMoveDialogOpen(false)}
-        title={t("students.moveStudent")}
-        description={`${studentToMove?.full_name}`}
+        title={t("students.moveModalTitle")}
+        description={studentToMove?.full_name}
       >
         <form onSubmit={handleMoveClass} className="space-y-4">
-          <FormField label={t("students.targetClass")} required>
+          <FormField label={t("students.selectTargetClass")} required>
             <Select
               value={targetClassId}
               onChange={(e) => setTargetClassId(e.target.value)}
               required
             >
-              <option value="">— {t("students.selectClass")} —</option>
+              <option value="">— {t("classes.nameLabel")} —</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {tClass(c.name)} ({c.level_category || "General"})
@@ -452,31 +608,27 @@ export default function StudentsPage() {
             <Button type="button" variant="outline" onClick={() => setMoveDialogOpen(false)}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" variant="primary">
-              {t("students.moveStudent")}
+            <Button type="submit" variant="primary" disabled={!targetClassId}>
+              {t("students.confirmMove")}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
-        onClose={() => {
-          setDeleteConfirmOpen(false);
-          setStudentToDelete(null);
-        }}
+        onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={() => {
           if (studentToDelete) {
             deleteStudent(studentToDelete.id);
-            setDeleteConfirmOpen(false);
             setStudentToDelete(null);
           }
         }}
-        title={t("common.delete")}
-        description={t("students.deleteConfirm", { name: studentToDelete?.full_name || "" })}
-        confirmText={t("common.delete")}
+        title={t("students.confirmDelete").replace("{name}", studentToDelete?.full_name || "")}
+        message="This action will remove the student from class enrollments and grade sheets."
         variant="danger"
+        confirmLabel={t("common.delete")}
       />
     </div>
   );

@@ -18,9 +18,11 @@ import {
   AssessmentType,
   ClassRosterEntry,
   DashboardStats,
+  UserAccount,
 } from "@/types";
 import {
   INITIAL_PROFILE,
+  INITIAL_USERS,
   INITIAL_SCHOOL,
   INITIAL_ACADEMIC_YEARS,
   INITIAL_CLASSES,
@@ -38,10 +40,29 @@ interface SenbetContextType {
   user: Profile | null;
   currentRole: UserRole;
   isOwner: boolean;
+  schoolUsers: UserAccount[];
   login: (email: string, pass: string) => Promise<boolean>;
-  register: (email: string, pass: string, fullName: string) => Promise<boolean>;
+  register: (
+    email: string,
+    pass: string,
+    fullName: string,
+    schoolData?: {
+      name: string;
+      parishName: string;
+      code?: string;
+      phone?: string;
+      address?: string;
+    }
+  ) => Promise<boolean>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
+  createSchoolUser: (data: {
+    email: string;
+    fullName: string;
+    role: UserRole;
+    phone?: string;
+  }) => UserAccount;
+  deleteSchoolUser: (id: string) => void;
 
   // School state
   school: School | null;
@@ -80,10 +101,13 @@ interface SenbetContextType {
   createStudent: (data: {
     studentId: string;
     fullName: string;
+    baptismalName?: string;
     gender: "male" | "female";
     dateOfBirth?: string;
+    address?: string;
     parentName?: string;
     parentPhone?: string;
+    parentEmail?: string;
     status?: StudentStatus;
     classId: string;
   }) => Student;
@@ -141,6 +165,7 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Profile | null>(INITIAL_PROFILE);
   const [currentRole, setCurrentRole] = useState<UserRole>("admin");
   const [isOwner, setIsOwner] = useState<boolean>(true);
+  const [schoolUsers, setSchoolUsers] = useState<UserAccount[]>(INITIAL_USERS);
 
   const [schools, setSchools] = useState<School[]>([INITIAL_SCHOOL]);
   const [school, setSchool] = useState<School | null>(INITIAL_SCHOOL);
@@ -166,6 +191,8 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(saved);
         if (parsed.user) setUser(parsed.user);
         if (parsed.currentRole) setCurrentRole(parsed.currentRole);
+        if (typeof parsed.isOwner === "boolean") setIsOwner(parsed.isOwner);
+        if (parsed.schoolUsers?.length) setSchoolUsers(parsed.schoolUsers);
         if (parsed.schools?.length) setSchools(parsed.schools);
         if (parsed.school) setSchool(parsed.school);
         if (parsed.academicYears?.length) setAcademicYears(parsed.academicYears);
@@ -189,6 +216,8 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
       const stateToSave = {
         user,
         currentRole,
+        isOwner,
+        schoolUsers,
         schools,
         school,
         academicYears,
@@ -208,32 +237,134 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Auth
+  // Auth & Roles
   const login = async (email: string, _pass: string): Promise<boolean> => {
-    const prof: Profile = {
-      id: "usr-" + Date.now(),
-      email,
-      full_name: email.split("@")[0].toUpperCase() + " (User)",
-      created_at: new Date().toISOString(),
-    };
+    const cleanEmail = email.trim().toLowerCase();
+    const foundUser = schoolUsers.find((u) => u.email.toLowerCase() === cleanEmail);
+
+    let prof: Profile;
+    let roleToAssign: UserRole = "admin";
+    let ownerFlag = true;
+
+    if (foundUser) {
+      prof = {
+        id: foundUser.id,
+        email: foundUser.email,
+        full_name: foundUser.full_name,
+        created_at: foundUser.created_at,
+      };
+      roleToAssign = foundUser.role;
+      ownerFlag = foundUser.is_owner;
+    } else {
+      prof = {
+        id: "usr-" + Date.now(),
+        email: email.trim(),
+        full_name: email.split("@")[0].toUpperCase() + " (User)",
+        created_at: new Date().toISOString(),
+      };
+      if (cleanEmail.includes("teacher")) {
+        roleToAssign = "teacher";
+        ownerFlag = false;
+      } else if (cleanEmail.includes("student")) {
+        roleToAssign = "student";
+        ownerFlag = false;
+      } else if (cleanEmail.includes("staff")) {
+        roleToAssign = "staff";
+        ownerFlag = false;
+      } else {
+        roleToAssign = "admin";
+        ownerFlag = true;
+      }
+    }
+
     setUser(prof);
-    setCurrentRole("admin");
-    setIsOwner(true);
-    persistState({ user: prof, currentRole: "admin" });
+    setCurrentRole(roleToAssign);
+    setIsOwner(ownerFlag);
+    persistState({ user: prof, currentRole: roleToAssign, isOwner: ownerFlag });
     return true;
   };
 
-  const register = async (email: string, _pass: string, fullName: string): Promise<boolean> => {
+  const register = async (
+    email: string,
+    _pass: string,
+    fullName: string,
+    schoolData?: {
+      name: string;
+      parishName: string;
+      code?: string;
+      phone?: string;
+      address?: string;
+    }
+  ): Promise<boolean> => {
     const prof: Profile = {
       id: "usr-" + Date.now(),
-      email,
-      full_name: fullName,
+      email: email.trim(),
+      full_name: fullName.trim(),
       created_at: new Date().toISOString(),
     };
+
+    let newSchool = school;
+    let updatedSchools = schools;
+    let newYear = currentAcademicYear;
+    let updatedYears = academicYears;
+
+    // If schoolData is provided, establish the Senbet School immediately!
+    if (schoolData && schoolData.name.trim()) {
+      newSchool = {
+        id: "sch-" + Date.now(),
+        name: schoolData.name.trim(),
+        code: schoolData.code || "SCH-" + Math.floor(1000 + Math.random() * 9000),
+        parish_name: schoolData.parishName.trim() || schoolData.name.trim(),
+        phone: schoolData.phone,
+        email: email.trim(),
+        address: schoolData.address,
+        created_at: new Date().toISOString(),
+      };
+
+      newYear = {
+        id: "ay-" + Date.now(),
+        school_id: newSchool.id,
+        name: "2017 ዓ.ም (2024-2025)",
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+
+      updatedSchools = [newSchool, ...schools.filter((s) => s.id !== newSchool?.id)];
+      updatedYears = [newYear, ...academicYears.filter((y) => y.id !== newYear?.id)];
+
+      setSchools(updatedSchools);
+      setSchool(newSchool);
+      setAcademicYears(updatedYears);
+      setCurrentAcademicYear(newYear);
+    }
+
+    // The user who created the school is registered as Owner/Admin
+    const newAdminUser: UserAccount = {
+      id: prof.id,
+      school_id: newSchool ? newSchool.id : "sch-default",
+      email: prof.email || "",
+      full_name: prof.full_name,
+      role: "admin",
+      is_owner: true,
+      created_at: new Date().toISOString(),
+    };
+
+    const updatedUsers = [newAdminUser, ...schoolUsers.filter((u) => u.email !== email)];
+    setSchoolUsers(updatedUsers);
     setUser(prof);
     setCurrentRole("admin");
     setIsOwner(true);
-    persistState({ user: prof, currentRole: "admin" });
+
+    persistState({
+      user: prof,
+      currentRole: "admin",
+      isOwner: true,
+      schoolUsers: updatedUsers,
+      schools: updatedSchools,
+      school: newSchool,
+      academicYears: updatedYears,
+      currentAcademicYear: newYear,
+    });
     return true;
   };
 
@@ -245,6 +376,35 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
   const switchRole = (role: UserRole) => {
     setCurrentRole(role);
     persistState({ currentRole: role });
+  };
+
+  // School Users (Subordinate to Admin)
+  const createSchoolUser = (data: {
+    email: string;
+    fullName: string;
+    role: UserRole;
+    phone?: string;
+  }): UserAccount => {
+    const newUser: UserAccount = {
+      id: "usr-" + Date.now(),
+      school_id: school?.id || "sch-default",
+      email: data.email.trim(),
+      full_name: data.fullName.trim(),
+      role: data.role,
+      is_owner: false, // New created users are below the Admin/Owner level
+      phone: data.phone,
+      created_at: new Date().toISOString(),
+    };
+    const updated = [newUser, ...schoolUsers];
+    setSchoolUsers(updated);
+    persistState({ schoolUsers: updated });
+    return newUser;
+  };
+
+  const deleteSchoolUser = (id: string) => {
+    const updated = schoolUsers.filter((u) => u.id !== id);
+    setSchoolUsers(updated);
+    persistState({ schoolUsers: updated });
   };
 
   // Schools
@@ -361,10 +521,13 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
   const createStudent = (data: {
     studentId: string;
     fullName: string;
+    baptismalName?: string;
     gender: "male" | "female";
     dateOfBirth?: string;
+    address?: string;
     parentName?: string;
     parentPhone?: string;
+    parentEmail?: string;
     status?: StudentStatus;
     classId: string;
   }): Student => {
@@ -375,10 +538,13 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
       school_id: school.id,
       student_id: data.studentId.trim(),
       full_name: data.fullName.trim(),
+      baptismal_name: data.baptismalName?.trim(),
       gender: data.gender,
       date_of_birth: data.dateOfBirth,
-      parent_name: data.parentName,
-      parent_phone: data.parentPhone,
+      address: data.address?.trim(),
+      parent_name: data.parentName?.trim(),
+      parent_phone: data.parentPhone?.trim(),
+      parent_email: data.parentEmail?.trim(),
       status: data.status || "active",
       created_at: new Date().toISOString(),
     };
@@ -774,6 +940,7 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
     setAssessments(INITIAL_ASSESSMENTS);
     setResults(INITIAL_RESULTS);
     setAttendance(INITIAL_ATTENDANCE);
+    setSchoolUsers(INITIAL_USERS);
   };
 
   return (
@@ -782,6 +949,9 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
         user,
         currentRole,
         isOwner,
+        schoolUsers,
+        createSchoolUser,
+        deleteSchoolUser,
         login,
         register,
         logout,

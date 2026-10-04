@@ -1,7 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import { Building2, Calendar, Shield, RotateCcw, Plus, Globe, Sun } from "lucide-react";
+import {
+  Building2,
+  Calendar,
+  Shield,
+  RotateCcw,
+  Plus,
+  Globe,
+  Sun,
+  Users,
+  Trash2,
+  ShieldCheck,
+  Mail,
+  User,
+} from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
 import { useLanguage } from "@/context/language-context";
 import {
@@ -13,6 +26,9 @@ import {
 } from "@/components/common/Card";
 import { Button } from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { FormField } from "@/components/common/FormField";
+import { Modal } from "@/components/common/Modal";
 import { PageHeader } from "@/components/common/PageHeader";
 import { InlineAlert } from "@/components/common/InlineAlert";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -29,8 +45,12 @@ export default function SettingsPage() {
     switchAcademicYear,
     currentRole,
     switchRole,
+    schoolUsers,
+    createSchoolUser,
+    deleteSchoolUser,
     resetToSampleData,
     user,
+    isOwner,
   } = useSenbet();
 
   const { t, tRole } = useLanguage();
@@ -41,6 +61,16 @@ export default function SettingsPage() {
   // New Academic Year state
   const [newYearName, setNewYearName] = useState("");
 
+  // Add User Modal state
+  const [addUserModalOpen, setAddUserModalOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserFullName, setNewUserFullName] = useState("");
+  const [newUserRole, setNewUserRole] = useState<UserRole>("teacher");
+  const [newUserPhone, setNewUserPhone] = useState("");
+
+  // User delete confirmation
+  const [deleteUserConfirmId, setDeleteUserConfirmId] = useState<string | null>(null);
+
   const handleAddYear = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newYearName.trim()) return;
@@ -48,6 +78,24 @@ export default function SettingsPage() {
       name: newYearName.trim(),
     });
     setNewYearName("");
+    setSavedAlert(true);
+    setTimeout(() => setSavedAlert(false), 3000);
+  };
+
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserEmail.trim() || !newUserFullName.trim()) return;
+    createSchoolUser({
+      email: newUserEmail.trim(),
+      fullName: newUserFullName.trim(),
+      role: newUserRole,
+      phone: newUserPhone.trim() || undefined,
+    });
+    setNewUserEmail("");
+    setNewUserFullName("");
+    setNewUserRole("teacher");
+    setNewUserPhone("");
+    setAddUserModalOpen(false);
     setSavedAlert(true);
     setTimeout(() => setSavedAlert(false), 3000);
   };
@@ -103,8 +151,8 @@ export default function SettingsPage() {
               <div>
                 <CardTitle className="text-base">{t("settings.theme")}</CardTitle>
                 <CardDescription>
-                  {t("settings.lightTheme")} / {t("settings.darkTheme")} /{" "}
-                  {t("settings.systemTheme")}
+                  {t("settings.themeLight")} / {t("settings.themeDark")} /{" "}
+                  {t("settings.themeSystem")}
                 </CardDescription>
               </div>
             </div>
@@ -114,6 +162,88 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* School Staff & Users Management (Hierarchy: Admin at top, created users below) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 flex items-center justify-center">
+                <Users className="h-4 w-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base">{t("users.title")}</CardTitle>
+                <CardDescription>{t("users.subtitle")}</CardDescription>
+              </div>
+            </div>
+            {isOwner && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setAddUserModalOpen(true)}
+                className="text-xs h-8 flex items-center gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>{t("users.addUser")}</span>
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-3 rounded-lg bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40 text-xs text-blue-900 dark:text-blue-300 flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-brand-gold shrink-0" />
+            <span>{t("users.roleNotice")}</span>
+          </div>
+
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+            {schoolUsers.map((u) => (
+              <div
+                key={u.id}
+                className="p-3.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-xs shrink-0">
+                    {u.full_name.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900 dark:text-white truncate">
+                      {u.full_name}
+                    </p>
+                    <p className="text-slate-400 font-mono truncate">{u.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      u.role === "admin"
+                        ? "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                        : u.role === "teacher"
+                        ? "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300"
+                        : u.role === "student"
+                        ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                        : "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300"
+                    }`}
+                  >
+                    {tRole(u.role)}
+                    {u.is_owner && " (Owner)"}
+                  </span>
+
+                  {!u.is_owner && (
+                    <button
+                      onClick={() => setDeleteUserConfirmId(u.id)}
+                      className="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                      title={t("common.delete")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* School Profile Info */}
       <Card>
@@ -289,7 +419,7 @@ export default function SettingsPage() {
                 {t("common.reset")}
               </CardTitle>
               <CardDescription className="text-xs text-rose-700 dark:text-rose-400">
-                {t("settings.resetConfirm")}
+                {t("settings.demoResetDesc")}
               </CardDescription>
             </div>
             <Button
@@ -305,13 +435,89 @@ export default function SettingsPage() {
         </CardHeader>
       </Card>
 
+      {/* Add User Modal */}
+      <Modal
+        isOpen={addUserModalOpen}
+        onClose={() => setAddUserModalOpen(false)}
+        title={t("users.addUser")}
+        description={t("users.subtitle")}
+      >
+        <form onSubmit={handleAddUser} className="space-y-4">
+          <FormField label={t("users.fullName")} required>
+            <Input
+              value={newUserFullName}
+              onChange={(e) => setNewUserFullName(e.target.value)}
+              placeholder="e.g. መምህር ዳዊት ወልደሚካኤል"
+              icon={User}
+              required
+            />
+          </FormField>
+
+          <FormField label={t("users.email")} required>
+            <Input
+              type="email"
+              value={newUserEmail}
+              onChange={(e) => setNewUserEmail(e.target.value)}
+              placeholder="teacher@senbet.org"
+              icon={Mail}
+              required
+            />
+          </FormField>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label={t("users.role")} required>
+              <Select
+                value={newUserRole}
+                onChange={(e) => setNewUserRole(e.target.value as UserRole)}
+              >
+                <option value="teacher">{tRole("teacher")}</option>
+                <option value="student">{tRole("student")}</option>
+                <option value="staff">{tRole("staff")}</option>
+              </Select>
+            </FormField>
+
+            <FormField label={t("students.parentPhone")}>
+              <Input
+                value={newUserPhone}
+                onChange={(e) => setNewUserPhone(e.target.value)}
+                placeholder="+251 91 222 3344"
+              />
+            </FormField>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <Button type="button" variant="outline" onClick={() => setAddUserModalOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" variant="primary">
+              {t("common.save")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete User Confirmation */}
+      <ConfirmDialog
+        isOpen={!!deleteUserConfirmId}
+        onClose={() => setDeleteUserConfirmId(null)}
+        onConfirm={() => {
+          if (deleteUserConfirmId) {
+            deleteSchoolUser(deleteUserConfirmId);
+            setDeleteUserConfirmId(null);
+          }
+        }}
+        title={t("common.delete")}
+        description="Are you sure you want to remove this user account from the school?"
+        variant="danger"
+      />
+
       {/* Reset Confirmation Dialog */}
       <ConfirmDialog
         isOpen={resetConfirmOpen}
         onClose={() => setResetConfirmOpen(false)}
         onConfirm={handleResetData}
         title={t("common.reset")}
-        description={t("settings.resetConfirm")}
+        description={t("settings.demoResetDesc")}
         confirmText={t("common.reset")}
         variant="danger"
       />

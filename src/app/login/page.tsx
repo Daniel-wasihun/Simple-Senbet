@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock, Mail, ArrowRight, KeyRound } from "lucide-react";
+import { Lock, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { FormField } from "@/components/common/FormField";
@@ -39,11 +39,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = () => {
-    setEmail("admin@senbet.org");
-    setPassword("password123");
   };
 
   return (
@@ -122,24 +117,60 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Quick Demo Fill */}
+          {/* Quick Demo Fills for Roles */}
           <div className="mt-5 pt-4 border-t border-slate-800">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleQuickDemo}
-              className="w-full border-dashed border-amber-500/40 text-amber-300 hover:bg-amber-500/10 h-8 text-xs flex items-center justify-center gap-1.5"
-            >
-              <KeyRound className="h-3.5 w-3.5" />
-              <span>Fill Demo Credentials (admin@senbet.org)</span>
-            </Button>
+            <p className="text-[11px] text-slate-400 mb-2 font-medium text-center">
+              Quick Test Login by Role:
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("admin@senbet.org");
+                  setPassword("password123");
+                }}
+                className="px-2 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs font-medium hover:bg-amber-500/20 text-center transition-colors"
+              >
+                👑 Owner / Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("teacher@senbet.org");
+                  setPassword("password123");
+                }}
+                className="px-2 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-medium hover:bg-blue-500/20 text-center transition-colors"
+              >
+                📖 Teacher
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("student@senbet.org");
+                  setPassword("password123");
+                }}
+                className="px-2 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs font-medium hover:bg-emerald-500/20 text-center transition-colors"
+              >
+                🎓 Student
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("staff@senbet.org");
+                  setPassword("password123");
+                }}
+                className="px-2 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-300 text-xs font-medium hover:bg-purple-500/20 text-center transition-colors"
+              >
+                📋 Staff
+              </button>
+            </div>
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
             <span>New Sunday School?</span>
             <Link
               href="/register"
-              className="text-amber-400 hover:underline font-medium flex items-center gap-1"
+              className="text-amber-400 hover:underline font-semibold flex items-center gap-1"
             >
               <span>{t("auth.createSchool")}</span>
               <ArrowRight className="h-3 w-3" />
