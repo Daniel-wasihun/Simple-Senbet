@@ -13,6 +13,9 @@ import {
   Phone,
   MapPin,
   Eye,
+  Download,
+  Upload,
+  Shield,
 } from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
 import { useLanguage } from "@/context/language-context";
@@ -27,6 +30,9 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
+import { StudentIDCardModal } from "@/components/common/StudentIDCardModal";
+import { CSVImportModal } from "@/components/common/CSVImportModal";
+import { exportStudentsToCSV, ParsedImportStudent } from "@/lib/io";
 
 export default function StudentsPage() {
   const {
@@ -37,6 +43,7 @@ export default function StudentsPage() {
     updateStudent,
     moveStudentClass,
     deleteStudent,
+    importBatchStudents,
   } = useSenbet();
   const { t, tClass } = useLanguage();
 
@@ -70,6 +77,14 @@ export default function StudentsPage() {
   // Delete Confirmation
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
+  // CSV Import Modal state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+
+  // Student ID Card & Certificate Modal state
+  const [idCardModalOpen, setIdCardModalOpen] = useState(false);
+  const [selectedCardStudent, setSelectedCardStudent] = useState<Student | null>(null);
+  const [selectedCardClassTitle, setSelectedCardClassTitle] = useState("");
 
   // Map students with their enrolled class
   const studentsWithClass = useMemo(() => {
@@ -185,17 +200,64 @@ export default function StudentsPage() {
     setStudentToMove(null);
   };
 
+  const handleExportCSV = () => {
+    exportStudentsToCSV(
+      filteredStudents.map((s) => ({
+        student_id: s.student_id,
+        full_name: s.full_name,
+        baptismal_name: s.baptismal_name,
+        gender: s.gender,
+        current_class_name: tClass(s.current_class_name),
+        parent_name: s.parent_name,
+        parent_phone: s.parent_phone,
+        parent_email: s.parent_email,
+        address: s.address,
+        date_of_birth: s.date_of_birth,
+        status: s.status,
+      }))
+    );
+  };
+
+  const handleImportSuccess = (imported: ParsedImportStudent[]) => {
+    importBatchStudents(imported);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Page Header with Action Group */}
       <PageHeader
         title={t("students.title")}
         subtitle={t("students.subtitle")}
         action={
-          <Button onClick={openAddDialog} variant="primary" className="flex items-center gap-1.5 shadow-sm">
-            <Plus className="h-4 w-4" />
-            <span>{t("students.registerNew")}</span>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={handleExportCSV}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1.5 shadow-sm text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
+            >
+              <Download className="h-3.5 w-3.5 text-slate-500" />
+              <span>{t("students.exportCsv")}</span>
+            </Button>
+            <Button
+              onClick={() => setImportModalOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1.5 shadow-sm text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
+            >
+              <Upload className="h-3.5 w-3.5 text-slate-500" />
+              <span>{t("students.importCsv")}</span>
+            </Button>
+            <Button
+              onClick={openAddDialog}
+              variant="primary"
+              size="sm"
+              className="flex items-center gap-1.5 shadow-sm text-xs"
+            >
+              <Plus className="h-4 w-4" />
+              <span>{t("students.registerNew")}</span>
+            </Button>
+          </div>
         }
       />
 
@@ -322,6 +384,19 @@ export default function StudentsPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedCardStudent(st);
+                            setSelectedCardClassTitle(tClass(st.current_class_name));
+                            setIdCardModalOpen(true);
+                          }}
+                          className="h-7 px-2 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                          title={t("students.idCardAndCert")}
+                        >
+                          <Shield className="h-3.5 w-3.5" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -629,6 +704,25 @@ export default function StudentsPage() {
         message="This action will remove the student from class enrollments and grade sheets."
         variant="danger"
         confirmLabel={t("common.delete")}
+      />
+
+      {/* Student ID Card & Certificate Modal */}
+      <StudentIDCardModal
+        isOpen={idCardModalOpen}
+        onClose={() => {
+          setIdCardModalOpen(false);
+          setSelectedCardStudent(null);
+        }}
+        student={selectedCardStudent}
+        classNameTitle={selectedCardClassTitle}
+      />
+
+      {/* CSV Import Modal */}
+      <CSVImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        classes={classes}
+        onImportSuccess={handleImportSuccess}
       />
     </div>
   );

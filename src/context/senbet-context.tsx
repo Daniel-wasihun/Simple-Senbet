@@ -156,6 +156,23 @@ interface SenbetContextType {
   getClassRoster: (classId: string) => ClassRosterEntry[];
   getDashboardStats: () => DashboardStats;
   resetToSampleData: () => void;
+
+  // Batch & Backup Actions
+  importBatchStudents: (
+    studentsToImport: Array<{
+      fullName: string;
+      baptismalName?: string;
+      gender: "male" | "female";
+      classId: string;
+      parentName?: string;
+      parentPhone?: string;
+      parentEmail?: string;
+      address?: string;
+      dateOfBirth?: string;
+    }>
+  ) => number;
+  restoreBackupState: (state: Record<string, unknown>) => void;
+  getBackupPayload: () => Record<string, unknown>;
 }
 
 const SenbetContext = createContext<SenbetContextType | null>(null);
@@ -832,6 +849,107 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
     setSchoolUsers(INITIAL_USERS);
   };
 
+  const importBatchStudents = (
+    studentsToImport: Array<{
+      fullName: string;
+      baptismalName?: string;
+      gender: "male" | "female";
+      classId: string;
+      parentName?: string;
+      parentPhone?: string;
+      parentEmail?: string;
+      address?: string;
+      dateOfBirth?: string;
+    }>
+  ): number => {
+    if (!studentsToImport.length) return 0;
+    const currentSchoolId = school?.id || "sch-debre-mewi";
+    const currentYearId = currentAcademicYear?.id || "ay-2017";
+
+    const newStudents: Student[] = [];
+    const newEnrollments: StudentEnrollment[] = [];
+
+    studentsToImport.forEach((s, idx) => {
+      const generatedId = `stu-imp-${Date.now()}-${idx}`;
+      const studentIdCode = `STU-2024-${String(students.length + idx + 1).padStart(3, "0")}`;
+
+      const newStudent: Student = {
+        id: generatedId,
+        school_id: currentSchoolId,
+        student_id: studentIdCode,
+        full_name: s.fullName,
+        baptismal_name: s.baptismalName,
+        gender: s.gender,
+        date_of_birth: s.dateOfBirth,
+        address: s.address,
+        parent_name: s.parentName,
+        parent_phone: s.parentPhone,
+        parent_email: s.parentEmail,
+        status: "active",
+        created_at: new Date().toISOString(),
+      };
+
+      const newEnrollment: StudentEnrollment = {
+        id: `enr-imp-${Date.now()}-${idx}`,
+        school_id: currentSchoolId,
+        student_id: generatedId,
+        class_id: s.classId || classes[0]?.id || "cls-g1",
+        academic_year_id: currentYearId,
+        enrollment_status: "enrolled",
+        created_at: new Date().toISOString(),
+      };
+
+      newStudents.push(newStudent);
+      newEnrollments.push(newEnrollment);
+    });
+
+    const updatedStudents = [...students, ...newStudents];
+    const updatedEnrollments = [...enrollments, ...newEnrollments];
+
+    setStudents(updatedStudents);
+    setEnrollments(updatedEnrollments);
+    persistState({ students: updatedStudents, enrollments: updatedEnrollments });
+
+    return newStudents.length;
+  };
+
+  const getBackupPayload = (): Record<string, unknown> => {
+    return {
+      school,
+      schools,
+      academicYears,
+      currentAcademicYear,
+      classes,
+      students,
+      enrollments,
+      courses,
+      assessments,
+      results,
+      attendance,
+      schoolUsers,
+    };
+  };
+
+  const restoreBackupState = (data: Record<string, unknown>) => {
+    if (data.school) setSchool(data.school as School);
+    if (Array.isArray(data.schools) && data.schools.length) setSchools(data.schools as School[]);
+    if (Array.isArray(data.academicYears) && data.academicYears.length)
+      setAcademicYears(data.academicYears as AcademicYear[]);
+    if (data.currentAcademicYear)
+      setCurrentAcademicYear(data.currentAcademicYear as AcademicYear);
+    if (Array.isArray(data.classes)) setClasses(data.classes as ClassModel[]);
+    if (Array.isArray(data.students)) setStudents(data.students as Student[]);
+    if (Array.isArray(data.enrollments)) setEnrollments(data.enrollments as StudentEnrollment[]);
+    if (Array.isArray(data.courses)) setCourses(data.courses as Course[]);
+    if (Array.isArray(data.assessments)) setAssessments(data.assessments as CourseAssessment[]);
+    if (Array.isArray(data.results)) setResults(data.results as AssessmentResult[]);
+    if (Array.isArray(data.attendance)) setAttendance(data.attendance as AttendanceRecord[]);
+    if (Array.isArray(data.schoolUsers) && data.schoolUsers.length)
+      setSchoolUsers(data.schoolUsers as UserAccount[]);
+
+    persistState(data);
+  };
+
   return (
     <SenbetContext.Provider
       value={{
@@ -877,6 +995,9 @@ export function SenbetProvider({ children }: { children: React.ReactNode }) {
         getClassRoster,
         getDashboardStats,
         resetToSampleData,
+        importBatchStudents,
+        restoreBackupState,
+        getBackupPayload,
       }}
     >
       {children}

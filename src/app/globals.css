@@ -82,3 +82,34 @@
     background: rgba(100, 116, 139, 0.5);
   }
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  /* Hide non-printable UI elements */
+  nav,
+  header,
+  aside,
+  button,
+  .print\:hidden {
+    display: none !important;
+  }
+  /* Isolate printable area */
+  body * {
+    visibility: hidden;
+  }
+  #printable-area,
+  #printable-area * {
+    visibility: visible;
+  }
+  #printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+  }
+}

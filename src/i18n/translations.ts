@@ -199,6 +199,29 @@ export const translations: Record<SupportedLanguage, Record<string, string>> = {
     "students.selectTargetClass": "Select Target Class",
     "students.confirmMove": "Confirm Transfer",
     "students.confirmDelete": "Are you sure you want to delete student {name}?",
+    "students.exportCsv": "Export CSV",
+    "students.importCsv": "Import CSV",
+    "students.importTitle": "Import Students from CSV",
+    "students.importDesc": "Upload a CSV file or paste spreadsheet records with Name, Gender, and Class.",
+    "students.downloadTemplate": "Download CSV Template",
+    "students.uploadFile": "Choose CSV File",
+    "students.pasteCsv": "Or Paste CSV Text",
+    "students.importedSuccess": "Successfully imported {count} students!",
+    "students.importError": "Failed to parse CSV. Please verify column formatting.",
+    "students.idCardAndCert": "ID Card & Certificate",
+
+    // Certificates & ID Cards
+    "cert.idCard": "Student ID Card",
+    "cert.certificate": "Certificate of Standing",
+    "cert.viewCard": "ID Card / Certificate",
+    "cert.titleId": "SUNDAY SCHOOL STUDENT ID CARD",
+    "cert.titleCert": "CERTIFICATE OF ENROLLMENT & STANDING",
+    "cert.signTeacher": "Class Teacher",
+    "cert.signDirector": "Sunday School Director",
+    "cert.signParish": "Parish Priest / Administrator",
+    "cert.print": "Print / Save PDF",
+    "cert.validThru": "Valid Thru",
+    "cert.issuedDate": "Date of Issue",
 
     // Users & School Staff
     "users.title": "School Staff & Users",
@@ -349,6 +372,15 @@ export const translations: Record<SupportedLanguage, Record<string, string>> = {
     "settings.themeLight": "Light Mode",
     "settings.themeDark": "Dark Mode",
     "settings.themeSystem": "System Default",
+    "settings.storageTitle": "Data Backup & Restore",
+    "settings.storageDesc":
+      "Export a full JSON backup of your school records or restore previous data. Ensures data permanence even on free ephemeral servers.",
+    "settings.exportBackup": "Download Backup (JSON)",
+    "settings.restoreBackup": "Restore from Backup",
+    "settings.restoreWarning":
+      "Restoring will overwrite current school records with the backup file data. Do you wish to proceed?",
+    "settings.restoreSuccess": "School records successfully restored from backup!",
+    "settings.restoreError": "Failed to restore backup. Please verify the JSON file format.",
   },
 
   am: {
@@ -530,6 +562,29 @@ export const translations: Record<SupportedLanguage, Record<string, string>> = {
     "students.selectTargetClass": "የሚዛወርበትን ክፍል ይምረጡ",
     "students.confirmMove": "ዝውውሩን አረጋግጥ",
     "students.confirmDelete": "{name}ን ከመዝገብ ለማጥፋት እርግጠኛ ነዎት?",
+    "students.exportCsv": "በCSV አውርድ",
+    "students.importCsv": "በCSV አስገባ",
+    "students.importTitle": "ተማሪዎችን በCSV መዝገብ አስገባ",
+    "students.importDesc": "የተማሪዎችን ስም፣ ጾታ፣ ክፍልና ስልክ የያዘ የCSV ፋይል ይጫኑ ወይም እዚህ ይለጥፉ",
+    "students.downloadTemplate": "የCSV ምሳሌ ፋይል አውርድ",
+    "students.uploadFile": "የCSV ፋይል ምረጥ",
+    "students.pasteCsv": "ወይም የCSV ጽሑፍ እዚህ ይለጥፉ",
+    "students.importedSuccess": "{count} ተማሪዎች በተሳካ ሁኔታ ተመዝግበዋል!",
+    "students.importError": "የCSV ፋይሉን ማንበብ አልተቻለም። አጻጻፉን ያረጋግጡ።",
+    "students.idCardAndCert": "መታወቂያ እና ምስክር ወረቀት",
+
+    // Certificates & ID Cards
+    "cert.idCard": "የተማሪ መታወቂያ ካርድ",
+    "cert.certificate": "የምስክር ወረቀት",
+    "cert.viewCard": "መታወቂያ / ምስክር ወረቀት",
+    "cert.titleId": "የሰንበት ትምህርት ቤት የተማሪ መታወቂያ",
+    "cert.titleCert": "የተሳትፎ እና የትምህርት ምስክር ወረቀት",
+    "cert.signTeacher": "የክፍሉ መምህር",
+    "cert.signDirector": "የትምህርት ቤቱ የበላይ ኃላፊ",
+    "cert.signParish": "የደብሩ አስተዳዳሪ / ቆሞስ",
+    "cert.print": "አትም / በPDF አስቀምጥ",
+    "cert.validThru": "የሚያበቃበት",
+    "cert.issuedDate": "የተሰጠበት ቀን",
 
     // Users & School Staff
     "users.title": "የትምህርት ቤቱ ሠራተኞች እና ተጠቃሚዎች",
@@ -677,6 +732,15 @@ export const translations: Record<SupportedLanguage, Record<string, string>> = {
     "settings.themeLight": "ብሩህ ገጽታ (Light)",
     "settings.themeDark": "ጨለማ ገጽታ (Dark)",
     "settings.themeSystem": "የስልኩ/ኮምፒውተሩ ምርጫ (System)",
+    "settings.storageTitle": "የመረጃ ምትኬ ማውጫ እና መመለሻ",
+    "settings.storageDesc":
+      "የትምህርት ቤቱን ሙሉ መረጃ በJSON ፋይል አውርደው ያስቀምጡ ወይም ቀደም ሲል የተቀመጠ ምትኬ ይመልሱ። በነጻ ሰርቨሮችም ቢሆን መረጃዎ እንዳይጠፋ ዋስትና ይሰጣል።",
+    "settings.exportBackup": "ምትኬ አውርድ (JSON)",
+    "settings.restoreBackup": "ምትኬ መልስ",
+    "settings.restoreWarning":
+      "ምትኬ መመለስ አሁን ያለውን የትምህርት ቤት መረጃ በፋይሉ ይተካዋል። መቀጠል ይፈልጋሉ?",
+    "settings.restoreSuccess": "የትምህርት ቤቱ መረጃ ከምትኬው በተሳካ ሁኔታ ተመልሷል!",
+    "settings.restoreError": "የተመረጠውን የJSON ምትኬ ፋይል ማንበብ አልተቻለም።",
   },
 
   or: {
@@ -861,6 +925,29 @@ export const translations: Record<SupportedLanguage, Record<string, string>> = {
     "students.selectTargetClass": "Kutaa Barbaadame Filadhaa",
     "students.confirmMove": "Dabarsuu Mirkaneessi",
     "students.confirmDelete": "Barataa {name} galmee keessaa balleessuu barbaadduu?",
+    "students.exportCsv": "Gara CSVtti Baasi",
+    "students.importCsv": "CSV Irraa Galchi",
+    "students.importTitle": "Barattoota CSV Irraa Galmeessi",
+    "students.importDesc": "Faayila CSV maqaa, saala, kutaa fi bilbila qabu fe'aa ykn asitti maxxansaa",
+    "students.downloadTemplate": "Fakkeenya CSV Buufadhaa",
+    "students.uploadFile": "Faayila CSV Filadhaa",
+    "students.pasteCsv": "Ykn Barreeffama CSV Asitti Maxxansaa",
+    "students.importedSuccess": "Barattoonni {count} milkaa'inaan galmaa'aniiru!",
+    "students.importError": "Faayila CSV dubbisuun hin danda'amne. Qulqullina isaa mirkaneeffadhaa.",
+    "students.idCardAndCert": "Eenyummaa fi Waraqaa Ragaa",
+
+    // Certificates & ID Cards
+    "cert.idCard": "Waraqaa Eenyummaa Barataa",
+    "cert.certificate": "Waraqaa Ragaa Barnootaa",
+    "cert.viewCard": "Eenyummaa / Waraqaa Ragaa",
+    "cert.titleId": "WARAQAA EENYUMMAA BARATAA SANBATAA",
+    "cert.titleCert": "WARAQAA RAGAA BARNOOTAA",
+    "cert.signTeacher": "Barsiisaa Kutaa",
+    "cert.signDirector": "Itti Gaafatamaa Mana Barumsaa",
+    "cert.signParish": "Hogganaa Waldaa / Lubicha",
+    "cert.print": "Maxxansi / PDFtti Olkaayi",
+    "cert.validThru": "Hamma Guyyaa",
+    "cert.issuedDate": "Guyyaa Kenname",
 
     // Users & School Staff
     "users.title": "Hojjattoota fi Fayyadamtoota Mana Barumsaa",
@@ -1012,5 +1099,14 @@ export const translations: Record<SupportedLanguage, Record<string, string>> = {
     "settings.themeLight": "Bifa Ifaa (Light)",
     "settings.themeDark": "Bifa Dukkanaa (Dark)",
     "settings.themeSystem": "Filannoo Meeshaa (System)",
+    "settings.storageTitle": "Deetaa Kuusaa Baasuu fi Deebisuu",
+    "settings.storageDesc":
+      "Deetaa mana barumsaa keessanii guutuu JSONn baasaa ykn isa duraan ture deebisaa. Kireessitoota bilisaa irrattillee deetaan keessan akka hin banne gargaara.",
+    "settings.exportBackup": "Kuusaa Buufadhaa (JSON)",
+    "settings.restoreBackup": "Kuusaa Irraa Deebisi",
+    "settings.restoreWarning":
+      "Kuusaa deebisuun deetaa amma jiru hunda bakka buusa. Itti fufuu barbaadduu?",
+    "settings.restoreSuccess": "Deetaan mana barumsaa kuusaa irraa milkaa'inaan deebi'eera!",
+    "settings.restoreError": "Faayila kuusaa JSON dubbisuun hin danda'amne.",
   },
 };

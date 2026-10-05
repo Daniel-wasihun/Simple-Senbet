@@ -14,6 +14,11 @@ import {
   ShieldCheck,
   Mail,
   User,
+  Download,
+  Upload,
+  Database,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { useSenbet } from "@/context/senbet-context";
 import { useLanguage } from "@/context/language-context";
@@ -35,6 +40,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { LanguageSwitcher } from "@/components/common/LanguageSwitcher";
 import { UserRole } from "@/types";
+import { exportSchoolBackupJSON, validateAndParseBackupJSON } from "@/lib/io";
 
 export default function SettingsPage() {
   const {
@@ -51,12 +57,19 @@ export default function SettingsPage() {
     resetToSampleData,
     user,
     isOwner,
+    getBackupPayload,
+    restoreBackupState,
   } = useSenbet();
 
   const { t, tRole } = useLanguage();
 
   const [savedAlert, setSavedAlert] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+
+  // Backup & Restore State
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [pendingRestoreData, setPendingRestoreData] = useState<Record<string, unknown> | null>(null);
+  const [backupMessage, setBackupMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // New Academic Year state
   const [newYearName, setNewYearName] = useState("");
@@ -105,6 +118,47 @@ export default function SettingsPage() {
     setResetConfirmOpen(false);
     setSavedAlert(true);
     setTimeout(() => setSavedAlert(false), 3000);
+  };
+
+  const handleExportBackup = () => {
+    const payload = getBackupPayload();
+    exportSchoolBackupJSON(payload);
+    setBackupMessage({ type: "success", text: t("settings.savedSuccess") });
+    setTimeout(() => setBackupMessage(null), 3500);
+  };
+
+  const handleRestoreFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const res = validateAndParseBackupJSON(text);
+      if (!res.success || !res.state) {
+        setBackupMessage({
+          type: "error",
+          text: res.error || t("settings.restoreError"),
+        });
+      } else {
+        setPendingRestoreData(res.state);
+        setRestoreConfirmOpen(true);
+      }
+    };
+    reader.onerror = () => {
+      setBackupMessage({ type: "error", text: t("settings.restoreError") });
+    };
+    reader.readAsText(file, "utf-8");
+  };
+
+  const handleConfirmRestore = () => {
+    if (pendingRestoreData) {
+      restoreBackupState(pendingRestoreData);
+      setPendingRestoreData(null);
+      setRestoreConfirmOpen(false);
+      setBackupMessage({ type: "success", text: t("settings.restoreSuccess") });
+      setTimeout(() => setBackupMessage(null), 4000);
+    }
   };
 
   return (
@@ -409,6 +463,63 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Data Backup & Restore */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+              <Database className="h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle className="text-base">{t("settings.storageTitle")}</CardTitle>
+              <CardDescription className="text-xs">{t("settings.storageDesc")}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {backupMessage && (
+            <div
+              className={`p-2.5 rounded-lg flex items-center gap-2 text-xs ${
+                backupMessage.type === "success"
+                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                  : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+              }`}
+            >
+              {backupMessage.type === "success" ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+              ) : (
+                <AlertCircle className="h-4 w-4 shrink-0" />
+              )}
+              <span>{backupMessage.text}</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExportBackup}
+              className="flex items-center gap-1.5 text-xs shadow-sm bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
+            >
+              <Download className="h-3.5 w-3.5 text-slate-500" />
+              <span>{t("settings.exportBackup")}</span>
+            </Button>
+
+            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm text-slate-700 dark:text-slate-300">
+              <Upload className="h-3.5 w-3.5 text-slate-500" />
+              <span>{t("settings.restoreBackup")}</span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={handleRestoreFileUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Demo Reset */}
       <Card className="border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/20">
         <CardHeader>
@@ -519,6 +630,20 @@ export default function SettingsPage() {
         description={t("settings.demoResetDesc")}
         confirmText={t("common.reset")}
         variant="danger"
+      />
+
+      {/* Restore Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={restoreConfirmOpen}
+        onClose={() => {
+          setRestoreConfirmOpen(false);
+          setPendingRestoreData(null);
+        }}
+        onConfirm={handleConfirmRestore}
+        title={t("settings.restoreBackup")}
+        description={t("settings.restoreWarning")}
+        confirmText={t("settings.restoreBackup")}
+        variant="warning"
       />
     </div>
   );
