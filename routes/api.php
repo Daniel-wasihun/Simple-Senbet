@@ -85,3 +85,20 @@ Route::get('/senbet/summary', function () {
         ],
     ]);
 });
+
+use App\Http\Requests\SchoolClass\StoreSchoolClassRequest;
+use App\Http\Requests\SchoolClass\UpdateSchoolClassRequest;
+use App\Http\Resources\SchoolClassResource;
+use App\Http\Responses\ApiResponse;
+use App\Models\SchoolClass;
+
+Route::get('/classes', function () {
+    return ApiResponse::success(
+        SchoolClassResource::collection(SchoolClass::all())
+    );
+});
+
+Route::post('/classes', function (StoreSchoolClassRequest $request) {
+    $schoolClass = SchoolClass::create($request->validated());
+    return ApiResponse::created(new SchoolClassResource($schoolClass));
+});
