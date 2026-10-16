@@ -2,17 +2,29 @@
 
 namespace App\Models;
 
+use App\Traits\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SchoolClass extends Model
 {
+    use HasTranslations;
+
     /**
      * The table associated with the model.
      *
      * @var string
      */
     protected $table = 'classes';
+
+    /**
+     * Translatable attributes stored as JSON.
+     *
+     * @var list<string>
+     */
+    protected array $translatable = [
+        'name',
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -34,6 +46,7 @@ class SchoolClass extends Model
     protected function casts(): array
     {
         return [
+            'name' => 'array',
             'number_of_sections' => 'integer',
             'passing_score' => 'decimal:2',
         ];

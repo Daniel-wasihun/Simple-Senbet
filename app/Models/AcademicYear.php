@@ -2,11 +2,23 @@
 
 namespace App\Models;
 
+use App\Traits\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AcademicYear extends Model
 {
+    use HasTranslations;
+
+    /**
+     * Translatable attributes stored as JSON.
+     *
+     * @var list<string>
+     */
+    protected array $translatable = [
+        'name',
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -27,6 +39,7 @@ class AcademicYear extends Model
     protected function casts(): array
     {
         return [
+            'name' => 'array',
             'start_date' => 'date',
             'end_date' => 'date',
             'is_current' => 'boolean',

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,7 +10,19 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Member extends Model
 {
-    use SoftDeletes;
+    use HasTranslations, SoftDeletes;
+
+    /**
+     * Translatable attributes stored as JSON.
+     *
+     * @var list<string>
+     */
+    protected array $translatable = [
+        'full_name',
+        'christian_name',
+        'emergency_contact_name',
+        'sol_father_name',
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -38,6 +51,10 @@ class Member extends Model
     protected function casts(): array
     {
         return [
+            'full_name' => 'array',
+            'christian_name' => 'array',
+            'emergency_contact_name' => 'array',
+            'sol_father_name' => 'array',
             'date_of_birth' => 'date',
             'membership_date' => 'date',
             'class_id' => 'integer',

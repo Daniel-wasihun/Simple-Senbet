@@ -2,11 +2,23 @@
 
 namespace App\Models;
 
+use App\Traits\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AssessmentResult extends Model
 {
+    use HasTranslations;
+
+    /**
+     * Translatable attributes stored as JSON.
+     *
+     * @var list<string>
+     */
+    protected array $translatable = [
+        'remarks',
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -16,6 +28,7 @@ class AssessmentResult extends Model
         'assessment_id',
         'member_id',
         'score',
+        'remarks',
     ];
 
     /**
@@ -29,6 +42,7 @@ class AssessmentResult extends Model
             'assessment_id' => 'integer',
             'member_id' => 'integer',
             'score' => 'decimal:2',
+            'remarks' => 'array',
         ];
     }
 
