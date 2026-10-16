@@ -1,0 +1,110 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Role;
+use App\Models\User;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password as PasswordRule;
+
+class AuthController extends Controller
+{
+    public function register(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+        ]);
+
+        $role = Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+        $user = User::create($data + ['role_id' => $role->id]);
+        $user->syncRoles([$role->name]);
+
+        return response()->json([
+            'message' => __('auth.registered'),
+            'user' => $this->userData($user),
+            'token' => $user->createToken('api-token')->plainTextToken,
+        ], 201);
+    }
+
+    public function login(Request $request)
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+            'device_name' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
+            return response()->json(['message' => __('auth.failed')], 422);
+        }
+
+        $user->tokens()->where('name', $data['device_name'] ?? 'api-token')->delete();
+
+        return response()->json([
+            'message' => __('auth.logged_in'),
+            'user' => $this->userData($user),
+            'token' => $user->createToken($data['device_name'] ?? 'api-token')->plainTextToken,
+        ]);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()?->delete();
+
+        return response()->json(['message' => __('auth.logged_out')]);
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $data = $request->validate(['email' => ['required', 'email']]);
+        Password::sendResetLink($data);
+
+        // Do not reveal whether an account exists for this email address.
+        return response()->json(['message' => __('auth.passwords.sent')]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $data = $request->validate([
+            'token' => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+        ]);
+
+        $status = Password::reset($data, function (User $user, string $password): void {
+            $user->forceFill([
+                'password' => $password,
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            $user->tokens()->delete();
+            event(new PasswordReset($user));
+        });
+
+        if ($status !== Password::PASSWORD_RESET) {
+            return response()->json(['message' => __($status)], 422);
+        }
+
+        return response()->json(['message' => __('auth.passwords.reset')]);
+    }
+
+    private function userData(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->getRoleNames()->first(),
+            'created_at' => $user->created_at,
+        ];
+    }
+}
