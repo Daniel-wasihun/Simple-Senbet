@@ -1,0 +1,12 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "npx --yes concurrently -k -p \"[{name}]\" -n \"LARAVEL,NEXT\" -c \"magenta,cyan\" \"php artisan serve\" \"npm --prefix frontend run dev\"",
+        "dev:backend": "php artisan serve",
+        "dev:frontend": "npm --prefix frontend run dev",
+        "install:all": "composer install && npm --prefix frontend install",
+        "build:frontend": "npm --prefix frontend run build"
+    }
+}
