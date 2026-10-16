@@ -29,4 +29,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get the teaching assignments associated with this teacher/user.
+     */
+    public function teachingAssignments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(TeachingAssignment::class, 'teacher_id');
+    }
 }
