@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('assessment_id')->constrained('assessments')->restrictOnDelete();
             $table->foreignId('member_id')->constrained('members')->restrictOnDelete();
             $table->decimal('score', 5, 2);
+            $table->json('remarks')->nullable();
             $table->timestamps();
 
             $table->unique(['assessment_id', 'member_id'], 'unique_member_assessment_result');

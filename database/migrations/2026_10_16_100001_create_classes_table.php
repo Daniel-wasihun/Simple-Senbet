@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('classes', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->json('name');
             $table->string('code')->unique();
             $table->unsignedInteger('number_of_sections')->default(1);
             $table->decimal('passing_score', 5, 2)->default(50.00);

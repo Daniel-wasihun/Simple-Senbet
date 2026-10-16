@@ -14,9 +14,9 @@ return new class extends Migration
     {
         Schema::create('courses', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->json('name');
             $table->string('code')->unique();
-            $table->text('description')->nullable();
+            $table->json('description')->nullable();
             $table->unsignedSmallInteger('credit_hour')->default(1);
             $table->foreignId('class_id')->constrained('classes')->restrictOnDelete();
             $table->timestamps();
