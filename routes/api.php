@@ -1,13 +1,19 @@
 <?php
 
+use App\Http\Controllers\Api\AcademicYearController;
+use App\Http\Controllers\Api\AssessmentController;
+use App\Http\Controllers\Api\AssessmentResultController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CourseController;
+use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RolePermissionController;
+use App\Http\Controllers\Api\SchoolClassController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\PermissionController;
-use App\Http\Controllers\Api\RolePermissionController;
 
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
@@ -16,7 +22,7 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->m
 
 // Laravel's standard reset notification links here, then the browser is sent to the frontend form.
 Route::get('/reset-password/{token}', function (string $token, Request $request) {
-    return redirect(rtrim(config('app.frontend_url'), '/') . '/reset-password?token=' . urlencode($token) . '&email=' . urlencode((string) $request->query('email')));
+    return redirect(rtrim(config('app.frontend_url'), '/').'/reset-password?token='.urlencode($token).'&email='.urlencode((string) $request->query('email')));
 })->middleware('guest')->name('password.reset');
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -25,10 +31,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
 
-    Route::middleware('role:superadmin')->apiResource('users', UserController::class);
     Route::middleware('role:superadmin')->apiResource('permissions', PermissionController::class)->except(['show']);
     Route::middleware('role:superadmin')->get('roles/{role}/permissions', [RolePermissionController::class, 'index']);
     Route::middleware('role:superadmin')->put('roles/{role}/permissions', [RolePermissionController::class, 'sync']);
+    Route::middleware('role:superadmin')->group(function () {
+        Route::apiResource('academic-years', AcademicYearController::class);
+    });
+
+    Route::middleware('role:superadmin')->apiResource('users', UserController::class);
+    Route::apiResource('school-classes', SchoolClassController::class);
+    Route::apiResource('courses', CourseController::class);
+    Route::apiResource('members', MemberController::class);
+    Route::apiResource('assessments', AssessmentController::class);
+    Route::apiResource('assessment-results', AssessmentResultController::class);
 });
 
 Route::get('/status', function () {
@@ -36,19 +51,19 @@ Route::get('/status', function () {
     try {
         DB::connection()->getPdo();
         $dbConnected = true;
-    } catch (\Throwable $e) {
+    } catch (Throwable $e) {
         $dbConnected = false;
     }
 
     return response()->json([
         'status' => 'online',
         'app' => 'Simple Senbet (የሰንበት ትምህርት ቤት)',
-        'framework' => 'Laravel ' . app()->version(),
+        'framework' => 'Laravel '.app()->version(),
         'php_version' => PHP_VERSION,
         'database' => [
             'connected' => $dbConnected,
             'driver' => config('database.default'),
-            'database' => config('database.connections.' . config('database.default') . '.database'),
+            'database' => config('database.connections.'.config('database.default').'.database'),
         ],
         'timestamp' => now()->toIso8601String(),
     ]);
@@ -67,6 +82,6 @@ Route::get('/senbet/summary', function () {
         'announcements' => [
             ['title' => 'የዘመነ ጽጌ መርሐግብር', 'date' => 'October 2026', 'priority' => 'High'],
             ['title' => 'Sunday Teacher Alignment Meeting', 'date' => 'Every Sunday 8:00 AM', 'priority' => 'Medium'],
-        ]
+        ],
     ]);
 });

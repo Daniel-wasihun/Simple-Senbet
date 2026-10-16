@@ -15,11 +15,14 @@ class UserController extends Controller
 
     public function index()
     {
+        $this->authorize('viewAny', User::class);
+
         return response()->json(['users' => User::with('roles')->latest()->paginate(20)]);
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', User::class);
         $data = $this->validated($request);
         $user = User::create($data);
         $this->assignRole($user, $data['role']);
@@ -29,11 +32,14 @@ class UserController extends Controller
 
     public function show(User $user)
     {
+        $this->authorize('view', $user);
+
         return response()->json(['user' => $this->userData($user)]);
     }
 
     public function update(Request $request, User $user)
     {
+        $this->authorize('update', $user);
         $data = $this->validated($request, $user, false);
         $changes = collect($data)->except('role')->all();
         if (empty($changes['password'])) {
@@ -47,6 +53,7 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user)
     {
+        $this->authorize('delete', $user);
         if ($request->user()->is($user)) {
             return response()->json(['message' => __('auth.cannot_delete_self')], 422);
         }
@@ -59,6 +66,7 @@ class UserController extends Controller
     private function validated(Request $request, ?User $user = null, bool $creating = true): array
     {
         $password = $creating ? ['required', 'confirmed', Password::defaults()] : ['nullable', 'confirmed', Password::defaults()];
+
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user?->id)],

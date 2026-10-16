@@ -63,6 +63,8 @@ class User extends Authenticatable
     public function primaryRole(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Role::class, 'role_id');
+    }
+
     /**
      * Get the teaching assignments associated with this teacher/user.
      */
