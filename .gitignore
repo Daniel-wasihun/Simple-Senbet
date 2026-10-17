@@ -32,3 +32,9 @@ node_modules
 /frontend/.next
 /frontend/out
 /frontend/.env*.local
+
+# Markdown tracking policy: Root README.md is the only tracked markdown file
+*.md
+*.MD
+!/README.md
+!/README.MD
