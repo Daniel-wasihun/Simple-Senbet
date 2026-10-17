@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RolePermissionController;
+use App\Http\Controllers\Api\ReportCardController;
 use App\Http\Controllers\Api\SchoolClassController;
 use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\UserController;
@@ -50,9 +51,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [AttendanceController::class, 'store'])->name('attendance.sessions.store');
         Route::get('/', [AttendanceController::class, 'index'])->name('attendance.sessions.index');
         Route::get('/{session}', [AttendanceController::class, 'show'])->name('attendance.sessions.show');
+        Route::get('/{session}/roster', [AttendanceController::class, 'roster'])->name('attendance.sessions.roster');
         Route::post('/{session}/submit', [AttendanceController::class, 'submit'])->name('attendance.sessions.submit');
         Route::patch('/{session}/marks', [AttendanceController::class, 'correct'])->name('attendance.sessions.correct');
         Route::post('/{session}/close', [AttendanceController::class, 'close'])->name('attendance.sessions.close');
+    });
+
+    Route::get('attendance/summary', [AttendanceController::class, 'summary'])->name('attendance.summary');
+
+    Route::prefix('report-cards')->group(function () {
+        Route::get('/student/{student}', [ReportCardController::class, 'showStudent'])->name('report-cards.student');
+        Route::get('/class/{schoolClass}', [ReportCardController::class, 'showClass'])->name('report-cards.class');
     });
 });
 

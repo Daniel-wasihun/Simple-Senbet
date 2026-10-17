@@ -71,6 +71,17 @@ class ApiResponse
     }
 
     /**
+     * Return a 403 Forbidden JSON response.
+     *
+     * @param string $message
+     * @return JsonResponse
+     */
+    public static function forbidden(string $message = 'Forbidden'): JsonResponse
+    {
+        return self::error($message, null, 403);
+    }
+
+    /**
      * Return a 404 Not Found JSON response.
      *
      * @param string $message
