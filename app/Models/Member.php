@@ -6,6 +6,7 @@ use App\Traits\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Member extends Model
@@ -75,5 +76,21 @@ class Member extends Model
     public function assessmentResults(): HasMany
     {
         return $this->hasMany(AssessmentResult::class, 'member_id');
+    }
+
+    /**
+     * Get all enrollment records for this member across academic history.
+     */
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(StudentEnrollment::class, 'member_id');
+    }
+
+    /**
+     * Get the single currently active enrollment record for this member.
+     */
+    public function activeEnrollment(): HasOne
+    {
+        return $this->hasOne(StudentEnrollment::class, 'member_id')->whereNull('end_date');
     }
 }
