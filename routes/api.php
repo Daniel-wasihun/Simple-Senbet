@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\SchoolClassController;
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +45,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('members', MemberController::class);
     Route::apiResource('assessments', AssessmentController::class);
     Route::apiResource('assessment-results', AssessmentResultController::class);
+
+    Route::prefix('attendance/sessions')->group(function () {
+        Route::post('/', [AttendanceController::class, 'store'])->name('attendance.sessions.store');
+        Route::get('/', [AttendanceController::class, 'index'])->name('attendance.sessions.index');
+        Route::get('/{session}', [AttendanceController::class, 'show'])->name('attendance.sessions.show');
+        Route::post('/{session}/submit', [AttendanceController::class, 'submit'])->name('attendance.sessions.submit');
+        Route::patch('/{session}/marks', [AttendanceController::class, 'correct'])->name('attendance.sessions.correct');
+        Route::post('/{session}/close', [AttendanceController::class, 'close'])->name('attendance.sessions.close');
+    });
 });
 
 Route::get('/status', function () {
