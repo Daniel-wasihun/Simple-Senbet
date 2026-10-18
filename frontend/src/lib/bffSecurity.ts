@@ -106,6 +106,12 @@ export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
     allowedMethods: ["GET"],
     description: "Export class gradebook CSV",
   },
+  // 15. Class Gradebook Print Document: GET
+  {
+    pattern: /^report-cards\/class\/\d+\/export\/print$/,
+    allowedMethods: ["GET"],
+    description: "View printable class gradebook",
+  },
 ];
 
 /**

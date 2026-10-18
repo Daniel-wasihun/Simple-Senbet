@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/student/{student}', [ReportCardController::class, 'showStudent'])->name('report-cards.student');
         Route::get('/class/{schoolClass}', [ReportCardController::class, 'showClass'])->name('report-cards.class');
         Route::get('/class/{schoolClass}/export/csv', [ReportCardController::class, 'exportCsv'])->name('report-cards.class.export.csv');
+        Route::get('/class/{schoolClass}/export/print', [ReportCardController::class, 'exportPrint'])->name('report-cards.class.export.print');
     });
 });
 
