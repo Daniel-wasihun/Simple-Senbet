@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Member;
+use App\Models\MemberPayment;
 use App\Models\MonthlyPaymentRule;
 use App\Models\SchoolClass;
 use App\Models\StudentEnrollment;
@@ -18,7 +19,7 @@ class PaymentRuleService
      */
     public function evaluateMemberEligibility(Member $member, string $paymentMonth): array
     {
-        $monthDate = Carbon::parse($paymentMonth . '-01')->startOfDay();
+        $monthDate = Carbon::parse($paymentMonth.'-01')->startOfDay();
 
         // 1. Resolve member's class as of the payment month
         $classId = $this->resolveMemberClassForMonth($member->id, $monthDate) ?? $member->class_id;
@@ -203,5 +204,55 @@ class PaymentRuleService
 
         // If not in forward chain, check numeric ID order as fallback
         return $classId >= $minimumClassId;
+    }
+
+    /**
+     * Compute durable net carry-forward credit available for a member entering a billing month.
+     *
+     * Net Credit = max(0.00, sum(prior_paid) - sum(prior_expected))
+     */
+    public function calculateNetCreditForMember(Member $member, string $paymentMonth): float
+    {
+        $eval = $this->evaluateMemberEligibility($member, $paymentMonth);
+        if (! ($eval['rule']?->allow_credit_carry_forward)) {
+            return 0.00;
+        }
+
+        $allPriorPayments = MemberPayment::where('member_id', $member->id)
+            ->where('payment_month', '<', $paymentMonth)
+            ->where('is_void', false)
+            ->get()
+            ->groupBy('payment_month');
+
+        if ($allPriorPayments->isEmpty()) {
+            return 0.00;
+        }
+
+        $earliestMonth = $allPriorPayments->keys()->sort()->first();
+        $start = Carbon::parse($earliestMonth.'-01')->startOfDay();
+        $target = Carbon::parse($paymentMonth.'-01')->startOfDay();
+
+        $totalPriorPaid = 0.00;
+        $totalPriorExpected = 0.00;
+
+        $cursor = $start->copy();
+        while ($cursor->lt($target)) {
+            $m = $cursor->format('Y-m');
+            $group = $allPriorPayments->get($m);
+
+            if ($group && $group->isNotEmpty()) {
+                $totalPriorPaid += (float) $group->sum('paid_amount');
+                $totalPriorExpected += (float) $group->first()->expected_amount;
+            } else {
+                $mEval = $this->evaluateMemberEligibility($member, $m);
+                if ($mEval['eligible']) {
+                    $totalPriorExpected += (float) $mEval['expected_amount'];
+                }
+            }
+
+            $cursor->addMonth();
+        }
+
+        return max(0.00, round($totalPriorPaid - $totalPriorExpected, 2));
     }
 }

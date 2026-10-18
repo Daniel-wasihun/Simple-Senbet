@@ -63,23 +63,8 @@ class MemberPaymentService
                 ->where('is_void', false)
                 ->get();
 
-            // Calculate credit carried forward from earlier months if rule allows
-            $creditCarriedForward = 0.00;
-            if ($eval['rule']?->allow_credit_carry_forward) {
-                $earlierMonthGroups = MemberPayment::where('member_id', $memberId)
-                    ->where('payment_month', '<', $paymentMonth)
-                    ->where('is_void', false)
-                    ->get()
-                    ->groupBy('payment_month');
-
-                foreach ($earlierMonthGroups as $mGroup) {
-                    $mExpected = (float) $mGroup->first()->expected_amount;
-                    $mPaid = (float) $mGroup->sum('paid_amount');
-                    if ($mPaid > $mExpected) {
-                        $creditCarriedForward += ($mPaid - $mExpected);
-                    }
-                }
-            }
+            // Calculate durable net credit carried forward from earlier months
+            $creditCarriedForward = $this->ruleService->calculateNetCreditForMember($member, $paymentMonth);
 
             $previouslyPaid = round((float) $priorPayments->sum('paid_amount') + $creditCarriedForward, 2);
             $newCumulativePaid = round($previouslyPaid + $amountPaid, 2);
@@ -226,11 +211,27 @@ class MemberPaymentService
     /**
      * Generate an auditable sequential receipt reference number.
      */
-    protected function generateReferenceNumber(string $paymentMonth): string
+    public function generateReferenceNumber(string $paymentMonth): string
     {
         $cleanMonth = str_replace('-', '', $paymentMonth);
-        $count = MemberPayment::where('payment_month', $paymentMonth)->count() + 1;
+        $prefix = "RCP-{$cleanMonth}-";
 
-        return sprintf('RCP-%s-%04d', $cleanMonth, $count);
+        $latest = MemberPayment::where('reference_number', 'LIKE', $prefix.'%')
+            ->lockForUpdate()
+            ->orderByDesc('id')
+            ->value('reference_number');
+
+        $nextSeq = 1;
+        if ($latest && preg_match('/RCP-\d{6}-(\d+)/', $latest, $matches)) {
+            $nextSeq = ((int) $matches[1]) + 1;
+        } else {
+            $nextSeq = MemberPayment::where('payment_month', $paymentMonth)->count() + 1;
+        }
+
+        while (MemberPayment::where('reference_number', sprintf('RCP-%s-%04d', $cleanMonth, $nextSeq))->exists()) {
+            $nextSeq++;
+        }
+
+        return sprintf('RCP-%s-%04d', $cleanMonth, $nextSeq);
     }
 }

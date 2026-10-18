@@ -2,17 +2,18 @@
 
 namespace Tests\Feature\Payment;
 
+use App\Models\AcademicYear;
+use App\Models\Course;
 use App\Models\Member;
 use App\Models\MemberPayment;
 use App\Models\MonthlyPaymentRule;
-use App\Models\PaymentAuditLog;
 use App\Models\Role;
 use App\Models\SchoolClass;
+use App\Models\TeachingAssignment;
 use App\Models\User;
 use App\Services\MemberPaymentService;
 use App\Services\PaymentDashboardService;
 use App\Services\PaymentRuleService;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,10 +22,13 @@ class MemberPaymentTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $teacher;
+
     private User $student;
 
     private SchoolClass $seniorClass;
+
     private SchoolClass $juniorClass;
 
     protected function setUp(): void
@@ -520,5 +524,228 @@ class MemberPaymentTest extends TestCase
         // Because of the 50 ETB carry-forward credit, remaining balance in 2026-11 is 0.00 and status is OVERPAID/PAID
         $this->assertEquals(0.00, (float) $p2->remaining_balance);
         $this->assertEquals('OVERPAID', $p2->payment_status);
+    }
+
+    public function test_multi_month_credit_exhaustion_prevents_perpetual_reuse(): void
+    {
+        $paymentService = app(MemberPaymentService::class);
+        $dashboardService = app(PaymentDashboardService::class);
+
+        MonthlyPaymentRule::create([
+            'name' => ['en' => 'Monthly Dues Exhaustion Test'],
+            'amount' => 50.00,
+            'effective_from' => '2026-01-01',
+            'is_active' => true,
+            'allow_credit_carry_forward' => true,
+        ]);
+
+        $member = Member::create([
+            'full_name' => ['en' => 'Multi Month Member'],
+            'date_of_birth' => '2000-01-01',
+            'gender' => 'male',
+            'class_id' => $this->seniorClass->id,
+        ]);
+
+        // Month 1 (2026-10): Owes 50 ETB, pays 100 ETB (+50 ETB overpayment credit)
+        $p1 = $paymentService->recordPayment([
+            'member_id' => $member->id,
+            'payment_month' => '2026-10',
+            'amount' => 100.00,
+        ], $this->admin);
+        $this->assertEquals(0.00, (float) $p1->remaining_balance);
+        $this->assertEquals('OVERPAID', $p1->payment_status);
+
+        // Month 2 (2026-11): Owes 50 ETB.
+        // Before paying, ledger should show the 50 ETB credit applied, balance 0.00, status PAID
+        $ledgerNov = $dashboardService->getMembersLedger('2026-11', ['search' => (string) $member->id]);
+        $rowNov = $ledgerNov->items()[0];
+        $this->assertEquals(50.00, (float) $rowNov['credit_applied']);
+        $this->assertEquals(0.00, (float) $rowNov['remaining_balance']);
+        $this->assertEquals('PAID', $rowNov['status']);
+
+        // Member records token 0.01 ETB in Month 2 (so Month 2 paid_amount = 0.01)
+        $p2 = $paymentService->recordPayment([
+            'member_id' => $member->id,
+            'payment_month' => '2026-11',
+            'amount' => 0.01,
+        ], $this->admin);
+        $this->assertEquals(0.00, (float) $p2->remaining_balance);
+
+        // Month 3 (2026-12): Owes 50 ETB.
+        // The 50 ETB credit from Month 1 was fully consumed by Month 2!
+        // Credit available entering Month 3 must be exactly 0.01 (the token paid in Month 2), NOT 50.00!
+        $ledgerDec = $dashboardService->getMembersLedger('2026-12', ['search' => (string) $member->id]);
+        $rowDec = $ledgerDec->items()[0];
+        $this->assertEquals(0.01, (float) $rowDec['credit_applied']);
+        $this->assertEquals(49.99, (float) $rowDec['remaining_balance']);
+        $this->assertEquals('PARTIAL', $rowDec['status']);
+
+        // Member pays 10.00 ETB in Month 3: remaining balance must be 39.99, NOT 0.00!
+        $p3 = $paymentService->recordPayment([
+            'member_id' => $member->id,
+            'payment_month' => '2026-12',
+            'amount' => 10.00,
+        ], $this->admin);
+        $this->assertEquals(39.99, (float) $p3->remaining_balance);
+        $this->assertEquals('PARTIAL', $p3->payment_status);
+    }
+
+    public function test_dashboard_accounts_for_carry_forward_credit_and_sums_overpaid(): void
+    {
+        $dashboardService = app(PaymentDashboardService::class);
+        $paymentService = app(MemberPaymentService::class);
+
+        MonthlyPaymentRule::create([
+            'name' => ['en' => 'Dues Rule'],
+            'amount' => 100.00,
+            'effective_from' => '2026-01-01',
+            'is_active' => true,
+            'allow_credit_carry_forward' => true,
+        ]);
+
+        $member = Member::create([
+            'full_name' => ['en' => 'Overpaid Member'],
+            'date_of_birth' => '2000-01-01',
+            'gender' => 'male',
+            'class_id' => $this->seniorClass->id,
+        ]);
+
+        // Member pays 150 in Month 1 (owes 100, overpaid 50)
+        $paymentService->recordPayment([
+            'member_id' => $member->id,
+            'payment_month' => '2026-10',
+            'amount' => 150.00,
+        ], $this->admin);
+
+        // Dashboard for Month 1 must have total_overpaid == 50.00 (NOT hardcoded 0.00)
+        $summaryOct = $dashboardService->getDashboardSummary('2026-10');
+        $this->assertEquals(50.00, (float) $summaryOct['financial_summary']['total_overpaid']);
+
+        // In Month 2 (2026-11): member paid 0 in cash, but has 50 carry-forward credit.
+        // Dashboard must recognize 50 credit towards the 100 obligation (status PARTIAL, remaining 50, NOT UNPAID)
+        $summaryNov = $dashboardService->getDashboardSummary('2026-11');
+        $this->assertEquals(1, $summaryNov['metrics']['partially_paid_count']);
+        $this->assertEquals(0, $summaryNov['metrics']['unpaid_count']);
+        $this->assertEquals(50.00, (float) $summaryNov['metrics']['remaining_amount']);
+    }
+
+    public function test_teacher_class_scoping_enforced_on_endpoints(): void
+    {
+        $academicYear = AcademicYear::create([
+            'name' => ['en' => '2026 E.C.'],
+            'start_date' => '2026-09-01',
+            'end_date' => '2027-06-30',
+            'is_current' => true,
+        ]);
+
+        $course = Course::create([
+            'name' => ['en' => 'General Studies'],
+            'code' => 'GEN1',
+            'credit_hour' => 3,
+            'class_id' => $this->seniorClass->id,
+        ]);
+
+        // Assign teacher ONLY to seniorClass
+        TeachingAssignment::create([
+            'teacher_id' => $this->teacher->id,
+            'academic_year_id' => $academicYear->id,
+            'class_id' => $this->seniorClass->id,
+            'section' => 'A',
+            'course_id' => $course->id,
+            'semester' => 'semester_1',
+            'is_primary' => true,
+            'start_date' => '2026-09-01',
+        ]);
+
+        MonthlyPaymentRule::create([
+            'name' => ['en' => 'Standard Fee'],
+            'amount' => 50.00,
+            'effective_from' => '2026-01-01',
+            'is_active' => true,
+        ]);
+
+        $seniorMember = Member::create([
+            'full_name' => ['en' => 'Senior Student'],
+            'date_of_birth' => '2000-01-01',
+            'gender' => 'male',
+            'class_id' => $this->seniorClass->id,
+        ]);
+
+        $juniorMember = Member::create([
+            'full_name' => ['en' => 'Junior Student'],
+            'date_of_birth' => '2000-01-01',
+            'gender' => 'female',
+            'class_id' => $this->juniorClass->id,
+        ]);
+
+        // 1. Dashboard: teacher can access assigned seniorClass, forbidden for unassigned juniorClass
+        $resSeniorDash = $this->actingAs($this->teacher, 'sanctum')->getJson("/api/payments/dashboard?class_id={$this->seniorClass->id}");
+        $resSeniorDash->assertStatus(200);
+
+        $resJuniorDash = $this->actingAs($this->teacher, 'sanctum')->getJson("/api/payments/dashboard?class_id={$this->juniorClass->id}");
+        $resJuniorDash->assertStatus(403);
+
+        // 2. Members Ledger: teacher can filter by assigned class, forbidden for unassigned class
+        $resSeniorLedger = $this->actingAs($this->teacher, 'sanctum')->getJson("/api/payments/members?class_id={$this->seniorClass->id}");
+        $resSeniorLedger->assertStatus(200);
+
+        $resJuniorLedger = $this->actingAs($this->teacher, 'sanctum')->getJson("/api/payments/members?class_id={$this->juniorClass->id}");
+        $resJuniorLedger->assertStatus(403);
+
+        // 3. Record Payment: teacher can record for assigned class member, forbidden for unassigned member
+        $resSeniorRecord = $this->actingAs($this->teacher, 'sanctum')->postJson('/api/payments/record', [
+            'member_id' => $seniorMember->id,
+            'payment_month' => '2026-10',
+            'amount' => 50.00,
+        ]);
+        $resSeniorRecord->assertStatus(201);
+
+        $resJuniorRecord = $this->actingAs($this->teacher, 'sanctum')->postJson('/api/payments/record', [
+            'member_id' => $juniorMember->id,
+            'payment_month' => '2026-10',
+            'amount' => 50.00,
+        ]);
+        $resJuniorRecord->assertStatus(403);
+
+        // 4. Member History: teacher can view assigned member history, forbidden for unassigned member
+        $resSeniorHist = $this->actingAs($this->teacher, 'sanctum')->getJson("/api/payments/members/{$seniorMember->id}/history");
+        $resSeniorHist->assertStatus(200);
+
+        $resJuniorHist = $this->actingAs($this->teacher, 'sanctum')->getJson("/api/payments/members/{$juniorMember->id}/history");
+        $resJuniorHist->assertStatus(403);
+    }
+
+    public function test_concurrency_safe_unique_reference_numbers(): void
+    {
+        $paymentService = app(MemberPaymentService::class);
+
+        MonthlyPaymentRule::create([
+            'name' => ['en' => 'Dues Rule'],
+            'amount' => 50.00,
+            'effective_from' => '2026-01-01',
+            'is_active' => true,
+        ]);
+
+        $member = Member::create([
+            'full_name' => ['en' => 'Seq Member'],
+            'date_of_birth' => '2000-01-01',
+            'gender' => 'male',
+            'class_id' => $this->seniorClass->id,
+        ]);
+
+        $refNumbers = [];
+        for ($i = 0; $i < 5; $i++) {
+            $payment = $paymentService->recordPayment([
+                'member_id' => $member->id,
+                'payment_month' => '2026-10',
+                'amount' => 10.00,
+            ], $this->admin);
+
+            $refNumbers[] = $payment->reference_number;
+        }
+
+        // Must generate 5 distinct, sequential reference numbers
+        $this->assertCount(5, array_unique($refNumbers));
+        $this->assertEquals(['RCP-202610-0001', 'RCP-202610-0002', 'RCP-202610-0003', 'RCP-202610-0004', 'RCP-202610-0005'], $refNumbers);
     }
 }

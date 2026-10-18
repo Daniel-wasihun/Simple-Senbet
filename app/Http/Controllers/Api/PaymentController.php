@@ -10,6 +10,7 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Member;
 use App\Models\MemberPayment;
 use App\Models\MonthlyPaymentRule;
+use App\Models\TeachingAssignment;
 use App\Services\MemberPaymentService;
 use App\Services\PaymentDashboardService;
 use App\Services\PaymentRuleService;
@@ -63,6 +64,22 @@ class PaymentController extends Controller
     }
 
     /**
+     * Get class IDs assigned to the user if teacher, or null if administrator.
+     */
+    protected function getTeacherAssignedClassIds($user): ?array
+    {
+        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        if ($isAdmin) {
+            return null;
+        }
+
+        return TeachingAssignment::where('teacher_id', $user->id)
+            ->pluck('class_id')
+            ->unique()
+            ->toArray();
+    }
+
+    /**
      * Get reconciled monthly payment dashboard metrics.
      */
     public function dashboard(Request $request): JsonResponse
@@ -72,10 +89,17 @@ class PaymentController extends Controller
             return ApiResponse::forbidden('You do not have permission to access payment records.');
         }
 
+        $assignedClassIds = $this->getTeacherAssignedClassIds($user);
         $month = (string) $request->query('month', now()->format('Y-m'));
         $classId = $request->query('class_id') ? (int) $request->query('class_id') : null;
 
-        $summary = $this->dashboardService->getDashboardSummary($month, $classId);
+        if ($assignedClassIds !== null) {
+            if ($classId !== null && ! in_array($classId, $assignedClassIds, true)) {
+                return ApiResponse::forbidden('You do not have permission to access payment records for this class.');
+            }
+        }
+
+        $summary = $this->dashboardService->getDashboardSummary($month, $classId, $assignedClassIds);
 
         return ApiResponse::success($summary, 'Payment dashboard metrics retrieved successfully.');
     }
@@ -90,9 +114,19 @@ class PaymentController extends Controller
             return ApiResponse::forbidden('You do not have permission to access payment records.');
         }
 
+        $assignedClassIds = $this->getTeacherAssignedClassIds($user);
+        $requestedClassId = $request->query('class_id') ? (int) $request->query('class_id') : null;
+
+        if ($assignedClassIds !== null) {
+            if ($requestedClassId !== null && ! in_array($requestedClassId, $assignedClassIds, true)) {
+                return ApiResponse::forbidden('You do not have permission to access payment records for this class.');
+            }
+        }
+
         $month = (string) $request->query('month', now()->format('Y-m'));
         $filters = [
-            'class_id' => $request->query('class_id'),
+            'class_id' => $requestedClassId,
+            'allowed_class_ids' => $assignedClassIds,
             'status' => $request->query('status'),
             'search' => $request->query('search'),
             'page' => $request->query('page', 1),
@@ -123,6 +157,13 @@ class PaymentController extends Controller
             return ApiResponse::forbidden('You do not have permission to access payment records.');
         }
 
+        $assignedClassIds = $this->getTeacherAssignedClassIds($user);
+        if ($assignedClassIds !== null) {
+            if (! $member->class_id || ! in_array($member->class_id, $assignedClassIds, true)) {
+                return ApiResponse::forbidden('You do not have permission to access payment history for members outside your assigned classes.');
+            }
+        }
+
         $history = $this->paymentService->getMemberPaymentHistory($member->id);
 
         return ApiResponse::success([
@@ -145,6 +186,16 @@ class PaymentController extends Controller
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to record payments.');
+        }
+
+        $assignedClassIds = $this->getTeacherAssignedClassIds($user);
+        $memberId = (int) $request->validated()['member_id'];
+        $member = Member::findOrFail($memberId);
+
+        if ($assignedClassIds !== null) {
+            if (! $member->class_id || ! in_array($member->class_id, $assignedClassIds, true)) {
+                return ApiResponse::forbidden('You do not have permission to record payments for members outside your assigned classes.');
+            }
         }
 
         $payment = $this->paymentService->recordPayment($request->validated(), $user);
@@ -175,6 +226,13 @@ class PaymentController extends Controller
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to access payment records.');
+        }
+
+        $assignedClassIds = $this->getTeacherAssignedClassIds($user);
+        if ($assignedClassIds !== null) {
+            if (! $payment->member?->class_id || ! in_array($payment->member->class_id, $assignedClassIds, true)) {
+                return ApiResponse::forbidden('You do not have permission to access receipts for members outside your assigned classes.');
+            }
         }
 
         $payment->load(['member.schoolClass', 'rule', 'recordedByUser']);

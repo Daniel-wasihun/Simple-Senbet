@@ -80,7 +80,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [PaymentController::class, 'dashboard'])->name('payments.dashboard');
         Route::get('/members', [PaymentController::class, 'membersLedger'])->name('payments.members');
         Route::get('/members/{member}', [PaymentController::class, 'memberHistory'])->name('payments.member.history');
+        Route::get('/members/{member}/history', [PaymentController::class, 'memberHistory'])->name('payments.member.history.alias');
         Route::post('/', [PaymentController::class, 'record'])->name('payments.record');
+        Route::post('/record', [PaymentController::class, 'record'])->name('payments.record.alias');
         Route::post('/{payment}/void', [PaymentController::class, 'voidPayment'])->name('payments.void');
         Route::get('/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
     });
