@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { 
   Server, 
   Database, 
@@ -50,7 +51,7 @@ export default function Home() {
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
   const [summary, setSummary] = useState<SenbetSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -74,8 +75,9 @@ export default function Home() {
         const summaryData = await summaryRes.json();
         setSummary(summaryData);
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to connect to backend");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to connect to backend";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -117,14 +119,25 @@ export default function Home() {
           </p>
         </div>
 
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition disabled:opacity-50 self-start md:self-auto cursor-pointer"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh Status
-        </button>
+        <div className="flex items-center gap-3 self-start md:self-auto">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition"
+          >
+            <span>Teacher & Admin Portal</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            aria-label="Refresh Status"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-sm font-medium shadow-2xs transition disabled:opacity-50 cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
       </header>
 
       {/* Backend Integration Status Bar */}
