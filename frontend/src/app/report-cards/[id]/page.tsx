@@ -13,6 +13,7 @@ import {
   Calendar,
   BookOpen,
   RefreshCw,
+  Printer,
 } from "lucide-react";
 import { StudentReportCardData } from "@/types/auth";
 
@@ -115,9 +116,36 @@ export default function StudentReportCardPage({
   const { student, academic_year, class: schoolClass, section, semester, courses, summary, attendance } = reportCard;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
-      {/* Top Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-12 print:bg-white print:p-0 print:pb-0">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin: 12mm 15mm;
+              }
+              body {
+                font-family: 'Noto Sans Ethiopic', 'Abyssinica SIL', 'Nyala', sans-serif, system-ui;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .no-print {
+                display: none !important;
+              }
+              .page-break-inside-avoid {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+              }
+            }
+          `,
+        }}
+      />
+
+      {/* Top Bar (Hidden on print) */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 no-print">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link
             href="/dashboard"
@@ -126,14 +154,50 @@ export default function StudentReportCardPage({
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Link>
-          <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-700">
-            <Calendar className="h-3.5 w-3.5 text-amber-600" />
-            {formatText(academic_year.name)} • {semester.replace("_", " ").toUpperCase()}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 text-slate-700">
+              <Calendar className="h-3.5 w-3.5 text-amber-600" />
+              {formatText(academic_year.name)} • {semester.replace("_", " ").toUpperCase()}
+            </div>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+              title="Print official report card document"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              Print Report
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 print:p-0 print:max-w-none">
+        {/* Print-Only Letterhead */}
+        <div className="hidden print:block mb-6 text-center border-b-2 border-slate-900 pb-4">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 font-serif">
+            Simple Senbet Sunday School (የሰንበት ትምህርት ቤት)
+          </h1>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700 mt-1">
+            Official Student Academic Report Card (የተማሪ የውጤት መግለጫ)
+          </h2>
+          <div className="flex justify-center gap-6 text-xs text-slate-600 mt-2">
+            <span>
+              <strong>Academic Year:</strong> {formatText(academic_year.name)}
+            </span>
+            <span>
+              <strong>Term:</strong> {semester.replace("_", " ").toUpperCase()}
+            </span>
+            <span>
+              <strong>Issued Date:</strong> {new Date().toLocaleDateString()}
+            </span>
+          </div>
+          {summary.is_incomplete && (
+            <div className="mt-3 py-1.5 px-4 bg-amber-50 border border-amber-300 text-amber-900 font-bold text-xs uppercase tracking-wider">
+              PROVISIONAL / INCOMPLETE REPORT — NOT AN OFFICIAL FINAL TRANSCRIPT
+            </div>
+          )}
+        </div>
         {/* Student Profile Card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
@@ -359,6 +423,20 @@ export default function StudentReportCardPage({
               <p className="text-xs text-blue-700">Excused</p>
               <p className="text-lg font-bold text-blue-800">{attendance.excused_count}</p>
             </div>
+          </div>
+        </div>
+
+        {/* Printable Official Signatures Block */}
+        <div className="hidden print:grid grid-cols-2 gap-16 mt-12 pt-8 border-t border-slate-300 page-break-inside-avoid">
+          <div className="text-center">
+            <div className="border-b border-slate-400 pb-1 mb-2 h-12"></div>
+            <p className="text-xs font-bold text-slate-800">Class Teacher (የክፍሉ መምህር)</p>
+            <p className="text-[11px] text-slate-500">Signature & Date</p>
+          </div>
+          <div className="text-center">
+            <div className="border-b border-slate-400 pb-1 mb-2 h-12"></div>
+            <p className="text-xs font-bold text-slate-800">Academic Director (የትምህርት ክፍል ኃላፊ)</p>
+            <p className="text-[11px] text-slate-500">Official Seal & Signature</p>
           </div>
         </div>
       </main>
