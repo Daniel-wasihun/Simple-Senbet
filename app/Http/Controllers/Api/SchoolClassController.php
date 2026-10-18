@@ -2,44 +2,54 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\Concerns\HandlesCachedCrud;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SchoolClassRequest;
 use App\Http\Resources\SchoolClassResource;
 use App\Models\SchoolClass;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Services\SchoolClassService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class SchoolClassController extends Controller
 {
-    use HandlesCachedCrud;
+    public function __construct(protected SchoolClassService $classService) {}
 
-    private function rules(?SchoolClass $class = null): array
+    public function index(): AnonymousResourceCollection
     {
-        return ['name' => ['required', 'string', 'max:255'], 'code' => ['required', 'string', 'max:50', Rule::unique('classes')->ignore($class?->id)], 'number_of_sections' => ['required', 'integer', 'min:1'], 'passing_score' => ['required', 'numeric', 'between:0,100']];
+        $this->authorize('viewAny', SchoolClass::class);
+
+        return SchoolClassResource::collection($this->classService->paginate());
     }
 
-    public function index()
+    public function store(SchoolClassRequest $request): JsonResponse
     {
-        return $this->indexCrud(SchoolClass::class, SchoolClassResource::class, [], true);
+        $this->authorize('create', SchoolClass::class);
+        $class = $this->classService->create($request->validated());
+
+        return response()->json(['data' => SchoolClassResource::make($class)], 201);
     }
 
-    public function store(Request $r)
+    public function show(SchoolClass $schoolClass): SchoolClassResource
     {
-        return $this->storeCrud($r, SchoolClass::class, SchoolClassResource::class, $this->rules(), [], true);
+        $this->authorize('view', $schoolClass);
+
+        return SchoolClassResource::make($this->classService->find($schoolClass));
     }
 
-    public function show(SchoolClass $schoolClass)
+    public function update(SchoolClassRequest $request, SchoolClass $schoolClass): array
     {
-        return $this->showCrud($schoolClass, SchoolClassResource::class, [], true);
+        $this->authorize('update', $schoolClass);
+        $updatedClass = $this->classService->update($schoolClass, $request->validated());
+
+        return ['data' => SchoolClassResource::make($updatedClass)];
     }
 
-    public function update(Request $r, SchoolClass $schoolClass)
+    public function destroy(SchoolClass $schoolClass): Response
     {
-        return $this->updateCrud($r, $schoolClass, SchoolClassResource::class, $this->rules($schoolClass), [], true);
-    }
+        $this->authorize('delete', $schoolClass);
+        $this->classService->delete($schoolClass);
 
-    public function destroy(SchoolClass $schoolClass)
-    {
-        return $this->destroyCrud($schoolClass, true);
+        return response()->noContent();
     }
 }

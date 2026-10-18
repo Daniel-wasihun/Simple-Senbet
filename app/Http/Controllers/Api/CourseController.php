@@ -2,44 +2,54 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\Concerns\HandlesCachedCrud;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CourseRequest;
 use App\Http\Resources\CourseResource;
 use App\Models\Course;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Services\CourseService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class CourseController extends Controller
 {
-    use HandlesCachedCrud;
+    public function __construct(protected CourseService $courseService) {}
 
-    private function rules(?Course $course = null): array
+    public function index(): AnonymousResourceCollection
     {
-        return ['name' => ['required', 'string', 'max:255'], 'code' => ['required', 'string', 'max:50', Rule::unique('courses')->ignore($course?->id)], 'description' => ['nullable', 'string'], 'credit_hour' => ['required', 'integer', 'min:1'], 'class_id' => ['required', 'exists:classes,id']];
+        $this->authorize('viewAny', Course::class);
+
+        return CourseResource::collection($this->courseService->paginate());
     }
 
-    public function index()
+    public function store(CourseRequest $request): JsonResponse
     {
-        return $this->indexCrud(Course::class, CourseResource::class, ['schoolClass'], true);
+        $this->authorize('create', Course::class);
+        $course = $this->courseService->create($request->validated());
+
+        return response()->json(['data' => CourseResource::make($course)], 201);
     }
 
-    public function store(Request $r)
+    public function show(Course $course): CourseResource
     {
-        return $this->storeCrud($r, Course::class, CourseResource::class, $this->rules(), ['schoolClass'], true);
+        $this->authorize('view', $course);
+
+        return CourseResource::make($this->courseService->find($course));
     }
 
-    public function show(Course $course)
+    public function update(CourseRequest $request, Course $course): array
     {
-        return $this->showCrud($course, CourseResource::class, ['schoolClass'], true);
+        $this->authorize('update', $course);
+        $updatedCourse = $this->courseService->update($course, $request->validated());
+
+        return ['data' => CourseResource::make($updatedCourse)];
     }
 
-    public function update(Request $r, Course $course)
+    public function destroy(Course $course): Response
     {
-        return $this->updateCrud($r, $course, CourseResource::class, $this->rules($course), ['schoolClass'], true);
-    }
+        $this->authorize('delete', $course);
+        $this->courseService->delete($course);
 
-    public function destroy(Course $course)
-    {
-        return $this->destroyCrud($course, true);
+        return response()->noContent();
     }
 }

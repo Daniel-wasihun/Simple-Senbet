@@ -2,44 +2,54 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\Concerns\HandlesCachedCrud;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssessmentRequest;
 use App\Http\Resources\AssessmentResource;
 use App\Models\Assessment;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Services\AssessmentService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class AssessmentController extends Controller
 {
-    use HandlesCachedCrud;
+    public function __construct(protected AssessmentService $assessmentService) {}
 
-    private function rules(?Assessment $assessment = null): array
+    public function index(): AnonymousResourceCollection
     {
-        return ['teaching_assignment_id' => ['required', 'exists:teaching_assignments,id'], 'name' => ['required', 'string', 'max:255', Rule::unique('assessments')->where(fn ($q) => $q->where('teaching_assignment_id', request('teaching_assignment_id')))->ignore($assessment?->id)], 'total_score' => ['required', 'numeric', 'gt:0', 'max:999.99'], 'weight_percentage' => ['required', 'numeric', 'between:0,100']];
+        $this->authorize('viewAny', Assessment::class);
+
+        return AssessmentResource::collection($this->assessmentService->paginate());
     }
 
-    public function index()
+    public function store(AssessmentRequest $request): JsonResponse
     {
-        return $this->indexCrud(Assessment::class, AssessmentResource::class, [], true);
+        $this->authorize('create', Assessment::class);
+        $assessment = $this->assessmentService->create($request->validated());
+
+        return response()->json(['data' => AssessmentResource::make($assessment)], 201);
     }
 
-    public function store(Request $r)
+    public function show(Assessment $assessment): AssessmentResource
     {
-        return $this->storeCrud($r, Assessment::class, AssessmentResource::class, $this->rules(), [], true);
+        $this->authorize('view', $assessment);
+
+        return AssessmentResource::make($this->assessmentService->find($assessment));
     }
 
-    public function show(Assessment $assessment)
+    public function update(AssessmentRequest $request, Assessment $assessment): array
     {
-        return $this->showCrud($assessment, AssessmentResource::class, [], true);
+        $this->authorize('update', $assessment);
+        $updatedAssessment = $this->assessmentService->update($assessment, $request->validated());
+
+        return ['data' => AssessmentResource::make($updatedAssessment)];
     }
 
-    public function update(Request $r, Assessment $assessment)
+    public function destroy(Assessment $assessment): Response
     {
-        return $this->updateCrud($r, $assessment, AssessmentResource::class, $this->rules($assessment), [], true);
-    }
+        $this->authorize('delete', $assessment);
+        $this->assessmentService->delete($assessment);
 
-    public function destroy(Assessment $assessment)
-    {
-        return $this->destroyCrud($assessment, true);
+        return response()->noContent();
     }
 }
