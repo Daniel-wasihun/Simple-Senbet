@@ -161,13 +161,13 @@ The monthly payments subsystem manages Sunday School member dues, rule-based pri
 
 ### 3. Payment Processing, Idempotency & Concurrency Safety
 - **Supported Payment Methods**: `CASH`, `BANK_TRANSFER`, `TELEBIRR`, `CBE_BIRR`, `CHECK`, `MOBILE_MONEY`, `OTHER`.
-- **Sequential Receipt Numbers**: Unique, human-readable receipt numbers (format `REC-YYYYMM-XXXX`) generated atomically using database table locking and unique index constraints (`member_payments_reference_number_unique`).
+- **Sequential Receipt Numbers**: Unique, human-readable receipt numbers (format `RCP-YYYYMM-XXXX`) generated atomically using database table locking and unique index constraints (`member_payments_reference_number_unique`).
 - **Idempotency**: Clients can supply an optional `idempotency_key`. The backend enforces uniqueness to prevent duplicate charges caused by network retries.
 - **Atomic Transactions**: All balance recalculations and status transitions (`PAID`, `PARTIAL`, `UNPAID`, `OVERPAID`) execute inside isolated database transactions.
 
 ### 4. Voiding & Immutable Audit Trail
 - **Soft Voiding**: Completed payments can be voided via `POST /api/payments/{id}/void` by authorized administrators only.
-- **Mandatory Reason**: Requires a minimum 5-character explanation (`reason`) which is recorded in the immutable audit log (`MemberPaymentAuditLog`).
+- **Mandatory Reason**: Requires an explanation (`reason`) between 3 and 255 characters, which is recorded in the immutable audit log (`PaymentAuditLog`).
 - **Automatic Recalculation**: Voiding immediately reverts applied credits and recalculates member balances. Already-voided payments cannot be voided again (`422 Unprocessable Content`).
 
 ### 5. Automated Dues Notifications CLI Command

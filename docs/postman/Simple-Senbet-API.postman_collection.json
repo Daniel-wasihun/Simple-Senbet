@@ -3522,7 +3522,7 @@
                   "    pm.expect(json.status).to.eql(\"success\");",
                   "    pm.expect(json.data).to.have.property(\"id\");",
                   "    pm.expect(json.data).to.have.property(\"reference_number\");",
-                  "    pm.expect(json.data.reference_number).to.match(/^REC-\\d{6}-\\d{4}$/);",
+                  "    pm.expect(json.data.reference_number).to.match(/^RCP-\\d{6}-\\d{4}$/);",
                   "    pm.expect(parseFloat(json.data.paid_amount)).to.eql(150.00);",
                   "    pm.collectionVariables.set(\"payment_id\", String(json.data.id));",
                   "    pm.collectionVariables.set(\"payment_receipt_number\", String(json.data.reference_number));",
@@ -3552,7 +3552,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"member_id\": {{student_id_1}},\n  \"payment_month\": \"{{payment_month}}\",\n  \"amount\": 150.00,\n  \"payment_date\": \"2026-10-15\",\n  \"payment_method\": \"CASH\",\n  \"notes\": \"Postman primary payment recording test\",\n  \"idempotency_key\": \"pm-test-rec-{{}}\"\n}",
+              "raw": "{\n  \"member_id\": {{student_id_1}},\n  \"payment_month\": \"{{payment_month}}\",\n  \"amount\": 150.00,\n  \"payment_date\": \"2026-10-15\",\n  \"payment_method\": \"CASH\",\n  \"notes\": \"Postman primary payment recording test\",\n  \"idempotency_key\": \"pm-test-rec-{{$timestamp}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3614,7 +3614,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"member_id\": {{student_id_2}},\n  \"billing_month\": \"{{payment_month}}\",\n  \"amount\": 75.00,\n  \"payment_date\": \"2026-10-16\",\n  \"payment_method\": \"TELEBIRR\",\n  \"payment_reference\": \"TLB-ALIAS-{{}}\",\n  \"notes\": \"Postman partial payment via /payments/record alias route\"\n}",
+              "raw": "{\n  \"member_id\": {{student_id_2}},\n  \"billing_month\": \"{{payment_month}}\",\n  \"amount\": 75.00,\n  \"payment_date\": \"2026-10-16\",\n  \"payment_method\": \"TELEBIRR\",\n  \"payment_reference\": \"TLB-ALIAS-{{$timestamp}}\",\n  \"notes\": \"Postman partial payment via /payments/record alias route\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
