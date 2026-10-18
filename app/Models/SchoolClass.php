@@ -36,6 +36,7 @@ class SchoolClass extends Model
         'code',
         'number_of_sections',
         'passing_score',
+        'next_class_id',
     ];
 
     /**
@@ -49,7 +50,16 @@ class SchoolClass extends Model
             'name' => 'array',
             'number_of_sections' => 'integer',
             'passing_score' => 'decimal:2',
+            'next_class_id' => 'integer',
         ];
+    }
+
+    /**
+     * Get the next class level in academic progression.
+     */
+    public function nextClass(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(self::class, 'next_class_id');
     }
 
     /**

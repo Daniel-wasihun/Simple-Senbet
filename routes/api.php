@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\ReportCardController;
 use App\Http\Controllers\Api\SchoolClassController;
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\PromotionController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,6 +65,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/class/{schoolClass}', [ReportCardController::class, 'showClass'])->name('report-cards.class');
         Route::get('/class/{schoolClass}/export/csv', [ReportCardController::class, 'exportCsv'])->name('report-cards.class.export.csv');
         Route::get('/class/{schoolClass}/export/print', [ReportCardController::class, 'exportPrint'])->name('report-cards.class.export.print');
+    });
+
+    Route::prefix('promotion')->group(function () {
+        Route::get('/student/{student}', [PromotionController::class, 'evaluateStudent'])->name('promotion.student');
+        Route::post('/dry-run', [PromotionController::class, 'dryRun'])->name('promotion.dry-run');
+        Route::post('/commit', [PromotionController::class, 'commit'])->name('promotion.commit');
     });
 });
 
