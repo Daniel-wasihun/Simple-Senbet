@@ -209,6 +209,203 @@ npm --prefix frontend run build
 
 ---
 
+## 🚀 Production Operations & Deployment Runbooks
+
+### 1. Production Architecture & Runtime Reality
+> [!IMPORTANT]
+> **Runtime Server Architecture:** The default `Dockerfile` executes `php artisan serve`, which utilizes PHP's built-in single-threaded CLI development server. **This server is strictly unsuitable for production use.** 
+> Production deployments must utilize **PHP-FPM (`php:8.4-fpm-alpine`) coupled with an Nginx or Caddy reverse proxy**, or alternatively a container runtime like FrankenPHP.
+
+Recommended Production Architecture:
+```
+[ Client Browser / HTTPS ]
+            │
+            ▼
+┌───────────────────────────────┐
+│ Nginx Reverse Proxy (TLS)    │  (Terminates SSL, serves static assets, enforces rate limits)
+└──────────────┬────────────────┘
+               │
+      ┌────────┴────────┐
+      ▼                 ▼
+┌──────────────┐  ┌──────────────┐
+│ Next.js BFF  │  │ PHP-FPM 8.4  │  (Laravel API backend with OPcache enabled)
+│ (Port 3000)  │  │ (Port 9000)  │
+└──────────────┘  └──────┬───────┘
+                         │
+             ┌───────────┴───────────┐
+             ▼                       ▼
+     ┌──────────────┐        ┌──────────────┐
+     │ PostgreSQL 16│        │ Redis 7      │  (Persistent storage & distributed cache/locks)
+     └──────────────┘        └──────────────┘
+```
+
+#### Production Docker Compose Example (`docker-compose.prod.yml`)
+```yaml
+services:
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public:/var/www/html/public:ro
+      - ./certs:/etc/ssl/certs:ro
+    depends_on:
+      - backend
+      - frontend
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.fpm
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      - ./storage:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ./frontend/.env.production
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: simple_senbet_production
+      POSTGRES_USER: senbet_app
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U senbet_app -d simple_senbet_production"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+```
+
+---
+
+### 2. Production Environment & Security Hardening
+Before bringing services up in production:
+
+1. **Provision Environment Files:**
+   ```bash
+   cp .env.production.example .env
+   cp frontend/.env.production.example frontend/.env.production
+   ```
+2. **Generate Strong Application Key:**
+   ```bash
+   php artisan key:generate --force
+   ```
+3. **Verify Critical Hardening Flags:**
+   - `APP_ENV=production`
+   - `APP_DEBUG=false`
+   - `SESSION_SECURE_COOKIE=true` (forces browser cookies to transmit exclusively over TLS)
+   - `SESSION_SAME_SITE=lax` (mitigates CSRF vulnerabilities)
+   - `CORS_ALLOWED_ORIGINS=https://senbet.example.com` (restricts cross-origin browser requests to the canonical domain)
+   - `BCRYPT_ROUNDS=12` (provides robust password hashing work-factor)
+4. **Compile Production Caches:**
+   ```bash
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   php artisan event:cache
+   ```
+   *(To clear caches during zero-downtime rolling updates: `php artisan optimize:clear`)*
+
+---
+
+### 3. Database Backup & Disaster Recovery Runbook
+
+#### A. Database Requirements
+- PostgreSQL 16 or newer.
+- Persistent dedicated volume for containerized databases (`pgdata`).
+
+#### B. On-Demand / Scheduled Full Database Backup
+Generate a compressed, atomic PostgreSQL dump using custom archive format (`-Fc`):
+```bash
+# Set timestamp variable
+BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Execute pg_dump via Docker or directly on host
+docker compose exec -T postgres pg_dump \
+  -U senbet_app \
+  -d simple_senbet_production \
+  -Fc \
+  --verbose \
+  > /var/backups/senbet/senbet_db_${BACKUP_TIMESTAMP}.dump
+```
+
+#### C. Database Recovery & Restore Runbook
+To restore a backup into a clean or disaster-recovery environment:
+```bash
+# 1. Ensure active connections are terminated or place app in maintenance
+php artisan down --secret="deployment-override-token"
+
+# 2. Restore database atomically (cleans existing tables before recreating)
+docker compose exec -T postgres pg_restore \
+  -U senbet_app \
+  -d simple_senbet_production \
+  --clean \
+  --if-exists \
+  --no-owner \
+  --no-privileges \
+  /var/backups/senbet/senbet_db_YYYYMMDD_HHMMSS.dump
+
+# 3. Run pending migrations if restoring to a newer release version
+php artisan migrate --force
+
+# 4. Bring application back online
+php artisan up
+```
+
+#### D. Recovery Objectives (RPO / RTO)
+- **Target RPO (Recovery Point Objective):** <= 1 hour (achieved via hourly automated snapshot cron + WAL archiving).
+- **Target RTO (Recovery Time Objective):** <= 15 minutes (achieved via automated `pg_restore` script execution).
+
+---
+
+### 4. Operational Monitoring & Observability
+
+#### A. Health Check Endpoints
+The backend provides two non-authenticated health inspection endpoints:
+- **`GET /up`**: Lightweight HTTP 200 liveness probe for container orchestrators (Kubernetes, AWS ECS, Docker swarm).
+- **`GET /api/status`**: Readiness and deep connectivity probe returning application status, Laravel framework version, PHP runtime version, database connectivity (`getPdo()` verification), and UTC timestamp:
+  ```json
+  {
+    "status": "online",
+    "app": "Simple Senbet (የሰንበት ትምህርት ቤት)",
+    "framework": "Laravel 13.x",
+    "php_version": "8.4.x",
+    "database": {
+      "connected": true,
+      "driver": "pgsql",
+      "database": "simple_senbet_production"
+    },
+    "timestamp": "2026-10-18T06:55:00+00:00"
+  }
+  ```
+
+#### B. Logging & Log Rotation Policy
+- **Stack & Daily Driver:** Set `LOG_STACK=daily` and `LOG_DAILY_DAYS=14` in production `.env`.
+- **Log Level:** Set `LOG_LEVEL=warning` in production to prevent disk bloat while capturing warnings and unhandled exceptions.
+- **Sensitive Field Redaction:** Passwords, tokens, credentials, and authentication authorization headers are automatically omitted or masked by Laravel's exception handler and FormRequest input sanitization.
+
+---
+
 ## 🔒 Governance & Markdown Tracking Policy
 
 Per project governance (`/home/daniel/Documents/Projects/fullstack/School/AGENTS.md`):
