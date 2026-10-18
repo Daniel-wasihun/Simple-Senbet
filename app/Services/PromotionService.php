@@ -86,7 +86,7 @@ class PromotionService
             $decision = 'RETAINED';
             $proposedClassId = $currentClassId;
             $proposedClassName = $schoolClass->name;
-            $reason = "Retained in {$schoolClass->code}: Average {$overallAverage}% was below passing threshold of {$passingScore}% or {$failedCoursesCount} courses failed.";
+            $reason = "Retained in {$schoolClass->code}: Average {$overallAverage}% was below passing threshold of {$passingScore}%.";
         }
 
         return [
@@ -390,7 +390,7 @@ class PromotionService
             $annualAvg = round(((float) $rc1['summary']['overall_average'] + (float) $rc2['summary']['overall_average']) / 2, 2);
             $failedCoursesCount = max((int) $rc1['summary']['failed_courses_count'], (int) $rc2['summary']['failed_courses_count']);
             $passingScore = (float) $rc1['class']['passing_score'];
-            $isPassed = ($annualAvg >= $passingScore && $failedCoursesCount <= 1);
+            $isPassed = ($annualAvg >= $passingScore);
             $isIncomplete = false;
         } elseif ($hasSem2) {
             // Semester 2 available and complete

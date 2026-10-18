@@ -23,6 +23,7 @@ class SchoolClassRequest extends FormRequest
             'code' => ['required', 'string', 'max:50', Rule::unique('classes', 'code')->ignore($classId)],
             'number_of_sections' => ['required', 'integer', 'min:1'],
             'passing_score' => ['required', 'numeric', 'between:0,100'],
+            'next_class_id' => ['sometimes', 'nullable', 'integer', 'exists:classes,id'],
         ];
     }
 }

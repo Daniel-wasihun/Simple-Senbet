@@ -19,6 +19,7 @@ class SchoolClassResource extends BaseJsonResource
             'code' => $this->code,
             'number_of_sections' => $this->number_of_sections,
             'passing_score' => $this->passing_score,
+            'next_class_id' => $this->next_class_id,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ]);

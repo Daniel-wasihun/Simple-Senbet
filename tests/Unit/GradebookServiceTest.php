@@ -238,15 +238,15 @@ class GradebookServiceTest extends TestCase
         $this->assertTrue($card1['summary']['is_passed']);
         $this->assertEquals(1, $card1['summary']['failed_courses_count']);
 
-        // Student 2: scores 70%, 45%, 40% (2 fails). Overall avg = 51.67% >= 50.00% but 2 fails -> FAIL
+        // Student 2: scores 70%, 45%, 40% (2 fails). Overall avg = 51.67% >= 50.00% -> PASS on class average
         $s2 = Member::create(['full_name' => ['en' => 'Student Two'], 'date_of_birth' => '2010-01-01', 'gender' => 'female', 'class_id' => $this->class->id, 'section' => 'A']);
         AssessmentResult::create(['assessment_id' => $a1->id, 'member_id' => $s2->id, 'score' => 70]);
         AssessmentResult::create(['assessment_id' => $a2->id, 'member_id' => $s2->id, 'score' => 45]);
         AssessmentResult::create(['assessment_id' => $a3->id, 'member_id' => $s2->id, 'score' => 40]);
 
         $card2 = $this->gradebookService->generateStudentReportCard($s2->id, $this->academicYear->id, 'semester_1');
-        $this->assertEquals('FAIL', $card2['summary']['status']);
-        $this->assertFalse($card2['summary']['is_passed']);
+        $this->assertEquals('PASS', $card2['summary']['status']);
+        $this->assertTrue($card2['summary']['is_passed']);
         $this->assertEquals(2, $card2['summary']['failed_courses_count']);
 
         // Student 3: scores 45%, 45%, 45%. Overall avg = 45.00% < 50.00% -> FAIL

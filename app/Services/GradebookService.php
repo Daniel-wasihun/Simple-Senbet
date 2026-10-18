@@ -200,11 +200,11 @@ class GradebookService
         $overallAverage = ($courseCount > 0) ? round($totalEarnedPercentages / $courseCount, 2) : 0.00;
         $passingScore = (float) $schoolClass->passing_score;
 
-        // Passing & Failing Status (Approved Option A)
+        // Passing & Failing Status (Pure Class Average Rule)
         if ($isReportCardIncomplete) {
             $status = 'INCOMPLETE';
             $finalPassed = null;
-        } elseif ($overallAverage >= $passingScore && $failedCoursesCount <= 1) {
+        } elseif ($overallAverage >= $passingScore) {
             $status = 'PASS';
             $finalPassed = true;
         } else {
