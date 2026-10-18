@@ -1,0 +1,14 @@
+.git
+vendor
+frontend
+node_modules
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+*.sqlite
+.env
+.env.backup
+.phpunit.result.cache
+*.md
+*.MD
