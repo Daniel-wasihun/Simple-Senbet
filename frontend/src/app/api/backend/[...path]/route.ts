@@ -9,7 +9,7 @@ const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_U
 
 async function proxyRequest(request: NextRequest, params: Promise<{ path: string[] }>) {
   // 1. SEC-01: CSRF & Origin Validation on mutating requests
-  const trustedOrigins = getTrustedOrigins(request.nextUrl.origin);
+  const trustedOrigins = getTrustedOrigins();
   const originCheck = validateOriginHeader(
     request.method,
     request.headers.get("origin"),

@@ -7,10 +7,19 @@ services:
       - "127.0.0.1:${NGINX_API_HOST_PORT:-8001}:8000"
     volumes:
       - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
-      - .:/var/www/html:ro
     depends_on:
       - backend
       - frontend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
 
   backend:
     build:
@@ -20,10 +29,20 @@ services:
     restart: unless-stopped
     env_file: ${BACKEND_ENV_FILE:-.env.production}
     volumes:
-      - .:/var/www/html
+      - app_storage:/var/www/html/storage/app
     depends_on:
       postgres:
         condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
 
   frontend:
     build:
@@ -34,6 +53,16 @@ services:
     env_file: ${FRONTEND_ENV_FILE:-./frontend/.env.production}
     depends_on:
       - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
 
   postgres:
     image: postgres:16-alpine
@@ -49,6 +78,17 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
 
 volumes:
   pgdata:
+  app_storage:

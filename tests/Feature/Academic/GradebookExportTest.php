@@ -226,4 +226,35 @@ class GradebookExportTest extends TestCase
             ->get("/api/report-cards/class/{$this->class->id}/export/print?academic_year_id={$this->year->id}&semester=semester_1");
         $forbiddenRes->assertStatus(403);
     }
+
+    public function test_printable_gradebook_escapes_xss_in_class_and_academic_year_names(): void
+    {
+        $maliciousClass = SchoolClass::create([
+            'name' => ['en' => 'Grade <script>alert("xss-class")</script>', 'am' => 'ክፍል <img src=x onerror=alert(1)>'],
+            'code' => 'XSS1',
+            'passing_score' => 50,
+        ]);
+
+        $maliciousYear = AcademicYear::create([
+            'name' => ['en' => 'Year <script>alert("xss-year")</script>', 'am' => 'ዓመት <b onmouseover=alert(1)>'],
+            'start_date' => '2027-09-01',
+            'end_date' => '2028-06-30',
+            'is_current' => false,
+        ]);
+
+        $response = $this->actingAs($this->superadmin, 'sanctum')
+            ->get("/api/report-cards/class/{$maliciousClass->id}/export/print?academic_year_id={$maliciousYear->id}&semester=semester_1");
+
+        $response->assertStatus(200);
+        $content = $response->getContent();
+
+        // Ensure executable HTML/JS tags are not present
+        $this->assertStringNotContainsString('<script>alert("xss-class")</script>', $content);
+        $this->assertStringNotContainsString('<script>alert("xss-year")</script>', $content);
+        $this->assertStringNotContainsString('<img src=x onerror=alert(1)>', $content);
+
+        // Ensure properly HTML encoded
+        $this->assertStringContainsString('&lt;script&gt;alert(&quot;xss-class&quot;)&lt;/script&gt;', $content);
+        $this->assertStringContainsString('&lt;script&gt;alert(&quot;xss-year&quot;)&lt;/script&gt;', $content);
+    }
 }

@@ -333,12 +333,15 @@ Before bringing services up in production:
 #### A. Database Requirements
 - PostgreSQL 16 or newer.
 - Persistent dedicated volume for containerized databases (`pgdata`).
+- Isolated recovery target database for pre-cutover verification.
 
-#### B. On-Demand / Scheduled Full Database Backup
+#### B. On-Demand Full Database Backup
 Generate a compressed, atomic PostgreSQL dump using custom archive format (`-Fc`):
 ```bash
-# Set timestamp variable
+# Set timestamp and backup target directory
 BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_DIR="/var/backups/senbet"
+mkdir -p "${BACKUP_DIR}"
 
 # Execute pg_dump via Docker or directly on host
 docker compose exec -T postgres pg_dump \
@@ -346,35 +349,74 @@ docker compose exec -T postgres pg_dump \
   -d simple_senbet_production \
   -Fc \
   --verbose \
-  > /var/backups/senbet/senbet_db_${BACKUP_TIMESTAMP}.dump
+  > "${BACKUP_DIR}/senbet_db_${BACKUP_TIMESTAMP}.dump"
 ```
 
-#### C. Database Recovery & Restore Runbook
-To restore a backup into a clean or disaster-recovery environment:
-```bash
-# 1. Ensure active connections are terminated or place app in maintenance
-php artisan down --secret="deployment-override-token"
+#### C. Safe Disaster Recovery & Restore Runbook (Two-Step Verification Procedure)
+**NEVER execute `pg_restore --clean` directly against the live production database without a verified snapshot and isolated test restore.**
 
-# 2. Restore database atomically (cleans existing tables before recreating)
-docker compose exec -T postgres pg_restore \
+##### Step 1: Pre-Restore Safety Snapshot & Archive Verification
+```bash
+# 1. Inspect archive Table of Contents (TOC) and verify file integrity
+pg_restore --list /var/backups/senbet/senbet_db_TARGET.dump | head -n 30
+
+# 2. Capture immediate safety snapshot of live database before any cutover
+docker compose exec -T postgres pg_dump \
   -U senbet_app \
   -d simple_senbet_production \
-  --clean \
-  --if-exists \
+  -Fc \
+  > "/var/backups/senbet/pre_restore_safety_$(date +%Y%m%d_%H%M%S).dump"
+```
+
+##### Step 2: Isolated Restoration & Integrity Verification
+```bash
+# 3. Create fresh, isolated recovery database
+docker compose exec -T postgres psql -U senbet_app -d postgres -c "DROP DATABASE IF EXISTS simple_senbet_recovery;"
+docker compose exec -T postgres psql -U senbet_app -d postgres -c "CREATE DATABASE simple_senbet_recovery OWNER senbet_app;"
+
+# 4. Restore into isolated recovery database wrapped in a single transaction
+docker compose exec -T postgres pg_restore \
+  -U senbet_app \
+  -d simple_senbet_recovery \
+  --single-transaction \
   --no-owner \
   --no-privileges \
-  /var/backups/senbet/senbet_db_YYYYMMDD_HHMMSS.dump
+  /var/backups/senbet/senbet_db_TARGET.dump
 
-# 3. Run pending migrations if restoring to a newer release version
+# 5. Verify restored schema, table count, and row counts
+docker compose exec -T postgres psql -U senbet_app -d simple_senbet_recovery -c "\dt"
+docker compose exec -T postgres psql -U senbet_app -d simple_senbet_recovery -c "SELECT count(*) FROM users; SELECT count(*) FROM attendance_sessions;"
+```
+
+##### Step 3: Production Cutover & Promotion
+```bash
+# 6. Put application in maintenance mode with secret token
+php artisan down --secret="disaster-recovery-override-token"
+
+# 7. Terminate active database connections and swap database names
+docker compose exec -T postgres psql -U senbet_app -d postgres -c "
+  SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'simple_senbet_production';
+  ALTER DATABASE simple_senbet_production RENAME TO simple_senbet_deprecated_$(date +%Y%m%d_%H%M%S);
+  ALTER DATABASE simple_senbet_recovery RENAME TO simple_senbet_production;
+"
+
+# 8. Run any pending database migrations
 php artisan migrate --force
 
-# 4. Bring application back online
+# 9. Bring application back online
 php artisan up
 ```
 
-#### D. Recovery Objectives (RPO / RTO)
-- **Target RPO (Recovery Point Objective):** <= 1 hour (achieved via hourly automated snapshot cron + WAL archiving).
-- **Target RTO (Recovery Time Objective):** <= 15 minutes (achieved via automated `pg_restore` script execution).
+##### Step 4: Fallback & Abort Procedure
+If integrity validation fails in Step 2:
+1. Drop the temporary database: `DROP DATABASE simple_senbet_recovery;`
+2. Keep the live production database untouched.
+3. Review restore error logs and evaluate archive provenance.
+
+#### D. Operational Recovery Planning Guidelines
+- **Snapshot Frequency:** Schedule automated snapshots (e.g., via host systemd timer or cron) during low-traffic windows.
+- **Off-Host Replication:** Store encrypted backup dumps on off-host durable storage (S3, B2, or isolated backup server).
+- **Periodic Restore Drills:** Periodically rehearse the two-step verification procedure against non-production staging environments.
 
 ---
 
@@ -383,21 +425,17 @@ php artisan up
 #### A. Health Check Endpoints
 The backend provides two non-authenticated health inspection endpoints:
 - **`GET /up`**: Lightweight HTTP 200 liveness probe for container orchestrators (Kubernetes, AWS ECS, Docker swarm).
-- **`GET /api/status`**: Readiness and deep connectivity probe returning application status, Laravel framework version, PHP runtime version, database connectivity (`getPdo()` verification), and UTC timestamp:
+- **`GET /api/status`**: Readiness and database connectivity probe. Internal database names and patch versions are redacted to prevent information disclosure:
   ```json
   {
     "status": "online",
-    "app": "Simple Senbet (የሰንበት ትምህርት ቤት)",
-    "framework": "Laravel 13.x",
-    "php_version": "8.4.x",
     "database": {
-      "connected": true,
-      "driver": "pgsql",
-      "database": "simple_senbet_production"
+      "connected": true
     },
-    "timestamp": "2026-10-18T06:55:00+00:00"
+    "timestamp": "2026-10-18T12:00:00+00:00"
   }
   ```
+  *(Returns HTTP 200 when healthy, or HTTP 503 Service Unavailable if database connectivity fails).*
 
 #### B. Logging & Log Rotation Policy
 - **Stack & Daily Driver:** Set `LOG_STACK=daily` and `LOG_DAILY_DAYS=14` in production `.env`.

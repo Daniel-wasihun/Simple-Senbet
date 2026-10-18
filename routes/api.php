@@ -72,22 +72,19 @@ Route::get('/status', function () {
     try {
         DB::connection()->getPdo();
         $dbConnected = true;
-    } catch (Throwable $e) {
+    } catch (Throwable) {
         $dbConnected = false;
     }
 
+    $healthy = $dbConnected;
+
     return response()->json([
-        'status' => 'online',
-        'app' => 'Simple Senbet (የሰንበት ትምህርት ቤት)',
-        'framework' => 'Laravel '.app()->version(),
-        'php_version' => PHP_VERSION,
+        'status' => $healthy ? 'online' : 'degraded',
         'database' => [
             'connected' => $dbConnected,
-            'driver' => config('database.default'),
-            'database' => config('database.connections.'.config('database.default').'.database'),
         ],
         'timestamp' => now()->toIso8601String(),
-    ]);
+    ], $healthy ? 200 : 503);
 });
 
 Route::get('/senbet/summary', function () {

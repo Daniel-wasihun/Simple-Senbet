@@ -116,40 +116,53 @@ export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
 
 /**
  * Resolve trusted origins for CSRF origin validation.
+ * Origins must be explicitly configured via server environment variables.
+ * Never trust origins derived from incoming client request headers (Host, Origin, Referer, or X-Forwarded-*).
  */
-export function getTrustedOrigins(currentRequestOrigin?: string): string[] {
+export function getTrustedOrigins(customConfiguredOrigins?: string[]): string[] {
   const trusted: Set<string> = new Set();
 
-  const configuredEnv = [
+  const configuredEnv = customConfiguredOrigins ?? [
     process.env.APP_URL,
     process.env.FRONTEND_URL,
     process.env.NEXT_PUBLIC_APP_URL,
   ];
 
-  for (const envVal of configuredEnv) {
-    if (envVal) {
-      try {
-        const u = new URL(envVal);
-        trusted.add(u.origin);
-      } catch {
-        // Ignore invalid URL
-      }
+  for (const rawVal of configuredEnv) {
+    if (!rawVal || typeof rawVal !== "string") {
+      continue;
     }
-  }
 
-  // Include current request origin if valid
-  if (currentRequestOrigin) {
+    const trimmed = rawVal.trim();
+    if (!trimmed) {
+      continue;
+    }
+
     try {
-      const u = new URL(currentRequestOrigin);
+      const u = new URL(trimmed);
+      // Only permit http: and https: protocols
+      if (u.protocol !== "http:" && u.protocol !== "https:") {
+        continue;
+      }
+      // Reject URLs containing userinfo (credentials)
+      if (u.username || u.password) {
+        continue;
+      }
+      // Origin must have a valid non-empty hostname
+      if (!u.hostname) {
+        continue;
+      }
       trusted.add(u.origin);
     } catch {
-      // Ignore invalid URL
+      // Ignore malformed URL
     }
   }
 
-  // Standard development host origins
-  trusted.add("http://localhost:3000");
-  trusted.add("http://127.0.0.1:3000");
+  // Standard development host origins: only permitted in non-production environments when custom origins are not passed
+  if (process.env.NODE_ENV !== "production" && !customConfiguredOrigins) {
+    trusted.add("http://localhost:3000");
+    trusted.add("http://127.0.0.1:3000");
+  }
 
   return Array.from(trusted);
 }

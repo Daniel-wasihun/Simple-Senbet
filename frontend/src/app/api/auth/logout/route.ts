@@ -5,7 +5,7 @@ const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_U
 
 export async function POST(request: NextRequest) {
   // Validate origin for state-changing logout requests
-  const trustedOrigins = getTrustedOrigins(request.nextUrl.origin);
+  const trustedOrigins = getTrustedOrigins();
   const originCheck = validateOriginHeader(
     request.method,
     request.headers.get("origin"),

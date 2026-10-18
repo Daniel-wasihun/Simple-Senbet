@@ -254,10 +254,10 @@ class ReportCardController extends Controller
             $section ? (string) $section : null
         );
 
-        $className = $this->formatBilingualText($schoolClass->name);
-        $yearName = $academicYear ? $this->formatBilingualText($academicYear->name) : 'Academic Year ' . $academicYearId;
-        $semesterLabel = strtoupper(str_replace('_', ' ', $semester));
-        $generatedAt = date('Y-m-d H:i');
+        $className = htmlspecialchars($this->formatBilingualText($schoolClass->name), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $yearName = htmlspecialchars($academicYear ? $this->formatBilingualText($academicYear->name) : 'Academic Year ' . $academicYearId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $semesterLabel = htmlspecialchars(strtoupper(str_replace('_', ' ', $semester)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $generatedAt = htmlspecialchars(date('Y-m-d H:i'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         // Build HTML table rows
         $rowsHtml = '';
@@ -265,27 +265,34 @@ class ReportCardController extends Controller
             $student = $item['student'] ?? [];
             $summary = $item['summary'] ?? [];
             $attendance = $item['attendance'] ?? [];
-            $fullName = htmlspecialchars($this->formatTextValue($student['full_name'] ?? ''));
-            $statusBadgeClass = match ($summary['status'] ?? 'INCOMPLETE') {
+            $studentId = (int) ($student['id'] ?? 0);
+            $fullName = htmlspecialchars($this->formatTextValue($student['full_name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $section = htmlspecialchars((string) ($item['section'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $statusRaw = (string) ($summary['status'] ?? 'INCOMPLETE');
+            $statusBadgeClass = match ($statusRaw) {
                 'PASS' => 'status-pass',
                 'FAIL' => 'status-fail',
                 default => 'status-incomplete',
             };
+            $status = htmlspecialchars($statusRaw, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-            $sectionRank = $summary['section_rank'] ? '#' . $summary['section_rank'] : '—';
-            $classRank = $summary['class_rank'] ? '#' . $summary['class_rank'] : '—';
+            $sectionRank = htmlspecialchars((string) ($summary['section_rank'] ? '#' . $summary['section_rank'] : '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $classRank = htmlspecialchars((string) ($summary['class_rank'] ? '#' . $summary['class_rank'] : '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $average = (float) ($summary['overall_average'] ?? 0);
+            $failedCount = (int) ($summary['failed_courses_count'] ?? 0);
+            $attendanceRate = (float) ($attendance['attendance_rate'] ?? 0);
 
             $rowsHtml .= "
                 <tr>
-                    <td>{$student['id']}</td>
+                    <td>{$studentId}</td>
                     <td class='student-name'>{$fullName}</td>
-                    <td class='text-center'>{$item['section']}</td>
-                    <td class='text-center font-bold'>{$summary['overall_average']}%</td>
-                    <td class='text-center'><span class='badge {$statusBadgeClass}'>{$summary['status']}</span></td>
+                    <td class='text-center'>{$section}</td>
+                    <td class='text-center font-bold'>{$average}%</td>
+                    <td class='text-center'><span class='badge {$statusBadgeClass}'>{$status}</span></td>
                     <td class='text-center'>{$sectionRank}</td>
                     <td class='text-center'>{$classRank}</td>
-                    <td class='text-center'>{$summary['failed_courses_count']}</td>
-                    <td class='text-center'>{$attendance['attendance_rate']}%</td>
+                    <td class='text-center'>{$failedCount}</td>
+                    <td class='text-center'>{$attendanceRate}%</td>
                 </tr>
             ";
         }

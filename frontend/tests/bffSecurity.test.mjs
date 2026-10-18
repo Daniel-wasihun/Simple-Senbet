@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   validateOriginHeader,
   validateProxyPathAndMethod,
+  getTrustedOrigins,
   ALLOWED_PROXY_ROUTES,
 } from "../src/lib/bffSecurity.ts";
 
@@ -189,3 +190,66 @@ test("BFF Security - Route Allowlist Validation", async (t) => {
     assert.equal(nullByte.status, 400);
   });
 });
+
+test("BFF Security - Static Allowlist & Adversarial Origin Immunity", async (t) => {
+  await t.test("Validates and normalizes legitimate configured HTTPS origin", () => {
+    const origins = getTrustedOrigins(["https://senbet.example.com"]);
+    assert.deepEqual(origins, ["https://senbet.example.com"]);
+  });
+
+  await t.test("Normalizes URLs with trailing paths and query strings to origin only", () => {
+    const origins = getTrustedOrigins(["https://senbet.example.com:8443/app/dashboard?user=1#section"]);
+    assert.deepEqual(origins, ["https://senbet.example.com:8443"]);
+  });
+
+  await t.test("Rejects malformed URLs and non-http/https protocols", () => {
+    const origins = getTrustedOrigins([
+      "not-a-valid-url",
+      "ftp://senbet.example.com",
+      "javascript:alert(1)",
+      "",
+      null,
+    ]);
+    assert.deepEqual(origins, []);
+  });
+
+  await t.test("Rejects URLs containing user credentials", () => {
+    const origins = getTrustedOrigins(["https://admin:secret@senbet.example.com"]);
+    assert.deepEqual(origins, []);
+  });
+
+  await t.test("Fails closed when configuration is empty", () => {
+    const origins = getTrustedOrigins([]);
+    assert.deepEqual(origins, []);
+
+    // When trustedOrigins is empty, state-changing requests fail closed
+    const res = validateOriginHeader("POST", "https://senbet.example.com", null, null, origins);
+    assert.equal(res.valid, false);
+    assert.equal(res.status, 403);
+  });
+
+  await t.test("Forged Host header cannot make an attacker origin trusted", () => {
+    // Server is configured only for https://senbet.example.com
+    const serverConfig = ["https://senbet.example.com"];
+    const trusted = getTrustedOrigins(serverConfig);
+
+    // Attacker sends Origin: https://evil.com with forged Host: evil.com or Host: senbet.example.com
+    const attack1 = validateOriginHeader("POST", "https://evil.com", null, null, trusted);
+    assert.equal(attack1.valid, false);
+    assert.equal(attack1.status, 403);
+
+    const attack2 = validateOriginHeader("POST", "https://evil.com", "https://senbet.example.com/login", null, trusted);
+    assert.equal(attack2.valid, false);
+    assert.equal(attack2.status, 403);
+  });
+
+  await t.test("Conflicting Origin and Referer are evaluated strictly", () => {
+    const trusted = getTrustedOrigins(["https://senbet.example.com"]);
+
+    // If Origin is provided, it takes precedence and must be trusted
+    const res = validateOriginHeader("POST", "https://attacker.com", "https://senbet.example.com/login", null, trusted);
+    assert.equal(res.valid, false);
+    assert.equal(res.status, 403);
+  });
+});
+
