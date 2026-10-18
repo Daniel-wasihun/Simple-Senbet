@@ -223,3 +223,17 @@ export interface StudentReportCardData {
   };
 }
 
+export interface ClassGradebookData {
+  class: {
+    id: number;
+    name: string | { en?: string; am?: string };
+    code: string;
+    passing_score: number;
+  };
+  academic_year_id: number;
+  semester: string;
+  section: string | null;
+  total_students: number;
+  students: StudentReportCardData[];
+}
+
