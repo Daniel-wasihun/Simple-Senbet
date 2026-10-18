@@ -41,9 +41,7 @@ class ReportCardController extends Controller
         }
 
         // 2. Resolve Academic Year and Semester
-        $academicYearId = (int) $request->query('academic_year_id', function () {
-            return AcademicYear::where('is_current', true)->value('id') ?? AcademicYear::latest('id')->value('id') ?? 1;
-        });
+        $academicYearId = $this->resolveAcademicYearId($request);
 
         $semester = (string) $request->query('semester', 'semester_1');
 
@@ -72,9 +70,7 @@ class ReportCardController extends Controller
         }
 
         // 2. Resolve Academic Year and Semester
-        $academicYearId = (int) $request->query('academic_year_id', function () {
-            return AcademicYear::where('is_current', true)->value('id') ?? AcademicYear::latest('id')->value('id') ?? 1;
-        });
+        $academicYearId = $this->resolveAcademicYearId($request);
 
         $semester = (string) $request->query('semester', 'semester_1');
         $section = $request->query('section');
@@ -109,9 +105,7 @@ class ReportCardController extends Controller
         }
 
         // 2. Resolve Academic Year and Semester
-        $academicYearId = (int) $request->query('academic_year_id', function () {
-            return AcademicYear::where('is_current', true)->value('id') ?? AcademicYear::latest('id')->value('id') ?? 1;
-        });
+        $academicYearId = $this->resolveAcademicYearId($request);
 
         $semester = (string) $request->query('semester', 'semester_1');
         $section = $request->query('section');
@@ -214,6 +208,20 @@ class ReportCardController extends Controller
     }
 
     /**
+     * Resolve academic year ID from request or fallback to current/latest active year.
+     */
+    private function resolveAcademicYearId(Request $request): int
+    {
+        if ($request->filled('academic_year_id')) {
+            return (int) $request->query('academic_year_id');
+        }
+
+        return (int) (AcademicYear::where('is_current', true)->value('id')
+            ?? AcademicYear::latest('id')->value('id')
+            ?? 1);
+    }
+
+    /**
      * Export printable class gradebook HTML document (optimized for browser printing & PDF export).
      */
     public function exportPrint(Request $request, SchoolClass $schoolClass): \Illuminate\Http\Response|JsonResponse
@@ -233,9 +241,7 @@ class ReportCardController extends Controller
         }
 
         // 2. Resolve Academic Year and Semester
-        $academicYearId = (int) $request->query('academic_year_id', function () {
-            return AcademicYear::where('is_current', true)->value('id') ?? AcademicYear::latest('id')->value('id') ?? 1;
-        });
+        $academicYearId = $this->resolveAcademicYearId($request);
 
         $academicYear = AcademicYear::find($academicYearId);
         $semester = (string) $request->query('semester', 'semester_1');

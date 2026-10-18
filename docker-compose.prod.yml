@@ -1,0 +1,54 @@
+services:
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${NGINX_HOST_PORT:-8088}:80"
+      - "127.0.0.1:${NGINX_API_HOST_PORT:-8001}:8000"
+    volumes:
+      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - .:/var/www/html:ro
+    depends_on:
+      - backend
+      - frontend
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.fpm
+    image: simple-senbet-backend-fpm:latest
+    restart: unless-stopped
+    env_file: ${BACKEND_ENV_FILE:-.env.production}
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: simple-senbet-frontend:latest
+    restart: unless-stopped
+    env_file: ${FRONTEND_ENV_FILE:-./frontend/.env.production}
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-simple_senbet_production}
+      POSTGRES_USER: ${POSTGRES_USER:-senbet_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-staging_test_db_secret_key}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-senbet_app} -d $${POSTGRES_DB:-simple_senbet_production}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

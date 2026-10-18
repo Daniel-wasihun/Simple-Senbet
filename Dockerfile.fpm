@@ -1,0 +1,37 @@
+FROM simple-senbet-php84:latest AS extensions
+
+FROM php:8.4-fpm-alpine
+
+# Install only the runtime shared libraries needed by the pre-compiled extensions
+RUN apk add --no-cache \
+    libpng \
+    libavif \
+    libwebp \
+    libjpeg-turbo \
+    libxpm \
+    freetype \
+    icu-libs \
+    libstdc++ \
+    libpq \
+    libzip
+
+# Copy the pre-compiled PHP 8.4 extensions and ini configs from simple-senbet-php84
+COPY --from=extensions /usr/local/lib/php/extensions/no-debug-non-zts-20240924/ /usr/local/lib/php/extensions/no-debug-non-zts-20240924/
+COPY --from=extensions /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+
+# Recommended production PHP and OPcache configuration
+RUN { \
+    echo 'opcache.enable=1'; \
+    echo 'opcache.memory_consumption=128'; \
+    echo 'opcache.interned_strings_buffer=8'; \
+    echo 'opcache.max_accelerated_files=10000'; \
+    echo 'opcache.revalidate_freq=0'; \
+    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.save_comments=1'; \
+} > /usr/local/etc/php/conf.d/opcache-recommended.ini
+
+WORKDIR /var/www/html
+
+EXPOSE 9000
+
+CMD ["php-fpm"]
