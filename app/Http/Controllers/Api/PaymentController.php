@@ -11,6 +11,7 @@ use App\Models\Member;
 use App\Models\MemberPayment;
 use App\Models\MonthlyPaymentRule;
 use App\Models\TeachingAssignment;
+use App\Services\EthiopianDateService;
 use App\Services\MemberPaymentService;
 use App\Services\PaymentDashboardService;
 use App\Services\PaymentRuleService;
@@ -22,7 +23,8 @@ class PaymentController extends Controller
     public function __construct(
         protected PaymentRuleService $ruleService,
         protected MemberPaymentService $paymentService,
-        protected PaymentDashboardService $dashboardService
+        protected PaymentDashboardService $dashboardService,
+        protected EthiopianDateService $ethiopianDateService
     ) {}
 
     /**
@@ -237,25 +239,61 @@ class PaymentController extends Controller
 
         $payment->load(['member.schoolClass', 'rule', 'recordedByUser']);
 
+        $ethiopianDate = $payment->payment_date
+            ? $this->ethiopianDateService->toEthiopian($payment->payment_date)
+            : ($payment->created_at ? $this->ethiopianDateService->toEthiopian($payment->created_at) : null);
+
+        $billingMonthEth = $payment->payment_month
+            ? $this->ethiopianDateService->toEthiopian($payment->payment_month.'-01')
+            : null;
+
         return ApiResponse::success([
             'receipt_number' => $payment->reference_number,
+            'payment_reference' => $payment->reference_number,
             'payment_month' => $payment->payment_month,
+            'billing_month' => $payment->payment_month,
             'payment_date' => $payment->payment_date?->toDateString(),
+            'receipt_date' => $payment->payment_date?->toDateString() ?? $payment->created_at?->toDateString(),
             'payment_method' => $payment->payment_method,
             'paid_amount' => (float) $payment->paid_amount,
+            'amount' => (float) $payment->paid_amount,
             'expected_amount' => (float) $payment->expected_amount,
             'remaining_balance' => (float) $payment->remaining_balance,
             'payment_status' => $payment->payment_status,
-            'is_void' => $payment->is_void,
+            'is_void' => (bool) $payment->is_void,
+            'void_reason' => $payment->void_reason,
+            'payment_date_eth' => $ethiopianDate,
+            'billing_month_eth' => $billingMonthEth ? [
+                'year' => $billingMonthEth['year'],
+                'month' => $billingMonthEth['month'],
+                'month_name_en' => $billingMonthEth['month_name_en'],
+                'month_name_am' => $billingMonthEth['month_name_am'],
+                'formatted_am' => $billingMonthEth['month_name_am'].' '.$billingMonthEth['year'].' ዓ.ም.',
+                'formatted_en' => $billingMonthEth['month_name_en'].' '.$billingMonthEth['year'].' E.C.',
+            ] : null,
+            'status' => [
+                'expected_amount' => (float) $payment->expected_amount,
+                'total_paid_for_month' => (float) $payment->paid_amount,
+                'remaining_balance' => (float) $payment->remaining_balance,
+                'status' => $payment->payment_status,
+            ],
             'member' => [
                 'id' => $payment->member->id,
+                'member_code' => $payment->member->member_code ?? ('MEM-'.str_pad((string) $payment->member->id, 4, '0', STR_PAD_LEFT)),
                 'full_name' => $payment->member->full_name,
                 'christian_name' => $payment->member->christian_name,
                 'phone_number' => $payment->member->phone_number,
                 'class' => $payment->member->schoolClass?->name,
+                'class_name' => is_array($payment->member->schoolClass?->name)
+                    ? ($payment->member->schoolClass?->name['en'] ?? $payment->member->schoolClass?->name['am'] ?? '')
+                    : ($payment->member->schoolClass?->name ?? ''),
                 'section' => $payment->member->section,
             ],
-            'recorded_by' => $payment->recordedByUser?->name,
+            'recorded_by' => $payment->recordedByUser ? [
+                'id' => $payment->recordedByUser->id,
+                'name' => $payment->recordedByUser->name,
+            ] : null,
+            'recorded_by_name' => $payment->recordedByUser?->name,
             'recorded_at' => $payment->created_at?->toIso8601String(),
         ], 'Payment receipt generated successfully.');
     }

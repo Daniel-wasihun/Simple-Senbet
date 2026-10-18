@@ -23,6 +23,7 @@ import {
   Sliders,
   Calendar,
   UserCheck,
+  Download,
 } from "lucide-react";
 import {
   PaymentDashboardSummary,
@@ -80,6 +81,9 @@ export default function MemberPaymentsPage() {
 
   // Printable Receipt Modal
   const [activeReceipt, setActiveReceipt] = useState<PaymentReceiptData | null>(null);
+
+  // Export Dropdown
+  const [showExportMenu, setShowExportMenu] = useState<boolean>(false);
 
   // Rules Configuration Modal (Admin)
   const [showRuleModal, setShowRuleModal] = useState<boolean>(false);
@@ -493,6 +497,39 @@ export default function MemberPaymentsPage() {
                   <span>Configure Rules</span>
                 </button>
               )}
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Export CSV</span>
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs">
+                    <a
+                      href={`/api/backend/payments/export/monthly-summary?month=${selectedMonth}${filterClassId ? `&class_id=${filterClassId}` : ""}`}
+                      download
+                      onClick={() => setShowExportMenu(false)}
+                      className="flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 transition"
+                    >
+                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Monthly Summary CSV</span>
+                    </a>
+                    <a
+                      href={`/api/backend/payments/export/transactions?month=${selectedMonth}${filterClassId ? `&class_id=${filterClassId}` : ""}`}
+                      download
+                      onClick={() => setShowExportMenu(false)}
+                      className="flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 transition"
+                    >
+                      <CreditCard className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <span>Transactions Detail CSV</span>
+                    </a>
+                  </div>
+                )}
+              </div>
 
               <button
                 onClick={() => loadData(currentPage)}
@@ -1206,6 +1243,28 @@ export default function MemberPaymentsPage() {
             </div>
 
             {/* Receipt Printable Card */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #printable-receipt-card, #printable-receipt-card * {
+                  visibility: visible !important;
+                }
+                #printable-receipt-card {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  max-width: 550px !important;
+                  margin: 0 auto !important;
+                  border: 1px solid #cbd5e1 !important;
+                  background: #ffffff !important;
+                  box-shadow: none !important;
+                  padding: 24px !important;
+                }
+              }
+            ` }} />
             <div id="printable-receipt-card" className="p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 space-y-4 text-xs font-mono">
               <div className="text-center pb-3 border-b border-slate-200">
                 <h4 className="text-base font-black text-slate-900 tracking-tight font-sans">
@@ -1214,12 +1273,23 @@ export default function MemberPaymentsPage() {
                 <p className="text-[11px] text-slate-500 font-sans">የሰንበት ትምህርት ቤት ወርሃዊ መዋጮ ደረሰኝ</p>
                 <p className="mt-2 text-xs font-bold text-indigo-700">RECEIPT #{activeReceipt.receipt_number}</p>
                 <p className="text-[10px] text-slate-400">Date: {new Date(activeReceipt.receipt_date).toLocaleString()}</p>
+                {activeReceipt.payment_date_eth && (
+                  <p className="text-[11px] font-sans font-semibold text-indigo-900 mt-1">
+                    ቀን: {activeReceipt.payment_date_eth.formatted_am} ({activeReceipt.payment_date_eth.formatted_en})
+                  </p>
+                )}
               </div>
+
+              {activeReceipt.is_void && (
+                <div className="py-2 px-3 text-center bg-rose-50 border border-rose-300 rounded-xl text-rose-800 font-bold tracking-wider text-xs">
+                  ⚠️ VOIDED RECEIPT {activeReceipt.void_reason ? `— ${activeReceipt.void_reason}` : ""}
+                </div>
+              )}
 
               <div className="space-y-1.5 text-slate-700">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Member:</span>
-                  <span className="font-bold text-slate-900 font-sans">{activeReceipt.member.full_name}</span>
+                  <span className="font-bold text-slate-900 font-sans">{formatText(activeReceipt.member.full_name)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Member Code:</span>
@@ -1233,7 +1303,14 @@ export default function MemberPaymentsPage() {
                 )}
                 <div className="flex justify-between">
                   <span className="text-slate-500">Billing Month:</span>
-                  <span className="font-bold">{activeReceipt.billing_month}</span>
+                  <span className="font-bold">
+                    {activeReceipt.billing_month}
+                    {activeReceipt.billing_month_eth && (
+                      <span className="text-slate-500 font-sans text-[11px] ml-1.5">
+                        ({activeReceipt.billing_month_eth.formatted_am})
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Payment Method:</span>

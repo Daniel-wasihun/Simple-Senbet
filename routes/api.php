@@ -3,17 +3,18 @@
 use App\Http\Controllers\Api\AcademicYearController;
 use App\Http\Controllers\Api\AssessmentController;
 use App\Http\Controllers\Api\AssessmentResultController;
+use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PaymentExportController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\RolePermissionController;
-use App\Http\Controllers\Api\ReportCardController;
-use App\Http\Controllers\Api\SchoolClassController;
-use App\Http\Controllers\Api\AttendanceController;
-use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PromotionController;
+use App\Http\Controllers\Api\ReportCardController;
+use App\Http\Controllers\Api\RolePermissionController;
+use App\Http\Controllers\Api\SchoolClassController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -85,6 +86,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/record', [PaymentController::class, 'record'])->name('payments.record.alias');
         Route::post('/{payment}/void', [PaymentController::class, 'voidPayment'])->name('payments.void');
         Route::get('/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
+        Route::get('/export/monthly-summary', [PaymentExportController::class, 'exportMonthlySummary'])->name('payments.export.monthly-summary');
+        Route::get('/export/transactions', [PaymentExportController::class, 'exportTransactions'])->name('payments.export.transactions');
     });
 });
 
@@ -126,7 +129,6 @@ Route::get('/senbet/summary', function () {
 });
 
 use App\Http\Requests\SchoolClass\StoreSchoolClassRequest;
-use App\Http\Requests\SchoolClass\UpdateSchoolClassRequest;
 use App\Http\Resources\SchoolClassResource;
 use App\Http\Responses\ApiResponse;
 use App\Models\SchoolClass;
@@ -139,5 +141,6 @@ Route::get('/classes', function () {
 
 Route::post('/classes', function (StoreSchoolClassRequest $request) {
     $schoolClass = SchoolClass::create($request->validated());
+
     return ApiResponse::created(new SchoolClassResource($schoolClass));
 });
