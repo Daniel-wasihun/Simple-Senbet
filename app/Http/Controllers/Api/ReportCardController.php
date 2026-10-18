@@ -77,8 +77,14 @@ class ReportCardController extends Controller
         });
 
         $semester = (string) $request->query('semester', 'semester_1');
+        $section = $request->query('section');
 
-        $gradebook = $this->gradebookService->generateClassGradebook($schoolClass->id, $academicYearId, $semester);
+        $gradebook = $this->gradebookService->generateClassGradebook(
+            $schoolClass->id,
+            $academicYearId,
+            $semester,
+            $section ? (string) $section : null
+        );
 
         return ApiResponse::success($gradebook, 'Class gradebook retrieved successfully');
     }

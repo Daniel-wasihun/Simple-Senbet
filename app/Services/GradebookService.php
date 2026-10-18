@@ -256,7 +256,7 @@ class GradebookService
     /**
      * Generate class and section gradebooks with Standard Competition Ranking ("1224").
      */
-    public function generateClassGradebook(int $classId, int $academicYearId, string $semester): array
+    public function generateClassGradebook(int $classId, int $academicYearId, string $semester, ?string $section = null): array
     {
         $schoolClass = SchoolClass::findOrFail($classId);
 
@@ -293,6 +293,13 @@ class GradebookService
             }
         }
 
+        // Optional section filter
+        if ($section !== null && $section !== '' && $section !== 'all') {
+            $rankedReportCards = array_values(array_filter($rankedReportCards, function ($card) use ($section) {
+                return $card['section'] === $section;
+            }));
+        }
+
         return [
             'class' => [
                 'id' => $schoolClass->id,
@@ -302,6 +309,7 @@ class GradebookService
             ],
             'academic_year_id' => $academicYearId,
             'semester' => $semester,
+            'section' => $section,
             'total_students' => count($rankedReportCards),
             'students' => $rankedReportCards,
         ];
