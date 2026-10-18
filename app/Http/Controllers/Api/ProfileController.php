@@ -43,9 +43,36 @@ class ProfileController extends Controller
 
     private function userData(User $user): array
     {
-        return [
-            'id' => $user->id, 'name' => $user->name, 'email' => $user->email,
-            'role' => $user->getRoleNames()->first(), 'created_at' => $user->created_at,
+        $data = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->getRoleNames()->first(),
+            'created_at' => $user->created_at?->toIso8601String(),
         ];
+
+        if ($user->hasRole('teacher')) {
+            $data['teaching_assignments'] = $user->teachingAssignments()
+                ->with(['schoolClass:id,name,code', 'course:id,name,code', 'academicYear:id,name'])
+                ->get()
+                ->map(fn ($assignment) => [
+                    'id' => $assignment->id,
+                    'class_id' => $assignment->class_id,
+                    'class_name' => $assignment->schoolClass?->name,
+                    'class_code' => $assignment->schoolClass?->code,
+                    'section' => $assignment->section,
+                    'course_id' => $assignment->course_id,
+                    'course_name' => $assignment->course?->name,
+                    'course_code' => $assignment->course?->code,
+                    'academic_year_id' => $assignment->academic_year_id,
+                    'academic_year_name' => $assignment->academicYear?->name,
+                    'semester' => $assignment->semester?->value ?? (string) $assignment->semester,
+                    'is_primary' => (bool) $assignment->is_primary,
+                    'start_date' => $assignment->start_date?->format('Y-m-d'),
+                    'end_date' => $assignment->end_date?->format('Y-m-d'),
+                ])->values()->all();
+        }
+
+        return $data;
     }
 }
