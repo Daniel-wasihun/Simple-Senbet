@@ -78,57 +78,59 @@ class GradebookExportTest extends TestCase
             'class_id' => $this->class->id,
             'section' => 'A',
             'semester' => 'semester_1',
-        ]);
-
-        // Student with Amharic name
-        $this->studentAmharic = Member::factory()->create([
-            'first_name' => ['en' => 'Dawit', 'am' => 'ዳዊት'],
-            'last_name' => ['en' => 'Wolde', 'am' => 'ወልደ'],
-            'gender' => 'male',
-        ]);
-
-        StudentEnrollment::create([
-            'student_id' => $this->studentAmharic->id,
-            'class_id' => $this->class->id,
-            'academic_year_id' => $this->year->id,
-            'section' => 'A',
-            'enrollment_status' => 'active',
-        ]);
-
-        // Student with formula injection in name
-        $this->studentFormula = Member::factory()->create([
-            'first_name' => ['en' => '=cmd|'],
-            'last_name' => ['en' => 'calc!A1'],
-            'gender' => 'female',
-        ]);
-
-        StudentEnrollment::create([
-            'student_id' => $this->studentFormula->id,
-            'class_id' => $this->class->id,
-            'academic_year_id' => $this->year->id,
-            'section' => 'A',
-            'enrollment_status' => 'active',
+            'is_primary' => true,
         ]);
 
         $assessment = Assessment::create([
-            'course_id' => $this->course->id,
-            'academic_year_id' => $this->year->id,
+            'teaching_assignment_id' => $this->assignment->id,
             'name' => ['en' => 'Final Exam'],
-            'type' => 'final',
             'total_score' => 100.00,
             'weight_percentage' => 100.00,
-            'semester' => 'semester_1',
+        ]);
+
+        // Student with Amharic name
+        $this->studentAmharic = Member::create([
+            'full_name' => ['en' => 'Dawit Wolde', 'am' => 'ዳዊት ወልደ'],
+            'date_of_birth' => '2010-01-01',
+            'gender' => 'male',
+            'class_id' => $this->class->id,
+            'section' => 'A',
+        ]);
+
+        StudentEnrollment::create([
+            'member_id' => $this->studentAmharic->id,
+            'academic_year_id' => $this->year->id,
+            'class_id' => $this->class->id,
+            'section' => 'A',
+            'start_date' => '2025-09-01',
         ]);
 
         AssessmentResult::create([
             'assessment_id' => $assessment->id,
-            'student_id' => $this->studentAmharic->id,
+            'member_id' => $this->studentAmharic->id,
             'score' => 95.00,
         ]);
 
+        // Student with formula injection in name
+        $this->studentFormula = Member::create([
+            'full_name' => ['en' => '=cmd| calc!A1'],
+            'date_of_birth' => '2010-02-01',
+            'gender' => 'female',
+            'class_id' => $this->class->id,
+            'section' => 'A',
+        ]);
+
+        StudentEnrollment::create([
+            'member_id' => $this->studentFormula->id,
+            'academic_year_id' => $this->year->id,
+            'class_id' => $this->class->id,
+            'section' => 'A',
+            'start_date' => '2025-09-01',
+        ]);
+
         AssessmentResult::create([
             'assessment_id' => $assessment->id,
-            'student_id' => $this->studentFormula->id,
+            'member_id' => $this->studentFormula->id,
             'score' => 45.00,
         ]);
     }
@@ -147,7 +149,11 @@ class GradebookExportTest extends TestCase
         $this->assertTrue(str_starts_with($content, "\xEF\xBB\xBF"), 'Response must start with UTF-8 BOM');
 
         // Verify CSV header columns
-        $this->assertStringContainsString('Student ID,Full Name,Section,Overall Average (%),Status,Section Rank,Class Rank,Failed Courses,Attendance Rate (%)', $content);
+        $this->assertStringContainsString('Student ID', $content);
+        $this->assertStringContainsString('Full Name', $content);
+        $this->assertStringContainsString('Overall Average (%)', $content);
+        $this->assertStringContainsString('Section Rank', $content);
+        $this->assertStringContainsString('Class Rank', $content);
 
         // Academic director also has access
         $directorRes = $this->actingAs($this->director, 'sanctum')

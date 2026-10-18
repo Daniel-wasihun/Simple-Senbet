@@ -135,6 +135,7 @@ test("BFF Security - Route Allowlist Validation", async (t) => {
     assert.equal(validateProxyPathAndMethod("GET", ["members", "101"]).allowed, true);
     assert.equal(validateProxyPathAndMethod("GET", ["report-cards", "student", "101"]).allowed, true);
     assert.equal(validateProxyPathAndMethod("GET", ["report-cards", "class", "5"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["report-cards", "class", "5", "export", "csv"]).allowed, true);
   });
 
   await t.test("Rejects unpermitted methods on read-only routes with 405", () => {
