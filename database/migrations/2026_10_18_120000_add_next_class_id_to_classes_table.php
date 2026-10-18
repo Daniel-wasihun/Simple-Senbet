@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('classes', function (Blueprint $table) {
-            $table->foreignId('next_class_id')
-                ->nullable()
-                ->after('passing_score')
-                ->constrained('classes')
-                ->nullOnDelete();
-        });
+        if (! Schema::hasColumn('classes', 'next_class_id')) {
+            Schema::table('classes', function (Blueprint $table) {
+                $table->foreignId('next_class_id')
+                    ->nullable()
+                    ->after('passing_score')
+                    ->constrained('classes')
+                    ->nullOnDelete();
+            });
+        }
     }
 
     /**
@@ -25,9 +27,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('classes', function (Blueprint $table) {
-            $table->dropForeign(['next_class_id']);
-            $table->dropColumn('next_class_id');
-        });
+        if (Schema::hasColumn('classes', 'next_class_id')) {
+            Schema::table('classes', function (Blueprint $table) {
+                $table->dropForeign(['next_class_id']);
+                $table->dropColumn('next_class_id');
+            });
+        }
     }
 };

@@ -1,0 +1,176 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Payment\RecordPaymentRequest;
+use App\Http\Requests\Payment\StorePaymentRuleRequest;
+use App\Http\Requests\Payment\VoidPaymentRequest;
+use App\Http\Responses\ApiResponse;
+use App\Models\Member;
+use App\Models\MemberPayment;
+use App\Models\MonthlyPaymentRule;
+use App\Services\MemberPaymentService;
+use App\Services\PaymentDashboardService;
+use App\Services\PaymentRuleService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class PaymentController extends Controller
+{
+    public function __construct(
+        protected PaymentRuleService $ruleService,
+        protected MemberPaymentService $paymentService,
+        protected PaymentDashboardService $dashboardService
+    ) {}
+
+    /**
+     * List configured monthly payment rules.
+     */
+    public function rules(): JsonResponse
+    {
+        $rules = MonthlyPaymentRule::with(['schoolClass', 'minimumSchoolClass', 'creator'])
+            ->orderByDesc('effective_from')
+            ->get();
+
+        return ApiResponse::success($rules, 'Monthly payment rules retrieved successfully.');
+    }
+
+    /**
+     * Create a new monthly payment rule.
+     */
+    public function storeRule(StorePaymentRuleRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator'])) {
+            return ApiResponse::forbidden('Only administrators can configure payment rules.');
+        }
+
+        $validated = $request->validated();
+        $validated['created_by'] = $user->id;
+
+        $rule = MonthlyPaymentRule::create($validated);
+
+        return ApiResponse::created($rule->load(['schoolClass', 'minimumSchoolClass']), 'Payment rule created successfully.');
+    }
+
+    /**
+     * Get reconciled monthly payment dashboard metrics.
+     */
+    public function dashboard(Request $request): JsonResponse
+    {
+        $month = (string) $request->query('month', now()->format('Y-m'));
+        $classId = $request->query('class_id') ? (int) $request->query('class_id') : null;
+
+        $summary = $this->dashboardService->getDashboardSummary($month, $classId);
+
+        return ApiResponse::success($summary, 'Payment dashboard metrics retrieved successfully.');
+    }
+
+    /**
+     * Get paginated, filterable member payment ledger.
+     */
+    public function membersLedger(Request $request): JsonResponse
+    {
+        $month = (string) $request->query('month', now()->format('Y-m'));
+        $filters = [
+            'class_id' => $request->query('class_id'),
+            'status' => $request->query('status'),
+            'search' => $request->query('search'),
+            'page' => $request->query('page', 1),
+            'per_page' => $request->query('per_page', 15),
+        ];
+
+        $paginator = $this->dashboardService->getMembersLedger($month, $filters);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get a member's complete payment history.
+     */
+    public function memberHistory(Member $member): JsonResponse
+    {
+        $history = $this->paymentService->getMemberPaymentHistory($member->id);
+
+        return ApiResponse::success([
+            'member' => [
+                'id' => $member->id,
+                'full_name' => $member->full_name,
+                'christian_name' => $member->christian_name,
+                'phone_number' => $member->phone_number,
+                'date_of_birth' => $member->date_of_birth?->toDateString(),
+            ],
+            'payments' => $history,
+        ], 'Member payment history retrieved successfully.');
+    }
+
+    /**
+     * Record a new member payment transaction.
+     */
+    public function record(RecordPaymentRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
+            return ApiResponse::forbidden('You do not have permission to record payments.');
+        }
+
+        $payment = $this->paymentService->recordPayment($request->validated(), $user);
+
+        return ApiResponse::created($payment->load(['member', 'rule', 'recordedByUser']), 'Payment recorded successfully.');
+    }
+
+    /**
+     * Void an existing payment.
+     */
+    public function voidPayment(VoidPaymentRequest $request, MemberPayment $payment): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator'])) {
+            return ApiResponse::forbidden('Only administrators can void payments.');
+        }
+
+        $voided = $this->paymentService->voidPayment($payment, $request->validated()['reason'], $user);
+
+        return ApiResponse::success($voided->load(['member', 'voidedByUser', 'auditLogs']), 'Payment voided successfully.');
+    }
+
+    /**
+     * Get printable payment receipt data.
+     */
+    public function receipt(MemberPayment $payment): JsonResponse
+    {
+        $payment->load(['member.schoolClass', 'rule', 'recordedByUser']);
+
+        return ApiResponse::success([
+            'receipt_number' => $payment->reference_number,
+            'payment_month' => $payment->payment_month,
+            'payment_date' => $payment->payment_date?->toDateString(),
+            'payment_method' => $payment->payment_method,
+            'paid_amount' => (float) $payment->paid_amount,
+            'expected_amount' => (float) $payment->expected_amount,
+            'remaining_balance' => (float) $payment->remaining_balance,
+            'payment_status' => $payment->payment_status,
+            'is_void' => $payment->is_void,
+            'member' => [
+                'id' => $payment->member->id,
+                'full_name' => $payment->member->full_name,
+                'christian_name' => $payment->member->christian_name,
+                'phone_number' => $payment->member->phone_number,
+                'class' => $payment->member->schoolClass?->name,
+                'section' => $payment->member->section,
+            ],
+            'recorded_by' => $payment->recordedByUser?->name,
+            'recorded_at' => $payment->created_at?->toIso8601String(),
+        ], 'Payment receipt generated successfully.');
+    }
+}

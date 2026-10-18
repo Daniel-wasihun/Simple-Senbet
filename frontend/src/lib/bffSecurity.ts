@@ -112,6 +112,48 @@ export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
     allowedMethods: ["GET"],
     description: "View printable class gradebook",
   },
+  // 16. Payment Rules: GET, POST
+  {
+    pattern: /^payments\/rules$/,
+    allowedMethods: ["GET", "POST"],
+    description: "List or configure monthly payment rules",
+  },
+  // 17. Payment Dashboard Summary: GET
+  {
+    pattern: /^payments\/dashboard$/,
+    allowedMethods: ["GET"],
+    description: "View monthly payment reconciliation dashboard",
+  },
+  // 18. Member Payments Ledger: GET
+  {
+    pattern: /^payments\/members$/,
+    allowedMethods: ["GET"],
+    description: "List members monthly payment ledger",
+  },
+  // 19. Member Payment History: GET
+  {
+    pattern: /^payments\/members\/\d+$/,
+    allowedMethods: ["GET"],
+    description: "View member payment history and status",
+  },
+  // 20. Record Payment: POST
+  {
+    pattern: /^payments$/,
+    allowedMethods: ["POST"],
+    description: "Record a member payment transaction",
+  },
+  // 21. Void Payment: POST
+  {
+    pattern: /^payments\/\d+\/void$/,
+    allowedMethods: ["POST"],
+    description: "Void a recorded member payment with reason",
+  },
+  // 22. Payment Receipt: GET
+  {
+    pattern: /^payments\/\d+\/receipt$/,
+    allowedMethods: ["GET"],
+    description: "View printable payment receipt",
+  },
 ];
 
 /**

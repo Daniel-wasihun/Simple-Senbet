@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('code')->unique();
             $table->unsignedInteger('number_of_sections')->default(1);
             $table->decimal('passing_score', 5, 2)->default(50.00);
+            $table->foreignId('next_class_id')->nullable()->constrained('classes')->nullOnDelete();
             $table->timestamps();
         });
 

@@ -12,28 +12,30 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('teaching_assignments', function (Blueprint $table) {
-            $table->foreignId('class_id')->after('academic_year_id')->constrained('classes')->restrictOnDelete();
-            $table->string('section', 20)->after('class_id');
-            $table->boolean('is_primary')->default(false)->after('semester');
-            $table->date('start_date')->after('is_primary')->nullable();
-            $table->date('end_date')->after('start_date')->nullable();
+        if (! Schema::hasColumn('teaching_assignments', 'section')) {
+            Schema::table('teaching_assignments', function (Blueprint $table) {
+                $table->foreignId('class_id')->after('academic_year_id')->constrained('classes')->restrictOnDelete();
+                $table->string('section', 20)->after('class_id');
+                $table->boolean('is_primary')->default(false)->after('semester');
+                $table->date('start_date')->after('is_primary')->nullable();
+                $table->date('end_date')->after('start_date')->nullable();
 
-            $table->dropUnique('unique_teaching_assignment');
+                $table->dropUnique('unique_teaching_assignment');
 
-            $table->unique(
-                ['teacher_id', 'academic_year_id', 'class_id', 'section', 'course_id', 'semester', 'start_date'],
-                'uq_teacher_assignment_temporal'
-            );
+                $table->unique(
+                    ['teacher_id', 'academic_year_id', 'class_id', 'section', 'course_id', 'semester', 'start_date'],
+                    'uq_teacher_assignment_temporal'
+                );
 
-            $table->index(
-                ['academic_year_id', 'class_id', 'section', 'course_id', 'semester'],
-                'idx_teaching_assignment_lookup'
-            );
-        });
+                $table->index(
+                    ['academic_year_id', 'class_id', 'section', 'course_id', 'semester'],
+                    'idx_teaching_assignment_lookup'
+                );
+            });
 
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement('ALTER TABLE teaching_assignments ADD CONSTRAINT chk_assignment_dates CHECK (end_date IS NULL OR end_date > start_date);');
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('ALTER TABLE teaching_assignments ADD CONSTRAINT chk_assignment_dates CHECK (end_date IS NULL OR end_date > start_date);');
+            }
         }
     }
 

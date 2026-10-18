@@ -93,4 +93,12 @@ class Member extends Model
     {
         return $this->hasOne(StudentEnrollment::class, 'member_id')->whereNull('end_date');
     }
+
+    /**
+     * Get monthly payment records for this member.
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(MemberPayment::class, 'member_id');
+    }
 }

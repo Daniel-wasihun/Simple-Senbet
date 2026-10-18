@@ -237,3 +237,117 @@ export interface ClassGradebookData {
   students: StudentReportCardData[];
 }
 
+export interface MonthlyPaymentRuleData {
+  id: number;
+  name: string | { en?: string; am?: string };
+  amount: number;
+  minimum_age: number | null;
+  minimum_class_id: number | null;
+  target_class_id: number | null;
+  effective_from: string;
+  effective_to: string | null;
+  carry_forward_credit: boolean;
+  is_active: boolean;
+  minimum_class?: { id: number; name: string | { en?: string; am?: string }; code: string } | null;
+  target_class?: { id: number; name: string | { en?: string; am?: string }; code: string } | null;
+}
+
+export interface PaymentAuditLogData {
+  id: number;
+  action: string;
+  reason: string;
+  performed_by: number;
+  performer?: { id: number; name: string };
+  created_at: string;
+}
+
+export interface MemberPaymentRecord {
+  id: number;
+  member_id: number;
+  payment_rule_id: number | null;
+  billing_month: string;
+  amount: number;
+  payment_method: 'CASH' | 'BANK_TRANSFER' | 'CHECK' | 'MOBILE_MONEY' | 'OTHER';
+  payment_reference: string | null;
+  receipt_number: string;
+  is_void: boolean;
+  void_reason: string | null;
+  voided_at: string | null;
+  paid_at: string;
+  notes: string | null;
+  rule?: MonthlyPaymentRuleData | null;
+  recorded_by_user?: { id: number; name: string } | null;
+  voided_by_user?: { id: number; name: string } | null;
+  audit_logs?: PaymentAuditLogData[];
+}
+
+export interface MemberMonthlyStatus {
+  member_id: number;
+  member_code: string;
+  full_name: string;
+  christian_name?: string | null;
+  phone_number?: string | null;
+  class_id?: number | null;
+  class_name?: string | null;
+  age?: number | null;
+  expected_amount: number;
+  paid_amount: number;
+  remaining_balance: number;
+  overpaid_amount: number;
+  status: 'PAID' | 'PARTIAL' | 'UNPAID' | 'OVERPAID' | 'EXEMPT';
+  payments_count: number;
+  last_payment_date?: string | null;
+  last_receipt_number?: string | null;
+}
+
+export interface PaymentDashboardSummary {
+  billing_month: string;
+  financial_summary: {
+    total_expected: number;
+    total_collected: number;
+    total_remaining: number;
+    total_overpaid: number;
+    collection_rate_percent: number;
+  };
+  member_counts: {
+    total_members: number;
+    eligible_members: number;
+    paid_members: number;
+    partial_members: number;
+    unpaid_members: number;
+    overpaid_members: number;
+    exempt_members: number;
+  };
+  active_rules: MonthlyPaymentRuleData[];
+}
+
+export interface PaymentReceiptData {
+  receipt_number: string;
+  receipt_date: string;
+  billing_month: string;
+  amount: number;
+  payment_method: string;
+  payment_reference?: string | null;
+  member: {
+    id: number;
+    member_code: string;
+    full_name: string;
+    christian_name?: string | null;
+    phone_number?: string | null;
+    class_name?: string | null;
+  };
+  status: {
+    expected_amount: number;
+    total_paid_for_month: number;
+    remaining_balance: number;
+    status: string;
+  };
+  recorded_by?: {
+    id: number;
+    name: string;
+  } | null;
+  is_void: boolean;
+  void_reason?: string | null;
+}
+
+

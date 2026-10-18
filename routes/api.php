@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\ReportCardController;
 use App\Http\Controllers\Api\SchoolClassController;
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PromotionController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
@@ -71,6 +72,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/student/{student}', [PromotionController::class, 'evaluateStudent'])->name('promotion.student');
         Route::post('/dry-run', [PromotionController::class, 'dryRun'])->name('promotion.dry-run');
         Route::post('/commit', [PromotionController::class, 'commit'])->name('promotion.commit');
+    });
+
+    Route::prefix('payments')->group(function () {
+        Route::get('/rules', [PaymentController::class, 'rules'])->name('payments.rules');
+        Route::post('/rules', [PaymentController::class, 'storeRule'])->name('payments.rules.store');
+        Route::get('/dashboard', [PaymentController::class, 'dashboard'])->name('payments.dashboard');
+        Route::get('/members', [PaymentController::class, 'membersLedger'])->name('payments.members');
+        Route::get('/members/{member}', [PaymentController::class, 'memberHistory'])->name('payments.member.history');
+        Route::post('/', [PaymentController::class, 'record'])->name('payments.record');
+        Route::post('/{payment}/void', [PaymentController::class, 'voidPayment'])->name('payments.void');
+        Route::get('/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
     });
 });
 
