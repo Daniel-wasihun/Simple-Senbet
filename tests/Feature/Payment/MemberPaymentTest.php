@@ -472,4 +472,53 @@ class MemberPaymentTest extends TestCase
         $this->assertEquals(100.00, $data['paid_amount']);
         $this->assertEquals('CASH', $data['payment_method']);
     }
+
+    public function test_read_endpoints_forbidden_for_students(): void
+    {
+        // Student attempting to access dashboard metrics -> 403
+        $resDash = $this->actingAs($this->student, 'sanctum')->getJson('/api/payments/dashboard');
+        $resDash->assertStatus(403);
+
+        // Student attempting to access member ledger -> 403
+        $resLedger = $this->actingAs($this->student, 'sanctum')->getJson('/api/payments/members');
+        $resLedger->assertStatus(403);
+    }
+
+    public function test_credit_carry_forward_offsets_next_month_obligation(): void
+    {
+        $paymentService = app(MemberPaymentService::class);
+
+        MonthlyPaymentRule::create([
+            'name' => ['en' => 'Monthly Dues With Carry Forward'],
+            'amount' => 50.00,
+            'effective_from' => '2026-01-01',
+            'is_active' => true,
+            'allow_credit_carry_forward' => true,
+        ]);
+
+        $member = Member::create([
+            'full_name' => ['en' => 'Carry Forward Member'],
+            'date_of_birth' => '2000-01-01',
+            'gender' => 'male',
+            'class_id' => $this->seniorClass->id,
+        ]);
+
+        // In 2026-10: owes 50 ETB, pays 100 ETB (overpaid 50 ETB credit)
+        $paymentService->recordPayment([
+            'member_id' => $member->id,
+            'payment_month' => '2026-10',
+            'amount' => 100.00,
+        ], $this->admin);
+
+        // In 2026-11: owes 50 ETB, member pays 0.01 ETB token or completes payment
+        $p2 = $paymentService->recordPayment([
+            'member_id' => $member->id,
+            'payment_month' => '2026-11',
+            'amount' => 0.01,
+        ], $this->admin);
+
+        // Because of the 50 ETB carry-forward credit, remaining balance in 2026-11 is 0.00 and status is OVERPAID/PAID
+        $this->assertEquals(0.00, (float) $p2->remaining_balance);
+        $this->assertEquals('OVERPAID', $p2->payment_status);
+    }
 }

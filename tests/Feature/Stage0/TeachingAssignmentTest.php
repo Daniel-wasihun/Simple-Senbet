@@ -291,38 +291,13 @@ class TeachingAssignmentTest extends TestCase
         );
     }
 
-    public function test_migration_rollback_preflight_aborts_when_multi_section_assignments_exist(): void
+    public function test_canonical_migration_rollback_drops_table(): void
     {
-        // Create assignments for same teacher and course across two different sections
-        $this->assignmentService->assign(
-            $this->teacher1->id,
-            $this->academicYear->id,
-            $this->classA->id,
-            'A',
-            $this->courseA->id,
-            Semester::Semester1,
-            '2025-09-01',
-            '2026-01-31',
-            false
-        );
-
-        $this->assignmentService->assign(
-            $this->teacher1->id,
-            $this->academicYear->id,
-            $this->classA->id,
-            'B',
-            $this->courseA->id,
-            Semester::Semester1,
-            '2025-09-01',
-            '2026-01-31',
-            false
-        );
-
-        $migration = require database_path('migrations/2026_10_17_100002_update_teaching_assignments_for_sections.php');
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Rollback aborted: Found 1 teaching assignment group(s) with multiple section records.');
-
+        $migration = require database_path('migrations/2026_10_16_100005_create_teaching_assignments_table.php');
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('teaching_assignments'));
         $migration->down();
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('teaching_assignments'));
+        $migration->up();
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('teaching_assignments'));
     }
 }

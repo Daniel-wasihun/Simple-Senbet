@@ -32,7 +32,7 @@ class MemberPaymentService
     public function recordPayment(array $data, User $recordedBy): MemberPayment
     {
         $memberId = (int) $data['member_id'];
-        $paymentMonth = (string) $data['payment_month'];
+        $paymentMonth = (string) ($data['payment_month'] ?? $data['billing_month'] ?? '');
         $amountPaid = round((float) $data['amount'], 2);
 
         if ($amountPaid <= 0.00) {
@@ -63,7 +63,25 @@ class MemberPaymentService
                 ->where('is_void', false)
                 ->get();
 
-            $previouslyPaid = round((float) $priorPayments->sum('paid_amount'), 2);
+            // Calculate credit carried forward from earlier months if rule allows
+            $creditCarriedForward = 0.00;
+            if ($eval['rule']?->allow_credit_carry_forward) {
+                $earlierMonthGroups = MemberPayment::where('member_id', $memberId)
+                    ->where('payment_month', '<', $paymentMonth)
+                    ->where('is_void', false)
+                    ->get()
+                    ->groupBy('payment_month');
+
+                foreach ($earlierMonthGroups as $mGroup) {
+                    $mExpected = (float) $mGroup->first()->expected_amount;
+                    $mPaid = (float) $mGroup->sum('paid_amount');
+                    if ($mPaid > $mExpected) {
+                        $creditCarriedForward += ($mPaid - $mExpected);
+                    }
+                }
+            }
+
+            $previouslyPaid = round((float) $priorPayments->sum('paid_amount') + $creditCarriedForward, 2);
             $newCumulativePaid = round($previouslyPaid + $amountPaid, 2);
 
             $remainingBalance = max(0.00, round($expectedAmount - $newCumulativePaid, 2));
@@ -78,7 +96,8 @@ class MemberPaymentService
             }
 
             $paymentDate = ! empty($data['payment_date']) ? Carbon::parse($data['payment_date'])->toDateString() : now()->toDateString();
-            $referenceNumber = ! empty($data['reference_number']) ? trim($data['reference_number']) : $this->generateReferenceNumber($paymentMonth);
+            $rawRef = ! empty($data['reference_number']) ? $data['reference_number'] : ($data['payment_reference'] ?? null);
+            $referenceNumber = ! empty($rawRef) ? trim((string) $rawRef) : $this->generateReferenceNumber($paymentMonth);
 
             // Create payment record
             $payment = MemberPayment::create([

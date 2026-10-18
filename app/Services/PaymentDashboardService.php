@@ -81,8 +81,11 @@ class PaymentDashboardService
             ? round(($totalCollectedEligible / $totalExpected) * 100, 2)
             : 0.00;
 
+        $activeRules = \App\Models\MonthlyPaymentRule::where('is_active', true)->get();
+
         return [
             'payment_month' => $paymentMonth,
+            'billing_month' => $paymentMonth,
             'filter_class_id' => $classId,
             'metrics' => [
                 'expected_amount' => $totalExpected,
@@ -96,6 +99,23 @@ class PaymentDashboardService
                 'overpaid_count' => $overpaidCount,
                 'exempt_count' => $exemptCount,
             ],
+            'financial_summary' => [
+                'total_expected' => $totalExpected,
+                'total_collected' => $totalCollected,
+                'total_remaining' => $totalRemaining,
+                'total_overpaid' => 0.00,
+                'collection_rate_percent' => $collectionRate,
+            ],
+            'member_counts' => [
+                'total_members' => $members->count(),
+                'eligible_members' => $members->count() - $exemptCount,
+                'paid_members' => $fullyPaidCount,
+                'partial_members' => $partiallyPaidCount,
+                'unpaid_members' => $unpaidCount,
+                'overpaid_members' => $overpaidCount,
+                'exempt_members' => $exemptCount,
+            ],
+            'active_rules' => $activeRules,
         ];
     }
 
@@ -159,6 +179,11 @@ class PaymentDashboardService
 
             $lastPayment = $payments->first();
 
+            $fullName = is_array($member->full_name) ? ($member->full_name['en'] ?? $member->full_name['am'] ?? '') : (string) $member->full_name;
+            $christianName = is_array($member->christian_name) ? ($member->christian_name['en'] ?? $member->christian_name['am'] ?? '') : (string) ($member->christian_name ?? '');
+            $className = $member->schoolClass ? (is_array($member->schoolClass->name) ? ($member->schoolClass->name['en'] ?? $member->schoolClass->name['am'] ?? '') : (string) $member->schoolClass->name) : null;
+            $overpaidAmount = max(0.00, round($totalPaid - $expected, 2));
+
             $rows[] = [
                 'member' => [
                     'id' => $member->id,
@@ -166,6 +191,13 @@ class PaymentDashboardService
                     'christian_name' => $member->christian_name,
                     'phone_number' => $member->phone_number,
                 ],
+                'member_id' => $member->id,
+                'member_code' => 'MEM-'.str_pad((string) $member->id, 4, '0', STR_PAD_LEFT),
+                'full_name' => $fullName,
+                'christian_name' => $christianName,
+                'phone_number' => $member->phone_number,
+                'class_id' => $member->class_id,
+                'class_name' => $className,
                 'age' => $eval['age'],
                 'class' => $member->schoolClass ? [
                     'id' => $member->schoolClass->id,
@@ -182,10 +214,13 @@ class PaymentDashboardService
                 'expected_amount' => $expected,
                 'paid_amount' => $totalPaid,
                 'remaining_balance' => $remaining,
+                'overpaid_amount' => $overpaidAmount,
+                'status' => $status,
                 'payment_status' => $status,
                 'payments_count' => $payments->count(),
                 'last_payment_date' => $lastPayment?->payment_date?->toDateString(),
                 'last_reference_number' => $lastPayment?->reference_number,
+                'last_receipt_number' => $lastPayment?->reference_number,
             ];
         }
 

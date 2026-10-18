@@ -14,10 +14,12 @@ class StorePaymentRuleRequest extends BaseRequest
             'minimum_age' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:120'],
             'minimum_class_id' => ['sometimes', 'nullable', 'integer', 'exists:classes,id'],
             'class_id' => ['sometimes', 'nullable', 'integer', 'exists:classes,id'],
+            'target_class_id' => ['sometimes', 'nullable', 'integer', 'exists:classes,id'],
             'effective_from' => ['required', 'date'],
             'effective_to' => ['sometimes', 'nullable', 'date', 'after_or_equal:effective_from'],
             'is_active' => ['sometimes', 'boolean'],
             'allow_credit_carry_forward' => ['sometimes', 'boolean'],
+            'carry_forward_credit' => ['sometimes', 'boolean'],
         ];
     }
 }

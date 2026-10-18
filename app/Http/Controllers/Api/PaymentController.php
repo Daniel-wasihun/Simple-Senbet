@@ -47,6 +47,14 @@ class PaymentController extends Controller
         }
 
         $validated = $request->validated();
+        if (isset($validated['target_class_id']) && ! isset($validated['class_id'])) {
+            $validated['class_id'] = $validated['target_class_id'];
+            unset($validated['target_class_id']);
+        }
+        if (isset($validated['carry_forward_credit']) && ! isset($validated['allow_credit_carry_forward'])) {
+            $validated['allow_credit_carry_forward'] = $validated['carry_forward_credit'];
+            unset($validated['carry_forward_credit']);
+        }
         $validated['created_by'] = $user->id;
 
         $rule = MonthlyPaymentRule::create($validated);
@@ -59,6 +67,11 @@ class PaymentController extends Controller
      */
     public function dashboard(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
+            return ApiResponse::forbidden('You do not have permission to access payment records.');
+        }
+
         $month = (string) $request->query('month', now()->format('Y-m'));
         $classId = $request->query('class_id') ? (int) $request->query('class_id') : null;
 
@@ -72,6 +85,11 @@ class PaymentController extends Controller
      */
     public function membersLedger(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
+            return ApiResponse::forbidden('You do not have permission to access payment records.');
+        }
+
         $month = (string) $request->query('month', now()->format('Y-m'));
         $filters = [
             'class_id' => $request->query('class_id'),
@@ -98,8 +116,13 @@ class PaymentController extends Controller
     /**
      * Get a member's complete payment history.
      */
-    public function memberHistory(Member $member): JsonResponse
+    public function memberHistory(Request $request, Member $member): JsonResponse
     {
+        $user = $request->user();
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
+            return ApiResponse::forbidden('You do not have permission to access payment records.');
+        }
+
         $history = $this->paymentService->getMemberPaymentHistory($member->id);
 
         return ApiResponse::success([
@@ -147,8 +170,13 @@ class PaymentController extends Controller
     /**
      * Get printable payment receipt data.
      */
-    public function receipt(MemberPayment $payment): JsonResponse
+    public function receipt(Request $request, MemberPayment $payment): JsonResponse
     {
+        $user = $request->user();
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
+            return ApiResponse::forbidden('You do not have permission to access payment records.');
+        }
+
         $payment->load(['member.schoolClass', 'rule', 'recordedByUser']);
 
         return ApiResponse::success([
