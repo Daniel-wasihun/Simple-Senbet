@@ -1,0 +1,3208 @@
+{
+  "info": {
+    "_postman_id": "c1f7a829-06b2-4d51-9e28-769a6868cbe9",
+    "name": "Simple-Senbet API Collection",
+    "description": "Self-contained, production-grade Postman API test suite for the Simple-Senbet Sunday School platform. Fully covers authentication, school bootstrap discovery, academic year and class prerequisites, draft session creation, duplicate slot collision prevention, atomic roster submission, 24-hour mark correction window, administrative overrides with audit logs, session closure lifecycle protection, daily attendance summary reports with absentee rosters, and negative authorization boundaries.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@example.com"
+    },
+    {
+      "key": "admin_password",
+      "value": "ChangeMe123!"
+    },
+    {
+      "key": "teacher_email",
+      "value": "teacher@example.com"
+    },
+    {
+      "key": "teacher_password",
+      "value": "password"
+    },
+    {
+      "key": "unassigned_teacher_email",
+      "value": "unassigned_teacher@example.com"
+    },
+    {
+      "key": "unassigned_teacher_password",
+      "value": "password"
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "teacher_token",
+      "value": ""
+    },
+    {
+      "key": "unassigned_teacher_token",
+      "value": ""
+    },
+    {
+      "key": "temp_logout_token",
+      "value": ""
+    },
+    {
+      "key": "admin_user_id",
+      "value": ""
+    },
+    {
+      "key": "teacher_user_id",
+      "value": ""
+    },
+    {
+      "key": "academic_year_id",
+      "value": "1"
+    },
+    {
+      "key": "term_id",
+      "value": "1"
+    },
+    {
+      "key": "class_id",
+      "value": "1"
+    },
+    {
+      "key": "course_id",
+      "value": "1"
+    },
+    {
+      "key": "student_id_1",
+      "value": "1"
+    },
+    {
+      "key": "student_id_2",
+      "value": "2"
+    },
+    {
+      "key": "session_id",
+      "value": "1"
+    },
+    {
+      "key": "teacher_session_id",
+      "value": "2"
+    },
+    {
+      "key": "session_date",
+      "value": "2026-03-02"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Configuration and Health Checks",
+      "item": [
+        {
+          "name": "01.1 Status & Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Database connection is healthy', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('database');",
+                  "    pm.expect(json.database.connected).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "01.2 Public Senbet Overview Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns Sunday school metadata and modules', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('title');",
+                  "    pm.expect(json).to.have.property('modules');",
+                  "    pm.expect(json.modules).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/senbet/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "senbet",
+                "summary"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Authentication and Authorization",
+      "item": [
+        {
+          "name": "02.1 Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Captures admin token and user ID', function () {",
+                  "    var json = pm.response.json();",
+                  "    var token = json.token || (json.data && json.data.token);",
+                  "    pm.expect(token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('admin_token', token);",
+                  "    var user = json.user || (json.data && json.data.user);",
+                  "    if (user && user.id) {",
+                  "        pm.collectionVariables.set('admin_user_id', String(user.id));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\",\n  \"device_name\": \"admin-runner-session\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.2 Teacher Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Captures teacher token and user ID', function () {",
+                  "    var json = pm.response.json();",
+                  "    var token = json.token || (json.data && json.data.token);",
+                  "    pm.expect(token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('teacher_token', token);",
+                  "    var user = json.user || (json.data && json.data.user);",
+                  "    if (user && user.id) {",
+                  "        pm.collectionVariables.set('teacher_user_id', String(user.id));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacher_email}}\",\n  \"password\": \"{{teacher_password}}\",\n  \"device_name\": \"teacher-runner-session\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.3 Unassigned Teacher Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Captures unassigned teacher token', function () {",
+                  "    var json = pm.response.json();",
+                  "    var token = json.token || (json.data && json.data.token);",
+                  "    pm.expect(token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('unassigned_teacher_token', token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{unassigned_teacher_email}}\",\n  \"password\": \"{{unassigned_teacher_password}}\",\n  \"device_name\": \"unassigned-teacher-session\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.4 Authenticated Profile Show",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns profile data for authenticated user', function () {",
+                  "    var json = pm.response.json();",
+                  "    var user = json.user || json.data || json;",
+                  "    pm.expect(user).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.5 Temporary Session Login for Logout Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Captures temporary token for revocation test', function () {",
+                  "    var json = pm.response.json();",
+                  "    var token = json.token || (json.data && json.data.token);",
+                  "    pm.expect(token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('temp_logout_token', token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\",\n  \"device_name\": \"temp-logout-session\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.6 Revoke Session via Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Confirms successful logout message', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.match(/signed out|logged out/i);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{temp_logout_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.7 Verify Revoked Token Rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{temp_logout_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "02.8 Unauthenticated Request to Protected Route Rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - School Fixture Discovery",
+      "item": [
+        {
+          "name": "03.1 Discover Academic Years",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Discovers and stores academic year ID', function () {",
+                  "    var json = pm.response.json();",
+                  "    var items = json.data || json;",
+                  "    pm.expect(items).to.be.an('array').that.is.not.empty;",
+                  "    pm.collectionVariables.set('academic_year_id', String(items[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/academic-years",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "academic-years"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03.2 Discover School Classes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Discovers and stores class ID', function () {",
+                  "    var json = pm.response.json();",
+                  "    var items = json.data || json;",
+                  "    pm.expect(items).to.be.an('array').that.is.not.empty;",
+                  "    pm.collectionVariables.set('class_id', String(items[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/school-classes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "school-classes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03.3 Discover Courses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Discovers and stores course ID', function () {",
+                  "    var json = pm.response.json();",
+                  "    var items = json.data || json;",
+                  "    pm.expect(items).to.be.an('array').that.is.not.empty;",
+                  "    pm.collectionVariables.set('course_id', String(items[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/courses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "03.4 Discover Members and Students",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Discovers and stores student IDs', function () {",
+                  "    var json = pm.response.json();",
+                  "    var items = json.data || json;",
+                  "    pm.expect(items.length).to.be.at.least(2);",
+                  "    pm.collectionVariables.set('student_id_1', String(items[0].id));",
+                  "    pm.collectionVariables.set('student_id_2', String(items[1].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Academic Year, Class, Student, and Teacher Assignment Prerequisites",
+      "item": [
+        {
+          "name": "04.1 Validate Discovered Academic Year",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Verifies active academic year date span', function () {",
+                  "    var json = pm.response.json();",
+                  "    var year = json.data || json;",
+                  "    pm.expect(year).to.have.property('start_date');",
+                  "    pm.expect(year).to.have.property('end_date');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/academic-years/{{academic_year_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "academic-years",
+                "{{academic_year_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04.2 Validate Discovered Class Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Verifies class code and section structure', function () {",
+                  "    var json = pm.response.json();",
+                  "    var cls = json.data || json;",
+                  "    pm.expect(cls).to.have.property('code');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/school-classes/{{class_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "school-classes",
+                "{{class_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04.3 Validate Discovered Course Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Verifies course code and class binding', function () {",
+                  "    var json = pm.response.json();",
+                  "    var course = json.data || json;",
+                  "    pm.expect(course).to.have.property('code');",
+                  "    pm.expect(String(course.class_id)).to.equal(pm.collectionVariables.get('class_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/courses/{{course_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "courses",
+                "{{course_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "04.4 Validate Enrolled Student Record",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Verifies student full name and active status', function () {",
+                  "    var json = pm.response.json();",
+                  "    var student = json.data || json;",
+                  "    pm.expect(student).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/members/{{student_id_1}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{student_id_1}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 - Session Creation and Validation",
+      "item": [
+        {
+          "name": "05.1 Create Valid Course Session as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Stores created session ID and asserts Draft status', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.status).to.equal('draft');",
+                  "    pm.collectionVariables.set('session_id', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"{{academic_year_id}}\",\n  \"term_id\": \"{{term_id}}\",\n  \"class_id\": \"{{class_id}}\",\n  \"course_id\": \"{{course_id}}\",\n  \"date\": \"{{session_date}}\",\n  \"time_slot\": \"Period 1 (08:30-09:15)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05.2 Create Valid Session as Assigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Stores teacher session ID', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data.status).to.equal('draft');",
+                  "    pm.collectionVariables.set('teacher_session_id', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"{{academic_year_id}}\",\n  \"term_id\": \"{{term_id}}\",\n  \"class_id\": \"{{class_id}}\",\n  \"course_id\": \"{{course_id}}\",\n  \"date\": \"{{session_date}}\",\n  \"time_slot\": \"Period 2 (09:20-10:05)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05.3 Reject Creation Outside Academic Year Boundary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Content', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Contains validation error for academic year boundary', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.errors || json.message).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"{{academic_year_id}}\",\n  \"term_id\": \"{{term_id}}\",\n  \"class_id\": \"{{class_id}}\",\n  \"course_id\": \"{{course_id}}\",\n  \"date\": \"2024-01-01\",\n  \"time_slot\": \"Period 3 (10:10-10:55)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05.4 Reject Incompatible Course and Class Combination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Content', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"{{academic_year_id}}\",\n  \"term_id\": \"{{term_id}}\",\n  \"class_id\": \"{{class_id}}\",\n  \"course_id\": 999999,\n  \"date\": \"{{session_date}}\",\n  \"time_slot\": \"Period 4 (11:00-11:45)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05.5 Reject Duplicate Session Slot Collision",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Content', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Rejects duplicate slot creation', function () {",
+                  "    var json = pm.response.json();",
+                  "    var msg = JSON.stringify(json);",
+                  "    pm.expect(msg).to.include('already exists');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"{{academic_year_id}}\",\n  \"term_id\": \"{{term_id}}\",\n  \"class_id\": \"{{class_id}}\",\n  \"course_id\": \"{{course_id}}\",\n  \"date\": \"{{session_date}}\",\n  \"time_slot\": \"Period 1 (08:30-09:15)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "05.6 Reject Session Creation by Unassigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{unassigned_teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academic_year_id\": \"{{academic_year_id}}\",\n  \"term_id\": \"{{term_id}}\",\n  \"class_id\": \"{{class_id}}\",\n  \"course_id\": \"{{course_id}}\",\n  \"date\": \"{{session_date}}\",\n  \"time_slot\": \"Period 5 (11:50-12:35)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 - Session Listing and Detail Authorization",
+      "item": [
+        {
+          "name": "06.1 Admin View All Sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns paginated session collection', function () {",
+                  "    var json = pm.response.json();",
+                  "    var items = json.data || json;",
+                  "    pm.expect(items).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06.2 Teacher View Scoped Sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns sessions matching teacher assignments', function () {",
+                  "    var json = pm.response.json();",
+                  "    var items = json.data || json;",
+                  "    pm.expect(items).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06.3 Filter Sessions by Date and Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('All returned sessions match filter criteria', function () {",
+                  "    var json = pm.response.json();",
+                  "    var items = json.data || json;",
+                  "    items.forEach(function(s) {",
+                  "        pm.expect(s.status).to.equal('draft');",
+                  "        pm.expect(s.date).to.equal(pm.collectionVariables.get('session_date'));",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions?date={{session_date}}&status=draft",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{session_date}}"
+                },
+                {
+                  "key": "status",
+                  "value": "draft"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06.4 View Session Details as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns full session details and relationships', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.id).to.equal(Number(pm.collectionVariables.get('session_id')));",
+                  "    pm.expect(json.data).to.have.property('school_class');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06.5 View Session Details as Assigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "06.6 Reject View Session Details by Unassigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{unassigned_teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 - Roster Retrieval and Authorization",
+      "item": [
+        {
+          "name": "07.1 Retrieve Expected Roster as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Contains enrolled students in Section A', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.students).to.be.an('array').that.is.not.empty;",
+                  "    pm.expect(json.data.total_students).to.be.at.least(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/roster?section=A",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "roster"
+              ],
+              "query": [
+                {
+                  "key": "section",
+                  "value": "A"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07.2 Retrieve Expected Roster as Assigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/roster?section=A",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "roster"
+              ],
+              "query": [
+                {
+                  "key": "section",
+                  "value": "A"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "07.3 Reject Roster Access by Unassigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{unassigned_teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/roster?section=A",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "roster"
+              ],
+              "query": [
+                {
+                  "key": "section",
+                  "value": "A"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08 - Attendance Submission and Validation",
+      "item": [
+        {
+          "name": "08.1 Submit Session with Incomplete Roster Rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Content', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Reports missing student marks error', function () {",
+                  "    var json = pm.response.json();",
+                  "    var msg = JSON.stringify(json);",
+                  "    pm.expect(msg).to.include('missing');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"section\": \"A\",\n  \"semester\": \"semester_2\",\n  \"student_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"present\"\n    }\n  ],\n  \"teacher_marks\": [\n    {\n      \"teacher_id\": \"{{teacher_user_id}}\",\n      \"mark\": \"present\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08.2 Submit Session with Duplicate Student Marks Rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Content', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"section\": \"A\",\n  \"semester\": \"semester_2\",\n  \"student_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"present\"\n    },\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"absent\"\n    }\n  ],\n  \"teacher_marks\": [\n    {\n      \"teacher_id\": \"{{teacher_user_id}}\",\n      \"mark\": \"present\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08.3 Submit Session with Invalid Mark Code Rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Content', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"section\": \"A\",\n  \"semester\": \"semester_2\",\n  \"student_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"invalid_mark\"\n    },\n    {\n      \"student_id\": \"{{student_id_2}}\",\n      \"mark\": \"present\"\n    }\n  ],\n  \"teacher_marks\": [\n    {\n      \"teacher_id\": \"{{teacher_user_id}}\",\n      \"mark\": \"present\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08.4 Submit Full Valid Roster as Assigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Session transitions to Submitted status with serialized marks', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.status).to.equal('submitted');",
+                  "    pm.expect(json.data.student_records).to.be.an('array').with.lengthOf(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"section\": \"A\",\n  \"semester\": \"semester_2\",\n  \"student_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"present\",\n      \"remarks\": \"On time\"\n    },\n    {\n      \"student_id\": \"{{student_id_2}}\",\n      \"mark\": \"absent\",\n      \"remarks\": \"Excused sick\"\n    }\n  ],\n  \"teacher_marks\": [\n    {\n      \"teacher_id\": \"{{teacher_user_id}}\",\n      \"mark\": \"present\",\n      \"remarks\": \"Conducted lesson\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08.5 Reject Re-submission on Already Submitted Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 or 422 (submission rejected)', function () {",
+                  "    pm.expect([403, 422]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"section\": \"A\",\n  \"semester\": \"semester_2\",\n  \"student_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"present\"\n    },\n    {\n      \"student_id\": \"{{student_id_2}}\",\n      \"mark\": \"present\"\n    }\n  ],\n  \"teacher_marks\": [\n    {\n      \"teacher_id\": \"{{teacher_user_id}}\",\n      \"mark\": \"present\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "08.6 Reject Attendance Submission by Unassigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{unassigned_teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{teacher_session_id}}/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{teacher_session_id}}",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"section\": \"A\",\n  \"semester\": \"semester_2\",\n  \"student_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"present\"\n    },\n    {\n      \"student_id\": \"{{student_id_2}}\",\n      \"mark\": \"present\"\n    }\n  ],\n  \"teacher_marks\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "09 - Correction-Window Tests",
+      "item": [
+        {
+          "name": "09.1 Teacher Correct Attendance Marks Within 24h Window",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Updates student mark to excused', function () {",
+                  "    var json = pm.response.json();",
+                  "    var rec2 = json.data.student_records.find(function(r) {",
+                  "        return String(r.student_id) === String(pm.collectionVariables.get('student_id_2'));",
+                  "    });",
+                  "    pm.expect(rec2).to.not.be.undefined;",
+                  "    pm.expect(rec2.mark).to.equal('excused');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/marks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "marks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"corrected_marks\": [\n    {\n      \"student_id\": \"{{student_id_2}}\",\n      \"mark\": \"excused\",\n      \"remarks\": \"Medical note received\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09.2 Teacher Mark Correction with student_marks Alias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Updates student mark via alias payload', function () {",
+                  "    var json = pm.response.json();",
+                  "    var rec2 = json.data.student_records.find(function(r) {",
+                  "        return String(r.student_id) === String(pm.collectionVariables.get('student_id_2'));",
+                  "    });",
+                  "    pm.expect(rec2.mark).to.equal('present');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/marks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "marks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_marks\": [\n    {\n      \"student_id\": \"{{student_id_2}}\",\n      \"mark\": \"present\",\n      \"remarks\": \"Arrived later\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "09.3 Reject Mark Correction with Non-existent Student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Content', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/marks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "marks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"corrected_marks\": [\n    {\n      \"student_id\": 999999,\n      \"mark\": \"present\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "10 - Superadmin Override and Audit Verification",
+      "item": [
+        {
+          "name": "10.1 Superadmin Override with Mandatory Reason",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Superadmin override successfully updates mark', function () {",
+                  "    var json = pm.response.json();",
+                  "    var rec1 = json.data.student_records.find(function(r) {",
+                  "        return String(r.student_id) === String(pm.collectionVariables.get('student_id_1'));",
+                  "    });",
+                  "    pm.expect(rec1.mark).to.equal('late');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/marks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "marks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"corrected_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"late\",\n      \"remarks\": \"Traffic delay\"\n    }\n  ],\n  \"is_override\": true,\n  \"override_reason\": \"Administrative override authorized by director\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.2 Reject Superadmin Override Without Reason",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422 Unprocessable Content', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/marks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "marks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"corrected_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"present\"\n    }\n  ],\n  \"is_override\": true,\n  \"override_reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.3 Reject Mark Correction by Unassigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{unassigned_teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/marks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "marks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"corrected_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"present\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.4 Verify Audit Trail in Session Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Confirms session details and recorded mark states', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.status).to.equal('submitted');",
+                  "    pm.expect(json.data.student_records).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "11 - Session Closure and Lifecycle Protection",
+      "item": [
+        {
+          "name": "11.1 Reject Session Closure by Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/close",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "close"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.2 Reject Session Closure on Draft Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 or 422 (cannot close draft session)', function () {",
+                  "    pm.expect([403, 422]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{teacher_session_id}}/close",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{teacher_session_id}}",
+                "close"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.3 Close Submitted Session as Superadmin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Session transitions to Closed status', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.status).to.equal('closed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/close",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "close"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.4 Reject Modification on Closed Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 or 422 (closed session immutable)', function () {",
+                  "    pm.expect([403, 422]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/marks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "marks"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"corrected_marks\": [\n    {\n      \"student_id\": \"{{student_id_1}}\",\n      \"mark\": \"present\"\n    }\n  ],\n  \"is_override\": true,\n  \"override_reason\": \"Attempting edit on closed session\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.5 Reject Re-closure on Already Closed Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 403 or 422 (already closed)', function () {",
+                  "    pm.expect([403, 422]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/sessions/{{session_id}}/close",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "sessions",
+                "{{session_id}}",
+                "close"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "12 - Basic Reports",
+      "item": [
+        {
+          "name": "12.1 Daily Attendance Summary as Superadmin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns aggregated counts and attendance rate', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.have.property('counts');",
+                  "    pm.expect(json.data).to.have.property('attendance_rate');",
+                  "    pm.expect(json.data.total_sessions).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/summary?date={{session_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{session_date}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12.2 Daily Attendance Summary Filtered by Class",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Filters summary to requested class', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.class_id).to.equal(Number(pm.collectionVariables.get('class_id')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/summary?date={{session_date}}&class_id={{class_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{session_date}}"
+                },
+                {
+                  "key": "class_id",
+                  "value": "{{class_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12.3 Scoped Daily Attendance Summary as Assigned Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Teacher receives scoped daily attendance summary', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.success).to.be.true;",
+                  "    pm.expect(json.data).to.have.property('counts');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/summary?date={{session_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{session_date}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12.4 Verify Absentee List in Summary Response",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Summary contains absentees list array', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('absentees');",
+                  "    pm.expect(json.data.absentees).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/attendance/summary?date={{session_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "attendance",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "{{session_date}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "13 - Isolation, Regression, and Final Assertions",
+      "item": [
+        {
+          "name": "13.1 Verify Multi-Session Role Token Isolation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Confirms teacher token remains active and isolated from admin token', function () {",
+                  "    var json = pm.response.json();",
+                  "    var user = json.user || json.data || json;",
+                  "    pm.expect(user.email).to.equal(pm.collectionVariables.get('teacher_email'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{teacher_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13.2 Final System Health & Database Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Database connection remains stable after complete test suite', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.database.connected).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

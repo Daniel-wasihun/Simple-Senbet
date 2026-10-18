@@ -505,7 +505,7 @@ class AttendanceService
     /**
      * Resolve expected students for a session and optional section using Stage 0 enrollment service.
      */
-    protected function resolveExpectedStudents(AttendanceSession $session, ?string $section): Collection
+    public function resolveExpectedStudents(AttendanceSession $session, ?string $section = null): Collection
     {
         if ($section !== null) {
             return $this->enrollmentService->getRosterForDate(
@@ -554,4 +554,114 @@ class AttendanceService
             $fieldKey => ['Invalid attendance mark. Allowed values: present, absent, late, excused.'],
         ]);
     }
+
+    /**
+     * Retrieve a date-filtered attendance summary and absentee list scoped to user visibility.
+     *
+     * @return array{
+     *     date: string,
+     *     class_id: int|null,
+     *     total_sessions: int,
+     *     submitted_sessions: int,
+     *     counts: array{present: int, absent: int, late: int, excused: int, total: int},
+     *     attendance_rate: float,
+     *     absentees: list<array<string, mixed>>
+     * }
+     */
+    public function getAttendanceSummary(
+        string $date,
+        ?int $classId = null,
+        ?User $user = null
+    ): array {
+        $parsedDate = Carbon::parse($date)->toDateString();
+
+        $sessionQuery = AttendanceSession::query()->whereDate('date', $parsedDate);
+
+        if ($classId !== null) {
+            $sessionQuery->where('class_id', $classId);
+        }
+
+        // Apply role scoping if teacher
+        if ($user && ! ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator']))) {
+            $sessionQuery->where(function ($q) use ($user, $parsedDate) {
+                $q->whereExists(function ($sub) use ($user, $parsedDate) {
+                    $sub->selectRaw(1)
+                        ->from('teaching_assignments')
+                        ->where('teacher_id', $user->id)
+                        ->whereColumn('teaching_assignments.class_id', 'attendance_sessions.class_id')
+                        ->where(function ($cq) {
+                            $cq->whereNull('attendance_sessions.course_id')
+                                ->orWhereColumn('teaching_assignments.course_id', 'attendance_sessions.course_id');
+                        })
+                        ->where(function ($tq) use ($parsedDate) {
+                            $tq->whereNull('teaching_assignments.start_date')
+                                ->orWhereDate('teaching_assignments.start_date', '<=', $parsedDate);
+                        })
+                        ->where(function ($tq) use ($parsedDate) {
+                            $tq->whereNull('teaching_assignments.end_date')
+                                ->orWhereDate('teaching_assignments.end_date', '>', $parsedDate);
+                        });
+                });
+            });
+        }
+
+        $sessions = $sessionQuery->with(['schoolClass', 'course'])->get();
+        $totalSessions = $sessions->count();
+        $submittedSessions = $sessions->where('status', AttendanceStatus::Submitted)->count()
+            + $sessions->where('status', AttendanceStatus::Closed)->count();
+
+        $sessionIds = $sessions->pluck('id')->all();
+
+        $counts = [
+            'present' => 0,
+            'absent' => 0,
+            'late' => 0,
+            'excused' => 0,
+            'total' => 0,
+        ];
+        $absentees = [];
+
+        if (! empty($sessionIds)) {
+            $records = SessionStudentRecord::whereIn('attendance_session_id', $sessionIds)
+                ->with(['student', 'attendanceSession.schoolClass', 'attendanceSession.course'])
+                ->get();
+
+            foreach ($records as $record) {
+                $markVal = $record->mark instanceof AttendanceMark ? $record->mark->value : (string) $record->mark;
+                if (isset($counts[$markVal])) {
+                    $counts[$markVal]++;
+                }
+                $counts['total']++;
+
+                if ($markVal === AttendanceMark::Absent->value) {
+                    $student = $record->student;
+                    $absentees[] = [
+                        'student_id' => $record->student_id,
+                        'student_name' => $student?->name ?? trim(($student?->first_name ?? '') . ' ' . ($student?->last_name ?? '')) ?: "Student #{$record->student_id}",
+                        'class_id' => $record->attendanceSession?->class_id,
+                        'class_name' => $record->attendanceSession?->schoolClass?->name ?? $record->attendanceSession?->schoolClass?->code,
+                        'course_id' => $record->attendanceSession?->course_id,
+                        'course_title' => $record->attendanceSession?->course?->name ?? $record->attendanceSession?->course?->code ?? 'Homeroom',
+                        'session_id' => $record->attendance_session_id,
+                        'remarks' => $record->remarks,
+                    ];
+                }
+            }
+        }
+
+        $rate = $counts['total'] > 0
+            ? round((($counts['present'] + $counts['late']) / $counts['total']) * 100, 2)
+            : 0.0;
+
+        return [
+            'date' => $parsedDate,
+            'class_id' => $classId,
+            'total_sessions' => $totalSessions,
+            'submitted_sessions' => $submittedSessions,
+            'counts' => $counts,
+            'attendance_rate' => $rate,
+            'absentees' => $absentees,
+        ];
+    }
 }
+

@@ -136,6 +136,44 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Retrieve the active student roster for a session.
+     */
+    public function roster(Request $request, AttendanceSession $session): JsonResponse
+    {
+        $this->authorize('view', $session);
+
+        $section = $request->query('section');
+        $students = $this->attendanceService->resolveExpectedStudents(
+            $session,
+            $section ? (string) $section : null
+        );
+
+        $rosterData = [
+            'session_id' => $session->id,
+            'class_id' => $session->class_id,
+            'course_id' => $session->course_id,
+            'date' => $session->date->toDateString(),
+            'section' => $section ? (string) $section : null,
+            'total_students' => $students->count(),
+            'students' => $students->map(function ($member) {
+                return [
+                    'id' => $member->id,
+                    'name' => $member->name ?? trim(($member->first_name ?? '') . ' ' . ($member->last_name ?? '')),
+                    'first_name' => $member->first_name ?? null,
+                    'last_name' => $member->last_name ?? null,
+                    'gender' => $member->gender ?? null,
+                    'section' => $member->enrollment_section ?? $member->section ?? null,
+                ];
+            })->values(),
+        ];
+
+        return ApiResponse::success(
+            $rosterData,
+            'Student roster retrieved successfully'
+        );
+    }
+
+    /**
      * Submit an attendance session roster.
      */
     public function submit(SubmitAttendanceSessionRequest $request, AttendanceSession $session): JsonResponse
@@ -215,4 +253,32 @@ class AttendanceController extends Controller
             'Attendance session closed successfully'
         );
     }
+
+    /**
+     * Retrieve daily attendance summary and absentee list.
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', AttendanceSession::class);
+
+        $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'class_id' => ['nullable', 'integer', 'exists:classes,id'],
+        ]);
+
+        $date = $request->query('date', now()->toDateString());
+        $classId = $request->filled('class_id') ? (int) $request->query('class_id') : null;
+
+        $summary = $this->attendanceService->getAttendanceSummary(
+            date: (string) $date,
+            classId: $classId,
+            user: $request->user()
+        );
+
+        return ApiResponse::success(
+            $summary,
+            'Attendance summary retrieved successfully'
+        );
+    }
 }
+

@@ -387,6 +387,29 @@ class AttendanceApiTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_roster_returns_students_to_authorized_user(): void
+    {
+        $session = $this->createSession();
+
+        $response = $this->actingAs($this->assignedTeacher, 'sanctum')
+            ->getJson("/api/attendance/sessions/{$session->id}/roster")
+            ->assertOk();
+
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('data.session_id', $session->id);
+        $response->assertJsonPath('data.total_students', 2);
+        $response->assertJsonCount(2, 'data.students');
+    }
+
+    public function test_roster_denies_access_to_unassigned_teacher(): void
+    {
+        $session = $this->createSession();
+
+        $this->actingAs($this->unassignedTeacher, 'sanctum')
+            ->getJson("/api/attendance/sessions/{$session->id}/roster")
+            ->assertForbidden();
+    }
+
     // =========================================================================
     // 5. SUBMIT SESSION (POST /api/attendance/sessions/{session}/submit)
     // =========================================================================
@@ -699,4 +722,68 @@ class AttendanceApiTest extends TestCase
         $this->assertStringNotContainsString('password', $rawJson);
         $this->assertStringNotContainsString('remember_token', $rawJson);
     }
+
+    public function test_superadmin_can_retrieve_attendance_summary_with_absentees(): void
+    {
+        $session = $this->createSession(AttendanceStatus::Submitted);
+
+        SessionStudentRecord::create([
+            'attendance_session_id' => $session->id,
+            'student_id' => $this->member1->id,
+            'mark' => AttendanceMark::Present,
+            'marked_by' => $this->assignedTeacher->id,
+            'marked_at' => now(),
+        ]);
+
+        SessionStudentRecord::create([
+            'attendance_session_id' => $session->id,
+            'student_id' => $this->member2->id,
+            'mark' => AttendanceMark::Absent,
+            'marked_by' => $this->assignedTeacher->id,
+            'marked_at' => now(),
+            'remarks' => 'Illness',
+        ]);
+
+        $response = $this->actingAs($this->superadmin, 'sanctum')
+            ->getJson("/api/attendance/summary?date={$session->date->toDateString()}")
+            ->assertOk();
+
+        $json = $response->json();
+        $this->assertTrue($json['success']);
+        $this->assertEquals(1, $json['data']['total_sessions']);
+        $this->assertEquals(1, $json['data']['submitted_sessions']);
+        $this->assertEquals(1, $json['data']['counts']['present']);
+        $this->assertEquals(1, $json['data']['counts']['absent']);
+        $this->assertEquals(2, $json['data']['counts']['total']);
+        $this->assertEquals(50.0, $json['data']['attendance_rate']);
+        $this->assertCount(1, $json['data']['absentees']);
+        $this->assertEquals($this->member2->id, $json['data']['absentees'][0]['student_id']);
+        $this->assertEquals('Illness', $json['data']['absentees'][0]['remarks']);
+    }
+
+    public function test_teacher_can_retrieve_scoped_attendance_summary(): void
+    {
+        $session = $this->createSession(AttendanceStatus::Submitted);
+
+        $response = $this->actingAs($this->assignedTeacher, 'sanctum')
+            ->getJson("/api/attendance/summary?date={$session->date->toDateString()}")
+            ->assertOk();
+
+        $this->assertTrue($response->json('success'));
+        $this->assertEquals(1, $response->json('data.total_sessions'));
+
+        // Unassigned teacher sees 0 sessions in their scoped summary
+        $unassignedResponse = $this->actingAs($this->unassignedTeacher, 'sanctum')
+            ->getJson("/api/attendance/summary?date={$session->date->toDateString()}")
+            ->assertOk();
+
+        $this->assertEquals(0, $unassignedResponse->json('data.total_sessions'));
+    }
+
+    public function test_unauthenticated_request_to_attendance_summary_is_rejected(): void
+    {
+        $this->getJson('/api/attendance/summary')
+            ->assertUnauthorized();
+    }
 }
+
