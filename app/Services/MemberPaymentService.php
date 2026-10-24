@@ -8,6 +8,8 @@ use App\Models\PaymentAuditLog;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -49,81 +51,123 @@ class MemberPaymentService
             }
         }
 
-        return DB::transaction(function () use ($memberId, $paymentMonth, $amountPaid, $data, $recordedBy) {
-            $member = Member::where('id', $memberId)->lockForUpdate()->firstOrFail();
+        // Explicit duplicate reference number validation
+        $rawRef = ! empty($data['reference_number']) ? trim((string) $data['reference_number']) : (! empty($data['payment_reference']) ? trim((string) $data['payment_reference']) : null);
+        if ($rawRef && MemberPayment::where('reference_number', $rawRef)->exists()) {
+            throw ValidationException::withMessages([
+                'reference_number' => ['The reference number has already been taken.'],
+            ]);
+        }
 
-            // Evaluate member's obligation for this month
-            $eval = $this->ruleService->evaluateMemberEligibility($member, $paymentMonth);
-            $expectedAmount = (float) $eval['expected_amount'];
-            $ruleId = $eval['rule']?->id;
+        $maxAttempts = 3;
+        $attempt = 0;
 
-            // Fetch prior valid payments for this month
-            $priorPayments = MemberPayment::where('member_id', $memberId)
-                ->where('payment_month', $paymentMonth)
-                ->where('is_void', false)
-                ->get();
+        while ($attempt < $maxAttempts) {
+            $attempt++;
+            try {
+                return DB::transaction(function () use ($memberId, $paymentMonth, $amountPaid, $data, $recordedBy, $rawRef) {
+                    return $this->executeRecordPayment($memberId, $paymentMonth, $amountPaid, $data, $recordedBy, $rawRef);
+                });
+            } catch (UniqueConstraintViolationException|QueryException $e) {
+                $isRefCollision = str_contains($e->getMessage(), 'uq_member_payments_reference_number')
+                    || str_contains($e->getMessage(), 'reference_number')
+                    || str_contains($e->getMessage(), 'UNIQUE constraint failed: member_payments.reference_number');
 
-            // Calculate durable net credit carried forward from earlier months
-            $creditCarriedForward = $this->ruleService->calculateNetCreditForMember($member, $paymentMonth);
+                if ($isRefCollision && empty($rawRef) && $attempt < $maxAttempts) {
+                    usleep(50000 * $attempt);
 
-            $previouslyPaid = round((float) $priorPayments->sum('paid_amount') + $creditCarriedForward, 2);
-            $newCumulativePaid = round($previouslyPaid + $amountPaid, 2);
-
-            $remainingBalance = max(0.00, round($expectedAmount - $newCumulativePaid, 2));
-
-            // Status determination
-            if ($expectedAmount <= 0.00) {
-                $status = 'OVERPAID'; // Paid even though expected was 0 (e.g. voluntary donation)
-            } elseif ($newCumulativePaid >= $expectedAmount) {
-                $status = ($newCumulativePaid > $expectedAmount) ? 'OVERPAID' : 'PAID';
-            } else {
-                $status = 'PARTIAL';
+                    continue;
+                }
+                throw $e;
             }
+        }
 
-            $paymentDate = ! empty($data['payment_date']) ? Carbon::parse($data['payment_date'])->toDateString() : now()->toDateString();
-            $rawRef = ! empty($data['reference_number']) ? $data['reference_number'] : ($data['payment_reference'] ?? null);
-            $referenceNumber = ! empty($rawRef) ? trim((string) $rawRef) : $this->generateReferenceNumber($paymentMonth);
+        throw new \RuntimeException('Failed to record payment after maximum retry attempts.');
+    }
 
-            // Create payment record
-            $payment = MemberPayment::create([
-                'member_id' => $memberId,
-                'payment_rule_id' => $ruleId,
-                'payment_month' => $paymentMonth,
-                'expected_amount' => $expectedAmount,
-                'paid_amount' => $amountPaid,
+    /**
+     * Execute isolated payment record transaction.
+     */
+    protected function executeRecordPayment(
+        int $memberId,
+        string $paymentMonth,
+        float $amountPaid,
+        array $data,
+        User $recordedBy,
+        ?string $rawRef
+    ): MemberPayment {
+        $member = Member::where('id', $memberId)->lockForUpdate()->firstOrFail();
+
+        // Evaluate member's obligation for this month
+        $eval = $this->ruleService->evaluateMemberEligibility($member, $paymentMonth);
+        $expectedAmount = (float) $eval['expected_amount'];
+        $ruleId = $eval['rule']?->id;
+
+        // Fetch prior valid payments for this month
+        $priorPayments = MemberPayment::where('member_id', $memberId)
+            ->where('payment_month', $paymentMonth)
+            ->where('is_void', false)
+            ->get();
+
+        // Calculate durable net credit carried forward from earlier months
+        $creditCarriedForward = $this->ruleService->calculateNetCreditForMember($member, $paymentMonth);
+
+        $previouslyPaid = round((float) $priorPayments->sum('paid_amount') + $creditCarriedForward, 2);
+        $newCumulativePaid = round($previouslyPaid + $amountPaid, 2);
+
+        $remainingBalance = max(0.00, round($expectedAmount - $newCumulativePaid, 2));
+
+        // Status determination
+        if ($expectedAmount <= 0.00) {
+            $status = 'OVERPAID'; // Paid even though expected was 0 (e.g. voluntary donation)
+        } elseif ($newCumulativePaid >= $expectedAmount) {
+            $status = ($newCumulativePaid > $expectedAmount) ? 'OVERPAID' : 'PAID';
+        } else {
+            $status = 'PARTIAL';
+        }
+
+        $paymentDate = ! empty($data['payment_date']) ? Carbon::parse($data['payment_date'])->toDateString() : now()->toDateString();
+        $referenceNumber = ! empty($rawRef) ? $rawRef : $this->generateReferenceNumber($paymentMonth);
+
+        // Create payment record
+        $payment = MemberPayment::create([
+            'member_id' => $memberId,
+            'payment_rule_id' => $ruleId,
+            'payment_month' => $paymentMonth,
+            'expected_amount' => $expectedAmount,
+            'paid_amount' => $amountPaid,
+            'remaining_balance' => $remainingBalance,
+            'payment_status' => $status,
+            'payment_date' => $paymentDate,
+            'payment_method' => strtoupper($data['payment_method'] ?? 'CASH'),
+            'reference_number' => $referenceNumber,
+            'notes' => $data['notes'] ?? null,
+            'idempotency_key' => $data['idempotency_key'] ?? null,
+            'recorded_by' => $recordedBy->id,
+            'is_void' => false,
+        ]);
+
+        // Update remaining_balance on earlier payments of this month to reflect current cumulative state
+        MemberPayment::where('member_id', $memberId)
+            ->where('payment_month', $paymentMonth)
+            ->where('is_void', false)
+            ->where('id', '!=', $payment->id)
+            ->update([
                 'remaining_balance' => $remainingBalance,
                 'payment_status' => $status,
-                'payment_date' => $paymentDate,
-                'payment_method' => strtoupper($data['payment_method'] ?? 'CASH'),
-                'reference_number' => $referenceNumber,
-                'notes' => $data['notes'] ?? null,
-                'idempotency_key' => $data['idempotency_key'] ?? null,
-                'recorded_by' => $recordedBy->id,
-                'is_void' => false,
             ]);
 
-            // Update remaining_balance on earlier payments of this month to reflect current cumulative state
-            MemberPayment::where('member_id', $memberId)
-                ->where('payment_month', $paymentMonth)
-                ->where('is_void', false)
-                ->where('id', '!=', $payment->id)
-                ->update([
-                    'remaining_balance' => $remainingBalance,
-                    'payment_status' => $status,
-                ]);
+        // Create Audit Log
+        PaymentAuditLog::create([
+            'member_payment_id' => $payment->id,
+            'action' => 'CREATED',
+            'previous_payload' => null,
+            'new_payload' => $payment->toArray(),
+            'reason' => 'Payment recorded by '.$recordedBy->name,
+            'performed_by' => $recordedBy->id,
+        ]);
 
-            // Create Audit Log
-            PaymentAuditLog::create([
-                'member_payment_id' => $payment->id,
-                'action' => 'CREATED',
-                'previous_payload' => null,
-                'new_payload' => $payment->toArray(),
-                'reason' => 'Payment recorded by '.$recordedBy->name,
-                'performed_by' => $recordedBy->id,
-            ]);
-
-            return $payment;
-        });
+        return $payment;
     }
 
     /**

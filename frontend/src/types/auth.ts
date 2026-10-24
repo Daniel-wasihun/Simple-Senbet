@@ -348,6 +348,23 @@ export interface PaymentReceiptData {
   } | null;
   is_void: boolean;
   void_reason?: string | null;
+  payment_date_eth?: {
+    year: number;
+    month: number;
+    day: number;
+    month_name_en: string;
+    month_name_am: string;
+    formatted_en: string;
+    formatted_am: string;
+  } | null;
+  billing_month_eth?: {
+    year: number;
+    month: number;
+    month_name_en: string;
+    month_name_am: string;
+    formatted_am: string;
+    formatted_en: string;
+  } | null;
 }
 
 

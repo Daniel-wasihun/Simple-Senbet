@@ -27,7 +27,7 @@ Simple-Senbet/
 └── README.md             # Canonical project documentation
 ```
 
-- **Backend (Root)**: Laravel 13 on **PHP 8.4**, providing versioned cached REST APIs (`CachedCrudService`), Spatie role-based authorization, academic grading services (`GradebookService`), attendance lifecycle management (`AttendanceService`), and CSV/HTML print export endpoints.
+- **Backend (Root)**: Laravel 13 on **PHP 8.4**, providing versioned cached REST APIs (`CachedCrudService`), Spatie role-based authorization, academic grading services (`GradebookService`), attendance lifecycle management (`AttendanceService`), monthly dues & payments accounting (`MemberPaymentService`, `PaymentDashboardService`, `PaymentRuleService`), Ethiopian calendar conversion (`EthiopianDateService`), automated CLI dues reminders (`NotifyDuesCommand`), and CSV/HTML print export endpoints.
 - **Frontend (`/frontend`)**: Next.js 16 with React 19, App Router, TypeScript, and Tailwind CSS. Features role-aware dashboards for teachers and administrators, attendance tracking, printable report cards, and BFF security origin validation.
 
 ---
@@ -115,6 +115,13 @@ The system enforces strict multi-role authorization at both the API policy layer
 | Student Report Card | ✅ Full Access | ✅ Assigned Class | ❌ Denied (`403`) | 👁️ Own Only |
 | CSV Gradebook Export | ✅ Full Access | ✅ Assigned Class | ❌ Denied (`403`) | ❌ Denied (`403`) |
 | Printable Report Card | ✅ Full Access | ✅ Assigned Class | ❌ Denied (`403`) | 👁️ Own Only |
+| Payment Rules Configuration | ✅ Full CRUD | 👁️ View Only | ❌ Denied (`403`) | ❌ Denied (`403`) |
+| Payment Dashboard & Ledger | ✅ Full Access | ✅ Assigned Class | ❌ Denied (`403`) | ❌ Denied (`403`) |
+| Member Payment History | ✅ Full Access | ✅ Assigned Class | ❌ Denied (`403`) | ❌ Denied (`403`) |
+| Record Member Payments | ✅ Full Access | ✅ Assigned Class | ❌ Denied (`403`) | ❌ Denied (`403`) |
+| Void Payment Transactions | ✅ Full Access | ❌ Denied (`403`) | ❌ Denied (`403`) | ❌ Denied (`403`) |
+| Payment Receipts (Print/JSON) | ✅ Full Access | ✅ Assigned Class | ❌ Denied (`403`) | ❌ Denied (`403`) |
+| Financial CSV Exports | ✅ Full Access | ✅ Assigned Class | ❌ Denied (`403`) | ❌ Denied (`403`) |
 
 ---
 
@@ -137,6 +144,50 @@ The CSV export endpoint (`/api/report-cards/class/{id}/export/csv`) implements:
 
 ### 3. Attendance Independence
 Attendance tracking remains purely informational and **never silently alters academic assessment scores**. Even if a student has an attendance rate of 0%, the score adjustment is strictly 0.00%, ensuring grade integrity.
+
+---
+
+## 💰 Monthly Member Payments & Accounting Subsystem
+
+The monthly payments subsystem manages Sunday School member dues, rule-based pricing, payment recording, receipts, automated dues reminders, and financial exports.
+
+### 1. Dual Calendar Integration (Ethiopian & Gregorian)
+- **Canonical Storage**: All dates (`payment_date`, `created_at`, billing months) are canonically stored in standard UTC Gregorian dates (`YYYY-MM-DD` / `YYYY-MM`).
+- **Ethiopian Date Service (`EthiopianDateService`)**: Dynamically computes corresponding Ethiopian Calendar (E.C.) dates with month names in both Amharic and English phonetics (e.g. `መስከረም 2019 ዓ.ም.` / `Meskerem 2019 E.C.`) for UI presentation, printable receipts, and financial exports.
+
+### 2. Flexible Rule Engine & Credit Carry-Forward
+- **Eligibility Criteria**: Rules configure standard dues amounts with optional age thresholds (`minimum_age`), minimum class grades (`minimum_class_id`), or specific target classes (`class_id`).
+- **Credit Carry-Forward**: Overpayments in a given billing month can automatically carry forward as credit to reduce dues in subsequent months when `allow_credit_carry_forward` is enabled on the active rule.
+
+### 3. Payment Processing, Idempotency & Concurrency Safety
+- **Supported Payment Methods**: `CASH`, `BANK_TRANSFER`, `TELEBIRR`, `CBE_BIRR`, `CHECK`, `MOBILE_MONEY`, `OTHER`.
+- **Sequential Receipt Numbers**: Unique, human-readable receipt numbers (format `RCP-YYYYMM-XXXX`) generated atomically using database table locking and unique index constraints (`member_payments_reference_number_unique`).
+- **Idempotency**: Clients can supply an optional `idempotency_key`. The backend enforces uniqueness to prevent duplicate charges caused by network retries.
+- **Atomic Transactions**: All balance recalculations and status transitions (`PAID`, `PARTIAL`, `UNPAID`, `OVERPAID`) execute inside isolated database transactions.
+
+### 4. Voiding & Immutable Audit Trail
+- **Soft Voiding**: Completed payments can be voided via `POST /api/payments/{id}/void` by authorized administrators only.
+- **Mandatory Reason**: Requires an explanation (`reason`) between 3 and 255 characters, which is recorded in the immutable audit log (`PaymentAuditLog`).
+- **Automatic Recalculation**: Voiding immediately reverts applied credits and recalculates member balances. Already-voided payments cannot be voided again (`422 Unprocessable Content`).
+
+### 5. Automated Dues Notifications CLI Command
+- **Artisan Command**:
+  ```bash
+  # Execute reminder dispatch simulation (dry-run)
+  php artisan payments:notify-dues --dry-run
+
+  # Live dispatch for a specific billing month and class
+  php artisan payments:notify-dues --month=2026-10 --class=1
+  ```
+- **Concurrency Isolation**: Implements Laravel's `Isolatable` interface to prevent overlapping concurrent cron executions.
+- **Granular Reporting**: Generates execution metrics distinguishing eligible, fully-settled, exempt/minor, previously-notified, and dispatched reminders.
+
+### 6. Financial CSV Exports & Security Safeguards
+- **Export Endpoints**:
+  - `GET /api/payments/export/monthly-summary`: High-level financial KPIs (expected, collected, remaining, collection rate) followed by a full member-by-member ledger.
+  - `GET /api/payments/export/transactions`: Detailed chronological transaction journal with both Gregorian and Ethiopian payment dates.
+- **Ge'ez Unicode Compatibility**: Streams CSV with a UTF-8 Byte Order Mark (`\xEF\xBB\xBF`) ensuring Amharic text renders correctly in Microsoft Excel, Apple Numbers, and LibreOffice.
+- **OWASP Formula Injection Mitigation**: Any field starting with formula execution characters (`=`, `+`, `-`, `@`, `\t`, `\r`) is sanitized by prefixing with a single quote (`'`).
 
 ---
 
@@ -206,6 +257,17 @@ npm --prefix frontend run build
 | `GET` | `/api/report-cards/class/{id}` | Comprehensive class gradebook with sectional and class-wide rankings |
 | `GET` | `/api/report-cards/class/{id}/export/csv` | Authorized class gradebook CSV export |
 | `GET` | `/api/report-cards/class/{id}/export/print` | Authorized print-optimized HTML gradebook |
+| `GET` | `/api/payments/rules` | List configured monthly payment rules and eligibility criteria |
+| `POST` | `/api/payments/rules` | Create a monthly payment rule (admin only) |
+| `GET` | `/api/payments/dashboard` | Reconciled monthly payment dashboard metrics (`month`, `class_id`) |
+| `GET` | `/api/payments/members` | Paginated, filterable member payment ledger (`month`, `class_id`, `status`, `search`) |
+| `GET` | `/api/payments/members/{id}/history` | Complete historical payment ledger for a specific member |
+| `POST` | `/api/payments` | Record a member payment transaction (with idempotency support) |
+| `POST` | `/api/payments/record` | Alias endpoint for recording a member payment transaction |
+| `POST` | `/api/payments/{id}/void` | Soft-void a payment transaction with required audit reason (admin only) |
+| `GET` | `/api/payments/{id}/receipt` | Dual-calendar printable receipt data (E.C. & G.C.) |
+| `GET` | `/api/payments/export/monthly-summary` | Streamed monthly payment financial summary CSV export |
+| `GET` | `/api/payments/export/transactions` | Streamed granular payment transaction ledger CSV export |
 
 ---
 
