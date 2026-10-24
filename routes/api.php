@@ -13,84 +13,35 @@ use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PromotionController;
 use App\Http\Controllers\Api\ReportCardController;
+use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\SchoolClassController;
+use App\Http\Controllers\Api\StudentEnrollmentController;
+use App\Http\Controllers\Api\TeachingAssignmentController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
-Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
-Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
-Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:6,1');
+/*
+|--------------------------------------------------------------------------
+| Public & Guest Authentication Endpoints
+|--------------------------------------------------------------------------
+*/
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:6,1')->name('auth.login');
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1')->name('auth.forgot-password');
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:6,1')->name('auth.reset-password');
 
-// Laravel's standard reset notification links here, then the browser is sent to the frontend form.
+// Laravel standard reset notification links here, redirecting browser to the frontend
 Route::get('/reset-password/{token}', function (string $token, Request $request) {
     return redirect(rtrim(config('app.frontend_url'), '/').'/reset-password?token='.urlencode($token).'&email='.urlencode((string) $request->query('email')));
 })->middleware('guest')->name('password.reset');
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::get('/profile', [ProfileController::class, 'show']);
-    Route::patch('/profile', [ProfileController::class, 'update']);
-    Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
-
-    Route::middleware('role:superadmin')->apiResource('permissions', PermissionController::class)->except(['show']);
-    Route::middleware('role:superadmin')->get('roles/{role}/permissions', [RolePermissionController::class, 'index']);
-    Route::middleware('role:superadmin')->put('roles/{role}/permissions', [RolePermissionController::class, 'sync']);
-    Route::middleware('role:superadmin')->group(function () {
-        Route::apiResource('academic-years', AcademicYearController::class);
-    });
-
-    Route::middleware('role:superadmin')->apiResource('users', UserController::class);
-    Route::apiResource('school-classes', SchoolClassController::class);
-    Route::apiResource('courses', CourseController::class);
-    Route::apiResource('members', MemberController::class);
-    Route::apiResource('assessments', AssessmentController::class);
-    Route::apiResource('assessment-results', AssessmentResultController::class);
-
-    Route::prefix('attendance/sessions')->group(function () {
-        Route::post('/', [AttendanceController::class, 'store'])->name('attendance.sessions.store');
-        Route::get('/', [AttendanceController::class, 'index'])->name('attendance.sessions.index');
-        Route::get('/{session}', [AttendanceController::class, 'show'])->name('attendance.sessions.show');
-        Route::get('/{session}/roster', [AttendanceController::class, 'roster'])->name('attendance.sessions.roster');
-        Route::post('/{session}/submit', [AttendanceController::class, 'submit'])->name('attendance.sessions.submit');
-        Route::patch('/{session}/marks', [AttendanceController::class, 'correct'])->name('attendance.sessions.correct');
-        Route::post('/{session}/close', [AttendanceController::class, 'close'])->name('attendance.sessions.close');
-    });
-
-    Route::get('attendance/summary', [AttendanceController::class, 'summary'])->name('attendance.summary');
-
-    Route::prefix('report-cards')->group(function () {
-        Route::get('/student/{student}', [ReportCardController::class, 'showStudent'])->name('report-cards.student');
-        Route::get('/class/{schoolClass}', [ReportCardController::class, 'showClass'])->name('report-cards.class');
-        Route::get('/class/{schoolClass}/export/csv', [ReportCardController::class, 'exportCsv'])->name('report-cards.class.export.csv');
-        Route::get('/class/{schoolClass}/export/print', [ReportCardController::class, 'exportPrint'])->name('report-cards.class.export.print');
-    });
-
-    Route::prefix('promotion')->group(function () {
-        Route::get('/student/{student}', [PromotionController::class, 'evaluateStudent'])->name('promotion.student');
-        Route::post('/dry-run', [PromotionController::class, 'dryRun'])->name('promotion.dry-run');
-        Route::post('/commit', [PromotionController::class, 'commit'])->name('promotion.commit');
-    });
-
-    Route::prefix('payments')->group(function () {
-        Route::get('/rules', [PaymentController::class, 'rules'])->name('payments.rules');
-        Route::post('/rules', [PaymentController::class, 'storeRule'])->name('payments.rules.store');
-        Route::get('/dashboard', [PaymentController::class, 'dashboard'])->name('payments.dashboard');
-        Route::get('/members', [PaymentController::class, 'membersLedger'])->name('payments.members');
-        Route::get('/members/{member}', [PaymentController::class, 'memberHistory'])->name('payments.member.history');
-        Route::get('/members/{member}/history', [PaymentController::class, 'memberHistory'])->name('payments.member.history.alias');
-        Route::post('/', [PaymentController::class, 'record'])->name('payments.record');
-        Route::post('/record', [PaymentController::class, 'record'])->name('payments.record.alias');
-        Route::post('/{payment}/void', [PaymentController::class, 'voidPayment'])->name('payments.void');
-        Route::get('/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
-        Route::get('/export/monthly-summary', [PaymentExportController::class, 'exportMonthlySummary'])->name('payments.export.monthly-summary');
-        Route::get('/export/transactions', [PaymentExportController::class, 'exportTransactions'])->name('payments.export.transactions');
-    });
-});
-
+/*
+|--------------------------------------------------------------------------
+| Public Health & Institutional Overview Endpoints
+|--------------------------------------------------------------------------
+*/
 Route::get('/status', function () {
     $dbConnected = false;
     try {
@@ -109,7 +60,7 @@ Route::get('/status', function () {
         ],
         'timestamp' => now()->toIso8601String(),
     ], $healthy ? 200 : 503);
-});
+})->name('system.status');
 
 Route::get('/senbet/summary', function () {
     return response()->json([
@@ -126,21 +77,114 @@ Route::get('/senbet/summary', function () {
             ['title' => 'Sunday Teacher Alignment Meeting', 'date' => 'Every Sunday 8:00 AM', 'priority' => 'Medium'],
         ],
     ]);
-});
+})->name('senbet.summary');
 
-use App\Http\Requests\SchoolClass\StoreSchoolClassRequest;
-use App\Http\Resources\SchoolClassResource;
-use App\Http\Responses\ApiResponse;
-use App\Models\SchoolClass;
+/*
+|--------------------------------------------------------------------------
+| Authenticated API Endpoints (Sanctum Protected)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth:sanctum')->group(function () {
+    // Current user profile & authentication management
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-Route::get('/classes', function () {
-    return ApiResponse::success(
-        SchoolClassResource::collection(SchoolClass::all())
-    );
-});
+    // Protected user registration (strictly restricted to authorized users with registration permission)
+    Route::post('/auth/register', [AuthController::class, 'register'])
+        ->middleware('can:register,App\Models\User')
+        ->name('auth.register');
 
-Route::post('/classes', function (StoreSchoolClassRequest $request) {
-    $schoolClass = SchoolClass::create($request->validated());
+    // Superadmin: RBAC and User Administration
+    Route::middleware('role:superadmin')->group(function () {
+        Route::apiResource('users', UserController::class);
+        Route::apiResource('permissions', PermissionController::class)->except(['show']);
+        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+        Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
+        Route::get('roles/{role}/permissions', [RolePermissionController::class, 'index'])->name('roles.permissions.index');
+        Route::put('roles/{role}/permissions', [RolePermissionController::class, 'sync'])->name('roles.permissions.sync');
+    });
 
-    return ApiResponse::created(new SchoolClassResource($schoolClass));
+    // Academic Years: Discovery & Administrative CRUD
+    Route::get('/academic-years/current', [AcademicYearController::class, 'current'])->name('academic-years.current');
+    Route::middleware('role:superadmin')->group(function () {
+        Route::apiResource('academic-years', AcademicYearController::class);
+    });
+
+    // Core Academic Resources (Governed by CrudPolicy & Spatie Permissions)
+    Route::apiResource('school-classes', SchoolClassController::class);
+    Route::apiResource('courses', CourseController::class);
+    Route::apiResource('members', MemberController::class);
+
+    // Teaching Assignments Subsystem
+    Route::prefix('teaching-assignments')->group(function () {
+        Route::get('/', [TeachingAssignmentController::class, 'index'])->name('teaching-assignments.index');
+        Route::post('/', [TeachingAssignmentController::class, 'store'])->name('teaching-assignments.store');
+        Route::get('/expected', [TeachingAssignmentController::class, 'expectedTeachers'])->name('teaching-assignments.expected');
+        Route::get('/{teachingAssignment}', [TeachingAssignmentController::class, 'show'])->name('teaching-assignments.show');
+        Route::post('/{teachingAssignment}/end', [TeachingAssignmentController::class, 'end'])->name('teaching-assignments.end');
+        Route::delete('/{teachingAssignment}', [TeachingAssignmentController::class, 'destroy'])->name('teaching-assignments.destroy');
+    });
+
+    // Student Enrollments Subsystem
+    Route::prefix('enrollments')->group(function () {
+        Route::get('/', [StudentEnrollmentController::class, 'index'])->name('enrollments.index');
+        Route::post('/', [StudentEnrollmentController::class, 'store'])->name('enrollments.store');
+        Route::get('/roster', [StudentEnrollmentController::class, 'roster'])->name('enrollments.roster');
+        Route::get('/{enrollment}', [StudentEnrollmentController::class, 'show'])->name('enrollments.show');
+        Route::post('/members/{member}/transfer', [StudentEnrollmentController::class, 'transfer'])->name('enrollments.transfer');
+        Route::post('/members/{member}/withdraw', [StudentEnrollmentController::class, 'withdraw'])->name('enrollments.withdraw');
+    });
+
+    // Assessments & Gradebook Results
+    Route::apiResource('assessments', AssessmentController::class);
+    Route::apiResource('assessment-results', AssessmentResultController::class);
+
+    // Academic Reporting & Printable Gradebooks
+    Route::prefix('report-cards')->group(function () {
+        Route::get('/student/{student}', [ReportCardController::class, 'showStudent'])->name('report-cards.student');
+        Route::get('/class/{schoolClass}', [ReportCardController::class, 'showClass'])->name('report-cards.class');
+        Route::get('/class/{schoolClass}/export/csv', [ReportCardController::class, 'exportCsv'])->name('report-cards.class.export.csv');
+        Route::get('/class/{schoolClass}/export/print', [ReportCardController::class, 'exportPrint'])->name('report-cards.class.export.print');
+    });
+
+    // End-of-Year Student Promotion, Retention & Graduation
+    Route::prefix('promotion')->group(function () {
+        Route::get('/student/{student}', [PromotionController::class, 'evaluateStudent'])->name('promotion.student');
+        Route::post('/dry-run', [PromotionController::class, 'dryRun'])->name('promotion.dry-run');
+        Route::post('/commit', [PromotionController::class, 'commit'])->name('promotion.commit');
+    });
+
+    // Attendance Management Subsystem
+    Route::prefix('attendance')->group(function () {
+        Route::prefix('sessions')->group(function () {
+            Route::post('/', [AttendanceController::class, 'store'])->name('attendance.sessions.store');
+            Route::get('/', [AttendanceController::class, 'index'])->name('attendance.sessions.index');
+            Route::get('/{session}', [AttendanceController::class, 'show'])->name('attendance.sessions.show');
+            Route::get('/{session}/roster', [AttendanceController::class, 'roster'])->name('attendance.sessions.roster');
+            Route::post('/{session}/submit', [AttendanceController::class, 'submit'])->name('attendance.sessions.submit');
+            Route::patch('/{session}/marks', [AttendanceController::class, 'correct'])->name('attendance.sessions.correct');
+            Route::post('/{session}/close', [AttendanceController::class, 'close'])->name('attendance.sessions.close');
+            Route::delete('/{session}', [AttendanceController::class, 'destroy'])->name('attendance.sessions.destroy');
+        });
+
+        Route::get('summary', [AttendanceController::class, 'summary'])->name('attendance.summary');
+    });
+
+    // Monthly Member Payments & Accounting Subsystem
+    Route::prefix('payments')->group(function () {
+        Route::get('/rules', [PaymentController::class, 'rules'])->name('payments.rules');
+        Route::post('/rules', [PaymentController::class, 'storeRule'])->name('payments.rules.store');
+        Route::get('/dashboard', [PaymentController::class, 'dashboard'])->name('payments.dashboard');
+        Route::get('/members', [PaymentController::class, 'membersLedger'])->name('payments.members');
+        Route::get('/members/{member}', [PaymentController::class, 'memberHistory'])->name('payments.member.history');
+        Route::get('/members/{member}/history', [PaymentController::class, 'memberHistory'])->name('payments.member.history.alias');
+        Route::post('/', [PaymentController::class, 'record'])->name('payments.record');
+        Route::post('/record', [PaymentController::class, 'record'])->name('payments.record.alias');
+        Route::post('/{payment}/void', [PaymentController::class, 'voidPayment'])->name('payments.void');
+        Route::get('/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
+        Route::get('/export/monthly-summary', [PaymentExportController::class, 'exportMonthlySummary'])->name('payments.export.monthly-summary');
+        Route::get('/export/transactions', [PaymentExportController::class, 'exportTransactions'])->name('payments.export.transactions');
+    });
 });
