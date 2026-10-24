@@ -2,27 +2,25 @@
 
 namespace App\Models;
 
-use Spatie\Permission\Models\Permission as SpatiePermission;
-use OpenApi\Attributes as OA;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[OA\Schema(
-    schema: "Permission",
-    description: "Permission Model",
-    title: "Permission",
-    properties: [
-        new OA\Property(property: "id", type: "integer", example: 1),
-        new OA\Property(property: "name", type: "string", example: "edit articles"),
-        new OA\Property(property: "guard_name", type: "string", example: "web"),
-        new OA\Property(property: "created_at", type: "string", format: "date-time"),
-        new OA\Property(property: "updated_at", type: "string", format: "date-time")
-    ]
-)]
-class Permission extends SpatiePermission
+class Permission extends Model
 {
-    protected $fillable = ['name', 'guard_name', 'group_name', 'label', 'description'];
+    protected $fillable = [
+        'name',
+        'slug',
+        'module',
+        'description',
+    ];
 
-    protected function casts(): array
+    public function roles(): BelongsToMany
     {
-        return ['label' => 'array', 'description' => 'array'];
+        return $this->belongsToMany(
+            Role::class,
+            'permission_role',
+            'permission_id',
+            'role_id'
+        )->withTimestamps();
     }
 }

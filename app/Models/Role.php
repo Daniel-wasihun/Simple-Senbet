@@ -2,31 +2,42 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Spatie\Permission\Models\Role as SpatieRole;
-use OpenApi\Attributes as OA;
-
-#[OA\Schema(
-    schema: "Role",
-    description: "Role Model",
-    title: "Role",
-    properties: [
-        new OA\Property(property: "id", type: "integer", example: 1),
-        new OA\Property(property: "name", type: "string", example: "Admin"),
-        new OA\Property(property: "guard_name", type: "string", example: "web"),
-        new OA\Property(property: "created_at", type: "string", format: "date-time"),
-        new OA\Property(property: "updated_at", type: "string", format: "date-time")
-    ]
-)]
-class Role extends SpatieRole
+use App\Models\User;
+use App\Models\Permission;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany; 
+class Role extends Model
 {
-    /** @use HasFactory<\Database\Factories\RoleFactory> */
-    use HasFactory;
+    protected $fillable = [
+        'name',
+        'slug',
+        'description',
+        'is_system',
+    ];
 
-    protected $fillable = ['name', 'guard_name', 'label'];
+    protected $casts = [
+        'is_system' => 'boolean',
+    ];
 
-    protected function casts(): array
+    public function users(): BelongsToMany
     {
-        return ['label' => 'array'];
+        return $this->belongsToMany(
+            User::class,
+            'role_user',
+            'role_id',
+            'user_id'
+        )->withTimestamps();
     }
+
+    public function permissions(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Permission::class,
+            'permission_role',
+            'role_id',
+            'permission_id'
+        )->withTimestamps();
+    }
+
+    
 }
