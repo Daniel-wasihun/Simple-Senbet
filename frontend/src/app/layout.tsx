@@ -3,8 +3,8 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "Simple Senbet | Sunday School Management",
-  description: "Sunday School Management App built with Laravel 13 and Next.js 16",
+  title: "Simple Senbet | Ethiopian Orthodox Sunday School",
+  description: "Supporting learning, prayer, and parish life in Ethiopian Orthodox Tewahedo Sunday Schools.",
 };
 
 export default function RootLayout({

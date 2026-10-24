@@ -73,8 +73,6 @@ class APICache {
       });
 
       return data;
-    } catch (error) {
-      throw error;
     } finally {
       this.pendingRequests.delete(key);
     }

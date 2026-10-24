@@ -225,38 +225,34 @@ export const apiService = {
     // Ensure CSRF token is available before making request
     await ensureCsrfToken();
 
-    try {
-      // Prepare config to ensure auth headers are set
-      const config: any = {
-        headers: {}, // Initialize headers object
-      };
+    // Prepare config to ensure auth headers are set
+    const config: any = {
+      headers: {}, // Initialize headers object
+    };
 
-      // Ensure auth headers are set for DELETE requests
-      if (typeof window !== "undefined") {
-        const token = localStorage.getItem("auth_token");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-
-        // Add XSRF token from cookies
-        const xsrfToken = getCookie('XSRF-TOKEN');
-        if (xsrfToken) {
-          config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
-        }
+    // Ensure auth headers are set for DELETE requests
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // Add common headers for Laravel Sanctum compatibility
-      config.headers["Accept"] = "application/json";
-      config.headers["X-Requested-With"] = "XMLHttpRequest";
-
-      // For cross-origin requests, ensure credentials are included
-      config.withCredentials = true;
-
-      const response = await api.delete<T>(url, config);
-      return response.data;
-    } catch (error: any) {
-      throw error;
+      // Add XSRF token from cookies
+      const xsrfToken = getCookie('XSRF-TOKEN');
+      if (xsrfToken) {
+        config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
+      }
     }
+
+    // Add common headers for Laravel Sanctum compatibility
+    config.headers["Accept"] = "application/json";
+    config.headers["X-Requested-With"] = "XMLHttpRequest";
+
+    // For cross-origin requests, ensure credentials are included
+    config.withCredentials = true;
+
+    const response = await api.delete<T>(url, config);
+    return response.data;
   },
 };
 

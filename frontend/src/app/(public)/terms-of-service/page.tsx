@@ -1,0 +1,3 @@
+﻿export default function TermsOfServicePage() {
+  return <main className="mx-auto max-w-4xl px-5 py-16 sm:py-20"><p className="text-xs font-bold uppercase tracking-[.2em] text-[#9a7742]">Simple Senbet</p><h1 className="mt-3 font-serif text-4xl font-semibold text-[#102746]">Terms of service</h1><p className="mt-6 text-sm leading-7 text-[#687586]">Simple Senbet is provided to support the administration of parish Sunday Schools. Users must use their own account, keep their sign-in details private, and access only the records permitted for their role.</p><p className="mt-4 text-sm leading-7 text-[#687586]">School administrators are responsible for issuing and managing accounts and for keeping student information accurate and appropriate to the school's work.</p></main>;
+}

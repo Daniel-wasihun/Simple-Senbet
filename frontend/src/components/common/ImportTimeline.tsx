@@ -1,10 +1,16 @@
 // src/components/shared/ImportTimeline.tsx
 "use client";
 import { useLanguage } from "@/context/LanguageContext";
-import { APITimeline } from "@/services/timeline.service";
 import { Heading2, BodySmall, Caption, Label } from "@/components/ui/typography";
 
-export function ImportTimeline({ timelines }: { timelines: APITimeline[] }) {
+interface ImportTimelineStep {
+  timeline_id: number | string;
+  step_name: { en: string; am: string };
+  description: { en: string; am: string };
+  duration: { en: string; am: string };
+}
+
+export function ImportTimeline({ timelines }: { timelines: ImportTimelineStep[] }) {
   const { language } = useLanguage();
   const isAm = language === "am";
 
