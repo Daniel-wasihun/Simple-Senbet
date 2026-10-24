@@ -19,6 +19,8 @@ class RolePermissionController extends Controller
      */
     public function index(Role $role): JsonResponse
     {
+        $this->authorize('view', $role);
+
         return response()->json([
             'role' => RoleResource::make($role),
             'permission_groups' => collect($this->service->grouped($role))->map(fn ($group) => [
@@ -33,6 +35,8 @@ class RolePermissionController extends Controller
      */
     public function sync(SyncRolePermissionsRequest $request, Role $role): JsonResponse
     {
+        $this->authorize('update', $role);
+
         return response()->json([
             'message' => __('auth.permissions_updated'),
             'role' => RoleResource::make($this->service->sync($role, $request->validated('permission_ids'))),

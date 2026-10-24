@@ -15,8 +15,8 @@ class AttendanceSessionPolicy
     public function viewAny(User $user): bool
     {
         return $user->hasRole('superadmin')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])
-            || $user->hasRole('teacher');
+            || $user->can('attendance.view')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer', 'teacher']);
     }
 
     /**
@@ -42,7 +42,7 @@ class AttendanceSessionPolicy
             return true;
         }
 
-        if (! $user->hasRole('teacher')) {
+        if (! $user->hasRole('teacher') && ! $user->can('attendance.create')) {
             return false;
         }
 
@@ -121,11 +121,13 @@ class AttendanceSessionPolicy
             return false;
         }
 
-        return $user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer']);
+        return $user->hasRole('superadmin')
+            || $user->can('attendance.close')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer']);
     }
 
     /**
-     * Determine whether the user can delete the attendance session.
+     * Determine whether the user can delete an attendance session.
      */
     public function delete(User $user, AttendanceSession $session): bool
     {
@@ -133,7 +135,9 @@ class AttendanceSessionPolicy
             return false;
         }
 
-        return $user->hasRole('superadmin');
+        return $user->hasRole('superadmin')
+            || $user->can('attendance.delete')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer']);
     }
 
     /**

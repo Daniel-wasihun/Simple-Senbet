@@ -69,11 +69,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has the given permission (alias for Spatie hasPermissionTo).
+     * Check if user has the given permission (alias for Spatie/Gate can).
      */
     public function hasPermission(string $permission): bool
     {
-        return $this->hasPermissionTo($permission);
+        return $this->can($permission);
     }
 
     /**

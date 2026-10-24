@@ -32,6 +32,8 @@ class PaymentController extends Controller
      */
     public function rules(): JsonResponse
     {
+        $this->authorize('viewAny', MemberPayment::class);
+
         $rules = MonthlyPaymentRule::with(['schoolClass', 'minimumSchoolClass', 'creator'])
             ->orderByDesc('effective_from')
             ->get();
@@ -44,6 +46,8 @@ class PaymentController extends Controller
      */
     public function storeRule(StorePaymentRuleRequest $request): JsonResponse
     {
+        $this->authorize('manageRules', MemberPayment::class);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer'])) {
             return ApiResponse::forbidden('Only administrators can configure payment rules.');
@@ -86,6 +90,8 @@ class PaymentController extends Controller
      */
     public function dashboard(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', MemberPayment::class);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to access payment records.');
@@ -111,6 +117,8 @@ class PaymentController extends Controller
      */
     public function membersLedger(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', MemberPayment::class);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to access payment records.');
@@ -154,6 +162,8 @@ class PaymentController extends Controller
      */
     public function memberHistory(Request $request, Member $member): JsonResponse
     {
+        $this->authorize('viewAny', MemberPayment::class);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to access payment records.');
@@ -185,6 +195,8 @@ class PaymentController extends Controller
      */
     public function record(RecordPaymentRequest $request): JsonResponse
     {
+        $this->authorize('create', MemberPayment::class);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to record payments.');
@@ -210,6 +222,8 @@ class PaymentController extends Controller
      */
     public function voidPayment(VoidPaymentRequest $request, MemberPayment $payment): JsonResponse
     {
+        $this->authorize('void', $payment);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer'])) {
             return ApiResponse::forbidden('Only administrators can void payments.');
@@ -225,6 +239,8 @@ class PaymentController extends Controller
      */
     public function receipt(Request $request, MemberPayment $payment): JsonResponse
     {
+        $this->authorize('view', $payment);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to access payment records.');

@@ -24,8 +24,10 @@ class PromotionController extends Controller
     {
         $user = $request->user();
 
-        // 1. Authorization: Admins or assigned teachers
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        // 1. Authorization: Admins, users with promotions/reports permission, or assigned teachers
+        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator'])
+            || $user->can('promotions.manage')
+            || $user->can('reports.view');
         if (! $isAdmin) {
             $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
                 ->where('class_id', $student->class_id)
@@ -61,7 +63,7 @@ class PromotionController extends Controller
     public function dryRun(PromotionDryRunRequest $request): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator'])) {
+        if (! ($user->hasRole(['superadmin', 'academic_director', 'academic_administrator']) || $user->can('promotions.manage'))) {
             return ApiResponse::forbidden('Only administrative roles can simulate cohort promotions.');
         }
 
@@ -84,7 +86,7 @@ class PromotionController extends Controller
     public function commit(PromotionCommitRequest $request): JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director'])) {
+        if (! ($user->hasRole(['superadmin', 'academic_director']) || $user->can('promotions.manage'))) {
             return ApiResponse::forbidden('Only superadmin or academic director can execute promotion commits.');
         }
 

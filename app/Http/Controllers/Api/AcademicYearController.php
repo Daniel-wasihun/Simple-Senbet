@@ -38,7 +38,7 @@ class AcademicYearController extends Controller
      */
     public function index()
     {
-        return $this->indexCrud(AcademicYear::class, AcademicYearResource::class);
+        return $this->indexCrud(AcademicYear::class, AcademicYearResource::class, [], true);
     }
 
     /**
@@ -46,7 +46,7 @@ class AcademicYearController extends Controller
      */
     public function store(Request $request)
     {
-        return $this->storeCrud($request, AcademicYear::class, AcademicYearResource::class, $this->rules());
+        return $this->storeCrud($request, AcademicYear::class, AcademicYearResource::class, $this->rules(), [], true);
     }
 
     /**
@@ -54,7 +54,7 @@ class AcademicYearController extends Controller
      */
     public function show(AcademicYear $academicYear)
     {
-        return $this->showCrud($academicYear, AcademicYearResource::class);
+        return $this->showCrud($academicYear, AcademicYearResource::class, [], true);
     }
 
     /**
@@ -62,6 +62,8 @@ class AcademicYearController extends Controller
      */
     public function current(): JsonResponse
     {
+        $this->authorize('viewAny', AcademicYear::class);
+
         $current = AcademicYear::where('is_current', true)->first()
             ?? AcademicYear::latest('id')->first();
 
@@ -80,7 +82,7 @@ class AcademicYearController extends Controller
      */
     public function update(Request $request, AcademicYear $academicYear)
     {
-        return $this->updateCrud($request, $academicYear, AcademicYearResource::class, $this->rules($academicYear));
+        return $this->updateCrud($request, $academicYear, AcademicYearResource::class, $this->rules($academicYear), [], true);
     }
 
     /**
@@ -88,6 +90,6 @@ class AcademicYearController extends Controller
      */
     public function destroy(AcademicYear $academicYear)
     {
-        return $this->destroyCrud($academicYear);
+        return $this->destroyCrud($academicYear, true);
     }
 }

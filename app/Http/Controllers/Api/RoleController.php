@@ -15,6 +15,8 @@ class RoleController extends Controller
      */
     public function index(): JsonResponse
     {
+        $this->authorize('viewAny', Role::class);
+
         $roles = Role::with('permissions')->orderBy('id')->get();
 
         return ApiResponse::success(
@@ -28,6 +30,8 @@ class RoleController extends Controller
      */
     public function show(Role $role): JsonResponse
     {
+        $this->authorize('view', $role);
+
         $role->load('permissions');
 
         return ApiResponse::success(

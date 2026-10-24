@@ -25,9 +25,13 @@ class ReportCardController extends Controller
     {
         $user = $request->user();
 
-        // 1. Authorization: Admins or assigned teachers
+        // 1. Authorization: Admins or assigned teachers with reports view permission
         $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
         if (! $isAdmin) {
+            if (! $user->can('reports.view') && ! $user->hasRole('teacher')) {
+                return ApiResponse::forbidden('You do not have permission to view report cards.');
+            }
+
             $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
                 ->where('class_id', $student->class_id)
                 ->when($student->section, function ($query, $section) {
@@ -59,9 +63,13 @@ class ReportCardController extends Controller
     {
         $user = $request->user();
 
-        // 1. Authorization: Admins or assigned teachers for this class
+        // 1. Authorization: Admins or assigned teachers with reports view permission
         $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
         if (! $isAdmin) {
+            if (! $user->can('reports.view') && ! $user->hasRole('teacher')) {
+                return ApiResponse::forbidden('You do not have permission to view class gradebooks.');
+            }
+
             $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
                 ->where('class_id', $schoolClass->id)
                 ->exists();
@@ -94,9 +102,13 @@ class ReportCardController extends Controller
     {
         $user = $request->user();
 
-        // 1. Authorization: Admins or assigned teachers for this class
+        // 1. Authorization: Admins or assigned teachers with reports export permission
         $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
         if (! $isAdmin) {
+            if (! $user->can('reports.export') && ! $user->hasRole('teacher')) {
+                return ApiResponse::forbidden('You do not have permission to export class gradebooks.');
+            }
+
             $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
                 ->where('class_id', $schoolClass->id)
                 ->exists();
@@ -234,9 +246,13 @@ class ReportCardController extends Controller
     {
         $user = $request->user();
 
-        // 1. Authorization: Admins or assigned teachers for this class
+        // 1. Authorization: Admins or assigned teachers with reports export permission
         $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
         if (! $isAdmin) {
+            if (! $user->can('reports.export') && ! $user->hasRole('teacher')) {
+                return ApiResponse::forbidden('You do not have permission to view this printable gradebook.');
+            }
+
             $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
                 ->where('class_id', $schoolClass->id)
                 ->exists();

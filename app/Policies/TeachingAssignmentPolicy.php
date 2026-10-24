@@ -20,7 +20,8 @@ class TeachingAssignmentPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher']);
+        return $user->can('teaching-assignments.view')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer', 'teacher']);
     }
 
     /**
@@ -28,7 +29,7 @@ class TeachingAssignmentPolicy
      */
     public function view(User $user, TeachingAssignment $assignment): bool
     {
-        if ($user->hasRole(['superadmin', 'academic_director', 'academic_administrator'])) {
+        if ($user->can('teaching-assignments.view') || $user->hasRole(['academic_director', 'academic_administrator'])) {
             return true;
         }
 
@@ -40,7 +41,8 @@ class TeachingAssignmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        return $user->can('teaching-assignments.create')
+            || $user->hasRole(['academic_director', 'academic_administrator']);
     }
 
     /**
@@ -48,7 +50,8 @@ class TeachingAssignmentPolicy
      */
     public function update(User $user, TeachingAssignment $assignment): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        return $user->can('teaching-assignments.update')
+            || $user->hasRole(['academic_director', 'academic_administrator']);
     }
 
     /**
@@ -56,14 +59,15 @@ class TeachingAssignmentPolicy
      */
     public function delete(User $user, TeachingAssignment $assignment): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director']);
+        return $user->can('teaching-assignments.delete')
+            || $user->hasRole(['academic_director']);
     }
 
     /**
-     * Determine whether the user can end the teaching assignment.
+     * Determine whether the user can end a teaching assignment.
      */
     public function end(User $user, TeachingAssignment $assignment): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        return $this->update($user, $assignment);
     }
 }

@@ -20,7 +20,8 @@ class StudentEnrollmentPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator', 'teacher']);
+        return $user->can('student-enrollments.view')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator', 'teacher']);
     }
 
     /**
@@ -28,7 +29,7 @@ class StudentEnrollmentPolicy
      */
     public function view(User $user, StudentEnrollment $enrollment): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator', 'teacher']);
+        return $this->viewAny($user);
     }
 
     /**
@@ -36,7 +37,8 @@ class StudentEnrollmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator']);
+        return $user->can('student-enrollments.create')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator']);
     }
 
     /**
@@ -44,15 +46,8 @@ class StudentEnrollmentPolicy
      */
     public function update(User $user, StudentEnrollment $enrollment): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator']);
-    }
-
-    /**
-     * Determine whether the user can delete the student enrollment.
-     */
-    public function delete(User $user, StudentEnrollment $enrollment): bool
-    {
-        return $user->hasRole(['superadmin', 'academic_director']);
+        return $user->can('student-enrollments.update')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator']);
     }
 
     /**
@@ -60,7 +55,8 @@ class StudentEnrollmentPolicy
      */
     public function transfer(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator']);
+        return $user->can('student-enrollments.update')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator']);
     }
 
     /**
@@ -68,6 +64,16 @@ class StudentEnrollmentPolicy
      */
     public function withdraw(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator']);
+        return $user->can('student-enrollments.delete')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator']);
+    }
+
+    /**
+     * Determine whether the user can delete the student enrollment.
+     */
+    public function delete(User $user, StudentEnrollment $enrollment): bool
+    {
+        return $user->can('student-enrollments.delete')
+            || $user->hasRole(['academic_director']);
     }
 }

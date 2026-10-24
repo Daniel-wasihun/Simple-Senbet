@@ -3,10 +3,16 @@
 namespace App\Http\Requests\Payment;
 
 use App\Http\Requests\BaseRequest;
+use App\Models\MemberPayment;
 use Illuminate\Validation\Rule;
 
 class RecordPaymentRequest extends BaseRequest
 {
+    public function authorize(): bool
+    {
+        return $this->user()?->can('create', MemberPayment::class) ?? false;
+    }
+
     public function rules(): array
     {
         return [

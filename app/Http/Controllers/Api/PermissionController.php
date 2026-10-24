@@ -17,6 +17,8 @@ class PermissionController extends Controller
      */
     public function index(): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Permission::class);
+
         return PermissionResource::collection(Permission::orderBy('group_name')->paginate(50));
     }
 
@@ -25,6 +27,8 @@ class PermissionController extends Controller
      */
     public function store(StorePermissionRequest $request): JsonResponse
     {
+        $this->authorize('create', Permission::class);
+
         $permission = Permission::create($request->validated() + ['guard_name' => 'web']);
 
         return response()->json([
@@ -38,6 +42,8 @@ class PermissionController extends Controller
      */
     public function update(UpdatePermissionRequest $request, Permission $permission): array
     {
+        $this->authorize('update', $permission);
+
         $permission->update($request->validated());
 
         return [
@@ -51,6 +57,8 @@ class PermissionController extends Controller
      */
     public function destroy(Permission $permission): JsonResponse
     {
+        $this->authorize('delete', $permission);
+
         $permission->delete();
 
         return response()->json(['message' => __('auth.permission_deleted')]);

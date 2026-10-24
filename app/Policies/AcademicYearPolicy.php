@@ -20,7 +20,8 @@ class AcademicYearPolicy
      */
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->can('academic-years.view')
+            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator', 'teacher', 'student']);
     }
 
     /**
@@ -28,7 +29,7 @@ class AcademicYearPolicy
      */
     public function view(User $user, AcademicYear $academicYear): bool
     {
-        return true;
+        return $this->viewAny($user);
     }
 
     /**
@@ -36,7 +37,8 @@ class AcademicYearPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole('superadmin');
+        return $user->can('academic-years.create')
+            || $user->hasRole(['academic_director']);
     }
 
     /**
@@ -44,7 +46,8 @@ class AcademicYearPolicy
      */
     public function update(User $user, AcademicYear $academicYear): bool
     {
-        return $user->hasRole('superadmin');
+        return $user->can('academic-years.update')
+            || $user->hasRole(['academic_director']);
     }
 
     /**
@@ -52,6 +55,6 @@ class AcademicYearPolicy
      */
     public function delete(User $user, AcademicYear $academicYear): bool
     {
-        return $user->hasRole('superadmin');
+        return $user->can('academic-years.delete');
     }
 }

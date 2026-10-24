@@ -27,6 +27,8 @@ class PaymentExportController extends Controller
      */
     public function exportMonthlySummary(Request $request): StreamedResponse|JsonResponse
     {
+        $this->authorize('export', MemberPayment::class);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to export payment records.');
@@ -149,6 +151,8 @@ class PaymentExportController extends Controller
      */
     public function exportTransactions(Request $request): StreamedResponse|JsonResponse
     {
+        $this->authorize('export', MemberPayment::class);
+
         $user = $request->user();
         if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to export payment records.');
