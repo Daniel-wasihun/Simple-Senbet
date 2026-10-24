@@ -32,6 +32,15 @@ class DatabaseSeeder extends Seeder
             ])]
             ));
 
+        $registerPermission = Permission::firstOrCreate([
+            'name' => 'users.register',
+            'guard_name' => 'web',
+        ], [
+            'group_name' => 'users',
+            'label' => ['en' => 'Users Register'],
+        ]);
+        $permissions->put('users.register', $registerPermission);
+
         $roles['superadmin']->syncPermissions($permissions->values());
         $roles['teacher']->syncPermissions($permissions->only([
             'school-classes.view', 'courses.view', 'members.view',

@@ -16,14 +16,23 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        $this->authorize('register', User::class);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', PasswordRule::defaults()],
+            'role' => ['sometimes', 'string', 'exists:roles,name'],
         ]);
 
-        $role = Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
-        $user = User::create($data + ['role_id' => $role->id]);
+        $roleName = $data['role'] ?? 'student';
+        $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'role_id' => $role->id,
+        ]);
         $user->syncRoles([$role->name]);
 
         return response()->json([
