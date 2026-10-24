@@ -19,12 +19,19 @@ class ReportCardApiTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private User $assignedTeacher;
+
     private User $unassignedTeacher;
+
     private AcademicYear $academicYear;
+
     private SchoolClass $class;
+
     private Course $course;
+
     private TeachingAssignment $assignment;
+
     private Member $student;
 
     protected function setUp(): void

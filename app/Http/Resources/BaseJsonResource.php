@@ -15,7 +15,6 @@ abstract class BaseJsonResource extends JsonResource
     /**
      * Get additional data that should be returned with the resource array.
      *
-     * @param Request $request
      * @return array<string, mixed>
      */
     public function with(Request $request): array
@@ -31,7 +30,7 @@ abstract class BaseJsonResource extends JsonResource
     /**
      * Helper to append localized strings for translatable model fields into resource arrays.
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     protected function appendLocalized(array $data): array

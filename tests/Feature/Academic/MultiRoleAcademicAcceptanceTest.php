@@ -36,20 +36,29 @@ class MultiRoleAcademicAcceptanceTest extends TestCase
     use RefreshDatabase;
 
     protected Role $superRole;
+
     protected Role $teacherRole;
+
     protected Role $studentRole;
 
     protected User $superadmin;
+
     protected User $assignedTeacher;
+
     protected User $unassignedTeacher;
+
     protected User $studentUser;
 
     protected AcademicYear $academicYear;
+
     protected SchoolClass $schoolClass;
+
     protected Course $course;
+
     protected TeachingAssignment $assignment;
 
     protected Member $studentMember1;
+
     protected Member $studentMember2;
 
     protected function setUp(): void

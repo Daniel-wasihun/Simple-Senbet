@@ -17,9 +17,13 @@ class EnrollmentIntervalTest extends TestCase
     use RefreshDatabase;
 
     private StudentEnrollmentService $enrollmentService;
+
     private AcademicYear $academicYear;
+
     private SchoolClass $classA;
+
     private SchoolClass $classB;
+
     private Member $student;
 
     protected function setUp(): void

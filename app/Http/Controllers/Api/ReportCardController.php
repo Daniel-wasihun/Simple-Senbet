@@ -11,6 +11,8 @@ use App\Models\TeachingAssignment;
 use App\Services\GradebookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportCardController extends Controller
 {
@@ -88,7 +90,7 @@ class ReportCardController extends Controller
     /**
      * Export class gradebook as CSV with UTF-8 BOM and formula injection protection.
      */
-    public function exportCsv(Request $request, SchoolClass $schoolClass): \Symfony\Component\HttpFoundation\StreamedResponse|JsonResponse
+    public function exportCsv(Request $request, SchoolClass $schoolClass): StreamedResponse|JsonResponse
     {
         $user = $request->user();
 
@@ -120,7 +122,7 @@ class ReportCardController extends Controller
         $filename = sprintf('gradebook-class-%d-%d-%s.csv', $schoolClass->id, $academicYearId, $semester);
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Pragma' => 'no-cache',
             'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
             'Expires' => '0',
@@ -176,6 +178,7 @@ class ReportCardController extends Controller
         if (is_array($value)) {
             return $value['am'] ?? $value['en'] ?? (string) reset($value);
         }
+
         return (string) ($value ?? '');
     }
 
@@ -190,8 +193,10 @@ class ReportCardController extends Controller
             if ($en && $am && $en !== $am) {
                 return "{$en} ({$am})";
             }
+
             return $am ?? $en ?? (string) reset($value);
         }
+
         return (string) ($value ?? '');
     }
 
@@ -202,8 +207,9 @@ class ReportCardController extends Controller
     {
         $str = (string) ($value ?? '');
         if (str_starts_with($str, '=') || str_starts_with($str, '+') || str_starts_with($str, '-') || str_starts_with($str, '@')) {
-            return "'" . $str;
+            return "'".$str;
         }
+
         return $str;
     }
 
@@ -224,7 +230,7 @@ class ReportCardController extends Controller
     /**
      * Export printable class gradebook HTML document (optimized for browser printing & PDF export).
      */
-    public function exportPrint(Request $request, SchoolClass $schoolClass): \Illuminate\Http\Response|JsonResponse
+    public function exportPrint(Request $request, SchoolClass $schoolClass): Response|JsonResponse
     {
         $user = $request->user();
 
@@ -255,7 +261,7 @@ class ReportCardController extends Controller
         );
 
         $className = htmlspecialchars($this->formatBilingualText($schoolClass->name), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $yearName = htmlspecialchars($academicYear ? $this->formatBilingualText($academicYear->name) : 'Academic Year ' . $academicYearId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $yearName = htmlspecialchars($academicYear ? $this->formatBilingualText($academicYear->name) : 'Academic Year '.$academicYearId, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $semesterLabel = htmlspecialchars(strtoupper(str_replace('_', ' ', $semester)), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $generatedAt = htmlspecialchars(date('Y-m-d H:i'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -276,8 +282,8 @@ class ReportCardController extends Controller
             };
             $status = htmlspecialchars($statusRaw, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
-            $sectionRank = htmlspecialchars((string) ($summary['section_rank'] ? '#' . $summary['section_rank'] : '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $classRank = htmlspecialchars((string) ($summary['class_rank'] ? '#' . $summary['class_rank'] : '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $sectionRank = htmlspecialchars((string) ($summary['section_rank'] ? '#'.$summary['section_rank'] : '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $classRank = htmlspecialchars((string) ($summary['class_rank'] ? '#'.$summary['class_rank'] : '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $average = (float) ($summary['overall_average'] ?? 0);
             $failedCount = (int) ($summary['failed_courses_count'] ?? 0);
             $attendanceRate = (float) ($attendance['attendance_rate'] ?? 0);
@@ -502,5 +508,3 @@ HTML;
         ]);
     }
 }
-
-

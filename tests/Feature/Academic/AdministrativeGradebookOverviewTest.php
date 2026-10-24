@@ -20,14 +20,23 @@ class AdministrativeGradebookOverviewTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private User $director;
+
     private User $assignedTeacher;
+
     private User $unassignedTeacher;
+
     private AcademicYear $year;
+
     private SchoolClass $class;
+
     private Course $course;
+
     private TeachingAssignment $assignmentA;
+
     private Member $studentA;
+
     private Member $studentB;
 
     protected function setUp(): void

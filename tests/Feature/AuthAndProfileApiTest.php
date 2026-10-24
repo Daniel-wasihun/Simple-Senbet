@@ -18,6 +18,7 @@ class AuthAndProfileApiTest extends TestCase
     use RefreshDatabase;
 
     protected Role $teacherRole;
+
     protected Role $adminRole;
 
     protected function setUp(): void

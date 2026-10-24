@@ -15,8 +15,6 @@ use App\Models\Role;
 use App\Models\SchoolClass;
 use App\Models\SessionStudentRecord;
 use App\Models\SessionTeacherRecord;
-use App\Models\StudentEnrollment;
-use App\Models\TeachingAssignment;
 use App\Models\User;
 use App\Services\AttendanceService;
 use App\Services\StudentEnrollmentService;
@@ -31,17 +29,27 @@ class AttendanceServiceTest extends TestCase
     use RefreshDatabase;
 
     private AttendanceService $attendanceService;
+
     private StudentEnrollmentService $enrollmentService;
+
     private TeachingAssignmentService $teachingAssignmentService;
 
     private AcademicYear $academicYear;
+
     private SchoolClass $classA;
+
     private SchoolClass $classB;
+
     private Course $courseA;
+
     private Course $courseB;
+
     private User $teacher;
+
     private User $superadmin;
+
     private Member $student1;
+
     private Member $student2;
 
     protected function setUp(): void

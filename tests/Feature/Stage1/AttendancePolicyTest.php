@@ -20,13 +20,21 @@ class AttendancePolicyTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private User $assignedTeacher;
+
     private User $unassignedTeacher;
+
     private User $student;
+
     private AcademicYear $academicYear;
+
     private SchoolClass $classA;
+
     private SchoolClass $classB;
+
     private Course $courseA;
+
     private Course $courseB;
 
     protected function setUp(): void
@@ -110,7 +118,7 @@ class AttendancePolicyTest extends TestCase
 
     private function createSession(AttendanceStatus $status = AttendanceStatus::Draft, ?Carbon $submittedAt = null): AttendanceSession
     {
-        $slot = 'period_' . ($this->slotCounter++);
+        $slot = 'period_'.($this->slotCounter++);
 
         return AttendanceSession::create([
             'academic_year_id' => $this->academicYear->id,

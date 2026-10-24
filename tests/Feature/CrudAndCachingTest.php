@@ -3,14 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\AcademicYear;
-use App\Models\Assessment;
 use App\Models\Course;
 use App\Models\Role;
 use App\Models\SchoolClass;
 use App\Models\TeachingAssignment;
 use App\Models\User;
+use App\Services\CachedCrudService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CrudAndCachingTest extends TestCase
@@ -18,8 +19,11 @@ class CrudAndCachingTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private SchoolClass $class;
+
     private Course $course;
+
     private TeachingAssignment $assignment;
 
     protected function setUp(): void
@@ -217,14 +221,14 @@ class CrudAndCachingTest extends TestCase
 
     public function test_cache_version_invalidation_prevents_stale_data_return(): void
     {
-        $cachedService = app(\App\Services\CachedCrudService::class);
+        $cachedService = app(CachedCrudService::class);
 
         // 1. Initial lookup populates cache
         $res1 = $this->actingAs($this->superadmin, 'sanctum')->getJson("/api/school-classes/{$this->class->id}");
         $res1->assertOk()->assertJsonPath('data.code', 'G9');
 
         // 2. Direct database update bypassing service
-        \Illuminate\Support\Facades\DB::table('classes')
+        DB::table('classes')
             ->where('id', $this->class->id)
             ->update(['code' => 'G9-BYPASS']);
 
@@ -242,7 +246,7 @@ class CrudAndCachingTest extends TestCase
 
     public function test_model_cache_version_isolation(): void
     {
-        $cachedService = app(\App\Services\CachedCrudService::class);
+        $cachedService = app(CachedCrudService::class);
 
         $classKeyBefore = $cachedService->key(SchoolClass::class, 'test');
         $courseKeyBefore = $cachedService->key(Course::class, 'test');
@@ -263,4 +267,3 @@ class CrudAndCachingTest extends TestCase
         $this->assertEquals($courseKeyBefore, $courseKeyAfter);
     }
 }
-

@@ -10,6 +10,7 @@ use App\Models\TeachingAssignment;
 use App\Models\User;
 use App\Services\TeachingAssignmentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -18,12 +19,19 @@ class TeachingAssignmentTest extends TestCase
     use RefreshDatabase;
 
     private TeachingAssignmentService $assignmentService;
+
     private AcademicYear $academicYear;
+
     private SchoolClass $classA;
+
     private SchoolClass $classB;
+
     private Course $courseA;
+
     private Course $courseB;
+
     private User $teacher1;
+
     private User $teacher2;
 
     protected function setUp(): void
@@ -294,11 +302,11 @@ class TeachingAssignmentTest extends TestCase
     public function test_canonical_migration_rollback_drops_table(): void
     {
         $migration = require database_path('migrations/2026_10_16_100005_create_teaching_assignments_table.php');
-        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('teaching_assignments'));
+        $this->assertTrue(Schema::hasTable('teaching_assignments'));
         $migration->down();
-        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasTable('teaching_assignments'));
+        $this->assertFalse(Schema::hasTable('teaching_assignments'));
         $migration->up();
-        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasTable('teaching_assignments'));
+        $this->assertTrue(Schema::hasTable('teaching_assignments'));
     }
 
     public function test_migration_rollback_preflight_aborts_when_multi_section_assignments_exist(): void

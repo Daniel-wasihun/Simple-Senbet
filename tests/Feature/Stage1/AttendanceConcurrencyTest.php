@@ -15,8 +15,6 @@ use App\Models\Role;
 use App\Models\SchoolClass;
 use App\Models\SessionStudentRecord;
 use App\Models\SessionTeacherRecord;
-use App\Models\StudentEnrollment;
-use App\Models\TeachingAssignment;
 use App\Models\User;
 use App\Services\AttendanceService;
 use App\Services\StudentEnrollmentService;
@@ -33,17 +31,27 @@ class AttendanceConcurrencyTest extends TestCase
     use RefreshDatabase;
 
     private AttendanceService $attendanceService;
+
     private StudentEnrollmentService $enrollmentService;
+
     private TeachingAssignmentService $teachingAssignmentService;
 
     private AcademicYear $academicYear;
+
     private SchoolClass $classA;
+
     private Course $courseA;
+
     private User $teacher;
+
     private User $teacher2;
+
     private User $superadmin;
+
     private Member $student1;
+
     private Member $student2;
+
     private int $slotSequence = 1;
 
     protected function setUp(): void
@@ -149,7 +157,7 @@ class AttendanceConcurrencyTest extends TestCase
 
     private function nextSlot(): string
     {
-        return 'Period-C' . ($this->slotSequence++);
+        return 'Period-C'.($this->slotSequence++);
     }
 
     /**

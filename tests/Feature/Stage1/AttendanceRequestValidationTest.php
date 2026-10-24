@@ -26,11 +26,17 @@ class AttendanceRequestValidationTest extends TestCase
     use RefreshDatabase;
 
     private AcademicYear $academicYear;
+
     private SchoolClass $classA;
+
     private Course $courseA;
+
     private Member $student1;
+
     private Member $student2;
+
     private User $teacher;
+
     private User $superadmin;
 
     protected function setUp(): void
@@ -118,7 +124,7 @@ class AttendanceRequestValidationTest extends TestCase
             'time_slot' => 'period_1',
         ];
 
-        $request = new CreateAttendanceSessionRequest();
+        $request = new CreateAttendanceSessionRequest;
         $validator = Validator::make($payload, $request->rules());
 
         $this->assertTrue($validator->passes(), json_encode($validator->errors()->all()));
@@ -135,7 +141,7 @@ class AttendanceRequestValidationTest extends TestCase
             'time_slot' => 'homeroom_1',
         ];
 
-        $request = new CreateAttendanceSessionRequest();
+        $request = new CreateAttendanceSessionRequest;
         $validator = Validator::make($payload, $request->rules());
 
         $this->assertTrue($validator->passes());
@@ -143,7 +149,7 @@ class AttendanceRequestValidationTest extends TestCase
 
     public function test_create_request_fails_with_missing_required_fields(): void
     {
-        $request = new CreateAttendanceSessionRequest();
+        $request = new CreateAttendanceSessionRequest;
         $validator = Validator::make([], $request->rules());
 
         $this->assertTrue($validator->fails());
@@ -164,7 +170,7 @@ class AttendanceRequestValidationTest extends TestCase
             'time_slot' => 'period_1',
         ];
 
-        $validator = Validator::make($payload, (new CreateAttendanceSessionRequest())->rules());
+        $validator = Validator::make($payload, (new CreateAttendanceSessionRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('date', $validator->errors()->toArray());
     }
@@ -180,7 +186,7 @@ class AttendanceRequestValidationTest extends TestCase
             'time_slot' => 'period_1',
         ];
 
-        $validator = Validator::make($payload, (new CreateAttendanceSessionRequest())->rules());
+        $validator = Validator::make($payload, (new CreateAttendanceSessionRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('academic_year_id', $validator->errors()->toArray());
         $this->assertArrayHasKey('class_id', $validator->errors()->toArray());
@@ -233,7 +239,7 @@ class AttendanceRequestValidationTest extends TestCase
             'semester' => Semester::Semester1->value,
         ];
 
-        $request = new SubmitAttendanceSessionRequest();
+        $request = new SubmitAttendanceSessionRequest;
         $validator = Validator::make($payload, $request->rules());
 
         $this->assertTrue($validator->passes(), json_encode($validator->errors()->all()));
@@ -245,7 +251,7 @@ class AttendanceRequestValidationTest extends TestCase
             'student_marks' => [],
         ];
 
-        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest())->rules());
+        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('student_marks', $validator->errors()->toArray());
     }
@@ -259,7 +265,7 @@ class AttendanceRequestValidationTest extends TestCase
             ],
         ];
 
-        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest())->rules());
+        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('student_marks.1.student_id', $validator->errors()->toArray());
     }
@@ -272,7 +278,7 @@ class AttendanceRequestValidationTest extends TestCase
             ],
         ];
 
-        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest())->rules());
+        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('student_marks.0.mark', $validator->errors()->toArray());
     }
@@ -289,7 +295,7 @@ class AttendanceRequestValidationTest extends TestCase
             ],
         ];
 
-        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest())->rules());
+        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('teacher_marks.1.teacher_id', $validator->errors()->toArray());
     }
@@ -303,7 +309,7 @@ class AttendanceRequestValidationTest extends TestCase
             'semester' => 'semester_99',
         ];
 
-        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest())->rules());
+        $validator = Validator::make($payload, (new SubmitAttendanceSessionRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('semester', $validator->errors()->toArray());
     }
@@ -322,9 +328,12 @@ class AttendanceRequestValidationTest extends TestCase
 
         $request = SubmitAttendanceSessionRequest::create('/test', 'POST');
         $request->setUserResolver(fn () => $this->teacher);
-        $request->setRouteResolver(fn () => new class($draftSession) {
+        $request->setRouteResolver(fn () => new class($draftSession)
+        {
             public function __construct(private AttendanceSession $session) {}
-            public function parameter($key, $default = null) {
+
+            public function parameter($key, $default = null)
+            {
                 return $key === 'session' ? $this->session : $default;
             }
         });
@@ -349,7 +358,7 @@ class AttendanceRequestValidationTest extends TestCase
             'is_override' => false,
         ];
 
-        $request = new CorrectAttendanceMarksRequest();
+        $request = new CorrectAttendanceMarksRequest;
         $validator = Validator::make($payload, $request->rules());
 
         $this->assertTrue($validator->passes(), json_encode($validator->errors()->all()));
@@ -386,7 +395,7 @@ class AttendanceRequestValidationTest extends TestCase
             'override_reason' => null, // Missing reason
         ];
 
-        $validator = Validator::make($payload, (new CorrectAttendanceMarksRequest())->rules());
+        $validator = Validator::make($payload, (new CorrectAttendanceMarksRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('override_reason', $validator->errors()->toArray());
     }
@@ -401,7 +410,7 @@ class AttendanceRequestValidationTest extends TestCase
             'override_reason' => 'abc', // 3 chars < 5
         ];
 
-        $validator = Validator::make($payload, (new CorrectAttendanceMarksRequest())->rules());
+        $validator = Validator::make($payload, (new CorrectAttendanceMarksRequest)->rules());
         $this->assertTrue($validator->fails());
         $this->assertArrayHasKey('override_reason', $validator->errors()->toArray());
     }
@@ -442,9 +451,12 @@ class AttendanceRequestValidationTest extends TestCase
         ]);
 
         $request = CorrectAttendanceMarksRequest::create('/test', 'POST');
-        $request->setRouteResolver(fn () => new class($submittedSession) {
+        $request->setRouteResolver(fn () => new class($submittedSession)
+        {
             public function __construct(private AttendanceSession $session) {}
-            public function parameter($key, $default = null) {
+
+            public function parameter($key, $default = null)
+            {
                 return $key === 'session' ? $this->session : $default;
             }
         });

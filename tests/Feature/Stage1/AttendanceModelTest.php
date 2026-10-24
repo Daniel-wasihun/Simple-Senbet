@@ -16,7 +16,6 @@ use App\Models\SessionTeacherRecord;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AttendanceModelTest extends TestCase
@@ -24,10 +23,15 @@ class AttendanceModelTest extends TestCase
     use RefreshDatabase;
 
     private AcademicYear $academicYear;
+
     private SchoolClass $class;
+
     private Course $course;
+
     private User $teacher;
+
     private User $admin;
+
     private Member $student;
 
     protected function setUp(): void

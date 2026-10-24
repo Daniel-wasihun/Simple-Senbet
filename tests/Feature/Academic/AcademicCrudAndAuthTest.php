@@ -4,7 +4,6 @@ namespace Tests\Feature\Academic;
 
 use App\Models\AcademicYear;
 use App\Models\Assessment;
-use App\Models\AssessmentResult;
 use App\Models\Course;
 use App\Models\Member;
 use App\Models\Permission;
@@ -20,8 +19,11 @@ class AcademicCrudAndAuthTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private User $teacher;
+
     private Role $superadminRole;
+
     private Role $teacherRole;
 
     protected function setUp(): void

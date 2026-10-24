@@ -22,22 +22,31 @@ class PromotionTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private User $teacher;
+
     private User $studentUser;
 
     private AcademicYear $currentYear;
+
     private AcademicYear $nextYear;
 
     private SchoolClass $class1;
+
     private SchoolClass $class2;
 
     private Course $course1;
+
     private TeachingAssignment $assignmentSem1;
+
     private TeachingAssignment $assignmentSem2;
 
     private Member $passingStudent;
+
     private Member $failingStudent;
+
     private Member $terminalStudent;
+
     private Member $incompleteStudent;
 
     protected function setUp(): void

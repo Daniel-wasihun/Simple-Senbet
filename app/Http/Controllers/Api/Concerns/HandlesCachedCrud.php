@@ -14,7 +14,7 @@ trait HandlesCachedCrud
             $this->authorize('viewAny', $model);
         }
 
-return $resource::collection(app(CachedCrudService::class)->paginate($model, $with));
+        return $resource::collection(app(CachedCrudService::class)->paginate($model, $with));
     }
 
     protected function showCrud(Model $model, string $resource, array $with = [], bool $authorize = false)
@@ -23,7 +23,7 @@ return $resource::collection(app(CachedCrudService::class)->paginate($model, $wi
             $this->authorize('view', $model);
         }
 
-return $resource::make(app(CachedCrudService::class)->find($model, $with));
+        return $resource::make(app(CachedCrudService::class)->find($model, $with));
     }
 
     protected function storeCrud(Request $request, string $model, string $resource, array $rules, array $with = [], bool $authorize = false)

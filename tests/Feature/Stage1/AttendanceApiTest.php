@@ -27,17 +27,29 @@ class AttendanceApiTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private User $assignedTeacher;
+
     private User $unassignedTeacher;
+
     private User $studentUser;
+
     private AcademicYear $academicYear;
+
     private SchoolClass $classA;
+
     private SchoolClass $classB;
+
     private Course $courseA;
+
     private Course $courseB;
+
     private Member $member1;
+
     private Member $member2;
+
     private StudentEnrollmentService $enrollmentService;
+
     private int $slotCounter = 1;
 
     protected function setUp(): void
@@ -166,7 +178,7 @@ class AttendanceApiTest extends TestCase
 
     private function createSession(AttendanceStatus $status = AttendanceStatus::Draft, ?Carbon $submittedAt = null): AttendanceSession
     {
-        $slot = 'period_' . ($this->slotCounter++);
+        $slot = 'period_'.($this->slotCounter++);
 
         return AttendanceSession::create([
             'academic_year_id' => $this->academicYear->id,
@@ -786,4 +798,3 @@ class AttendanceApiTest extends TestCase
             ->assertUnauthorized();
     }
 }
-

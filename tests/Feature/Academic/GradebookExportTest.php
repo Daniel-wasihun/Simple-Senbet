@@ -20,14 +20,23 @@ class GradebookExportTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private User $director;
+
     private User $assignedTeacher;
+
     private User $unassignedTeacher;
+
     private AcademicYear $year;
+
     private SchoolClass $class;
+
     private Course $course;
+
     private TeachingAssignment $assignment;
+
     private Member $studentAmharic;
+
     private Member $studentFormula;
 
     protected function setUp(): void

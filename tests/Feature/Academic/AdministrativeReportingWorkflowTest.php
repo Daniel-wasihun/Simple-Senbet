@@ -20,16 +20,27 @@ class AdministrativeReportingWorkflowTest extends TestCase
     use RefreshDatabase;
 
     private User $superadmin;
+
     private User $director;
+
     private User $assignedTeacherA;
+
     private User $unassignedTeacher;
+
     private AcademicYear $year;
+
     private SchoolClass $class;
+
     private Course $course;
+
     private TeachingAssignment $assignmentA;
+
     private TeachingAssignment $assignmentB;
+
     private Member $studentA1;
+
     private Member $studentA2;
+
     private Member $studentB1;
 
     protected function setUp(): void

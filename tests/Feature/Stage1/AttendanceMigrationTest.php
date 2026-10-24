@@ -18,11 +18,17 @@ class AttendanceMigrationTest extends TestCase
     use RefreshDatabase;
 
     private AcademicYear $academicYear;
+
     private SchoolClass $class;
+
     private Course $courseA;
+
     private Course $courseB;
+
     private User $teacher;
+
     private User $admin;
+
     private Member $student;
 
     protected function setUp(): void
