@@ -1,108 +1,86 @@
 <?php
 
 namespace App\Models;
- 
-use App\Models\Role;  
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany; 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;   
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    /** @use HasFactory<UserFactory> */
+    use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable;
 
-    
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
     protected $fillable = [
-        'name', 
+        'name',
         'email',
         'password',
-        'phone_number',
-        'profile_picture',
-        'language',
+        'role_id',
     ];
 
-    
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
- 
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-        'status' => 'boolean',
-        'is_locked' => 'boolean',
-        'login_attempts' => 'integer',
-        'locked_until' => 'datetime',
-        'last_login' => 'datetime', 
-    ];
 
-    
-    public function roles(): BelongsToMany
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
     {
-        return $this->belongsToMany(
-            Role::class,
-            'role_user',
-            'user_id',
-            'role_id'
-        )->withTimestamps();
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
     }
 
-   
-
-  
-    
-    public function hasRole(string $roleSlug): bool
+    public function primaryRole(): BelongsTo
     {
-        return $this->roles()
-            ->where('slug', $roleSlug)
-            ->exists();
+        return $this->belongsTo(Role::class, 'role_id');
     }
 
-   
-    public function hasPermission(string $permissionSlug): bool
+    /**
+     * Check if user has the given permission (alias for Spatie hasPermissionTo).
+     */
+    public function hasPermission(string $permission): bool
     {
-        return $this->roles()
-            ->whereHas('permissions', function ($query) use ($permissionSlug) {
-                $query->where(
-                    'permissions.slug',
-                    $permissionSlug
-                );
-            })
-            ->exists();
+        return $this->hasPermissionTo($permission);
     }
- /**
+
+    /**
      * Get the teaching assignments associated with this teacher/user.
      */
-    public function teachingAssignments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function teachingAssignments(): HasMany
     {
         return $this->hasMany(TeachingAssignment::class, 'teacher_id');
     }
-    
-   
-   
-
-    
 }
-
-
-
-
-
- 
-
- 
-
-    
- 
-
-   
-   
-
-
-
-
-
-
-

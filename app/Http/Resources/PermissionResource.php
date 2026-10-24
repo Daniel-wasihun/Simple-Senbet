@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\UserManagement\Resources;
+namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -12,10 +12,13 @@ class PermissionResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'slug' => $this->slug,
-            'module' => $this->module,
+            'group_name' => $this->group_name,
+            // The frontend chooses the requested language from these JSON objects.
+            'label' => $this->label,
             'description' => $this->description,
-            'roles_count' => $this->whenCounted('roles'),
+            'guard_name' => $this->guard_name,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

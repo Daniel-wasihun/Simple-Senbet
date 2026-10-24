@@ -2,42 +2,40 @@
 
 namespace App\Models;
 
-use App\Models\User;
-use App\Models\Permission;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany; 
-class Role extends Model
+use Database\Factories\RoleFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
+use Spatie\Permission\Models\Role as SpatieRole;
+
+#[OA\Schema(
+    schema: 'Role',
+    description: 'Role Model',
+    title: 'Role',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'name', type: 'string', example: 'Admin'),
+        new OA\Property(property: 'guard_name', type: 'string', example: 'web'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+    ]
+)]
+class Role extends SpatieRole
 {
-    protected $fillable = [
-        'name',
-        'slug',
-        'description',
-        'is_system',
-    ];
+    /** @use HasFactory<RoleFactory> */
+    use HasFactory;
 
-    protected $casts = [
-        'is_system' => 'boolean',
-    ];
+    protected $fillable = ['name', 'guard_name', 'label'];
 
-    public function users(): BelongsToMany
+    protected $appends = ['slug'];
+
+    protected function casts(): array
     {
-        return $this->belongsToMany(
-            User::class,
-            'role_user',
-            'role_id',
-            'user_id'
-        )->withTimestamps();
+        return ['label' => 'array'];
     }
 
-    public function permissions(): BelongsToMany
+    public function getSlugAttribute(): string
     {
-        return $this->belongsToMany(
-            Permission::class,
-            'permission_role',
-            'role_id',
-            'permission_id'
-        )->withTimestamps();
+        return Str::slug($this->name);
     }
-
-    
 }

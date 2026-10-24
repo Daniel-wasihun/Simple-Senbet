@@ -2,25 +2,35 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
+use Spatie\Permission\Models\Permission as SpatiePermission;
 
-class Permission extends Model
+#[OA\Schema(
+    schema: 'Permission',
+    description: 'Permission Model',
+    title: 'Permission',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'name', type: 'string', example: 'edit articles'),
+        new OA\Property(property: 'guard_name', type: 'string', example: 'web'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+    ]
+)]
+class Permission extends SpatiePermission
 {
-    protected $fillable = [
-        'name',
-        'slug',
-        'module',
-        'description',
-    ];
+    protected $fillable = ['name', 'guard_name', 'group_name', 'label', 'description'];
 
-    public function roles(): BelongsToMany
+    protected $appends = ['slug'];
+
+    protected function casts(): array
     {
-        return $this->belongsToMany(
-            Role::class,
-            'permission_role',
-            'permission_id',
-            'role_id'
-        )->withTimestamps();
+        return ['label' => 'array', 'description' => 'array'];
+    }
+
+    public function getSlugAttribute(): string
+    {
+        return Str::slug($this->name);
     }
 }

@@ -20,7 +20,7 @@ class StudentEnrollmentPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher']);
+        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator', 'teacher']);
     }
 
     /**
@@ -28,7 +28,7 @@ class StudentEnrollmentPolicy
      */
     public function view(User $user, StudentEnrollment $enrollment): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher']);
+        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator', 'teacher']);
     }
 
     /**
@@ -36,7 +36,7 @@ class StudentEnrollmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator']);
     }
 
     /**
@@ -44,7 +44,7 @@ class StudentEnrollmentPolicy
      */
     public function update(User $user, StudentEnrollment $enrollment): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator']);
     }
 
     /**
@@ -60,7 +60,7 @@ class StudentEnrollmentPolicy
      */
     public function transfer(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator']);
     }
 
     /**
@@ -68,6 +68,6 @@ class StudentEnrollmentPolicy
      */
     public function withdraw(User $user): bool
     {
-        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        return $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'member_coordinator']);
     }
 }

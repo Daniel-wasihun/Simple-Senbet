@@ -15,7 +15,7 @@ class AttendanceSessionPolicy
     public function viewAny(User $user): bool
     {
         return $user->hasRole('superadmin')
-            || $user->hasRole(['academic_director', 'academic_administrator'])
+            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])
             || $user->hasRole('teacher');
     }
 
@@ -24,7 +24,7 @@ class AttendanceSessionPolicy
      */
     public function view(User $user, AttendanceSession $session): bool
     {
-        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator'])) {
+        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])) {
             return true;
         }
 
@@ -38,7 +38,7 @@ class AttendanceSessionPolicy
      */
     public function create(User $user, ?int $classId = null, ?int $courseId = null, ?string $date = null): bool
     {
-        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator'])) {
+        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])) {
             return true;
         }
 
@@ -77,7 +77,7 @@ class AttendanceSessionPolicy
             return false;
         }
 
-        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator'])) {
+        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])) {
             return true;
         }
 
@@ -98,7 +98,7 @@ class AttendanceSessionPolicy
         }
 
         if ($session->isTeacherEditable()) {
-            if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator'])) {
+            if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])) {
                 return true;
             }
 
@@ -121,7 +121,7 @@ class AttendanceSessionPolicy
             return false;
         }
 
-        return $user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator']);
+        return $user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer']);
     }
 
     /**

@@ -28,7 +28,7 @@ class PaymentExportController extends Controller
     public function exportMonthlySummary(Request $request): StreamedResponse|JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to export payment records.');
         }
 
@@ -150,7 +150,7 @@ class PaymentExportController extends Controller
     public function exportTransactions(Request $request): StreamedResponse|JsonResponse
     {
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'teacher'])) {
+        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
             return ApiResponse::forbidden('You do not have permission to export payment records.');
         }
 
@@ -245,7 +245,7 @@ class PaymentExportController extends Controller
      */
     protected function getTeacherAssignedClassIds($user): ?array
     {
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer']);
         if ($isAdmin) {
             return null;
         }
