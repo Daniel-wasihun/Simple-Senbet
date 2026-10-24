@@ -8,20 +8,11 @@ use App\Models\User;
 class RolePolicy
 {
     /**
-     * Superadmins bypass all role checks.
-     */
-    public function before(User $user): ?bool
-    {
-        return $user->hasRole('superadmin') ? true : null;
-    }
-
-    /**
      * Determine whether the user can view roles.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('roles.view')
-            || $user->can('roles.manage');
+        return $user->hasPermission('roles.view');
     }
 
     /**
@@ -37,7 +28,7 @@ class RolePolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('roles.manage');
+        return $user->hasPermission('roles.create');
     }
 
     /**
@@ -45,7 +36,7 @@ class RolePolicy
      */
     public function update(User $user, Role $role): bool
     {
-        return $user->can('roles.manage');
+        return $user->hasPermission('roles.update');
     }
 
     /**
@@ -53,6 +44,14 @@ class RolePolicy
      */
     public function delete(User $user, Role $role): bool
     {
-        return $user->can('roles.manage');
+        return $user->hasPermission('roles.delete') && ! $role->users()->exists();
+    }
+
+    /**
+     * Changing a role's permission set is a separate sensitive operation.
+     */
+    public function assignPermissions(User $user, Role $role): bool
+    {
+        return $user->hasPermission('permissions.assign');
     }
 }

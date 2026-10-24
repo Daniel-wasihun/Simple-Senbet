@@ -25,6 +25,12 @@ class AttendanceController extends Controller
     public function store(CreateAttendanceSessionRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $this->authorize('create', [
+            AttendanceSession::class,
+            (int) $validated['class_id'],
+            isset($validated['course_id']) ? (int) $validated['course_id'] : null,
+            (string) $validated['date'],
+        ]);
 
         $session = $this->attendanceService->createSession(
             academicYearId: (int) $validated['academic_year_id'],
@@ -54,8 +60,8 @@ class AttendanceController extends Controller
         $user = $request->user();
         $query = AttendanceSession::query();
 
-        // 1. Scoped query visibility: non-admins only see sessions for classes/courses they teach
-        if (! ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator']))) {
+        // Assigned teachers only see sessions for classes and courses they teach.
+        if ($user->hasRole('teacher')) {
             $query->where(function ($q) use ($user) {
                 $q->whereExists(function ($sub) use ($user) {
                     $sub->selectRaw(1)
@@ -178,6 +184,8 @@ class AttendanceController extends Controller
      */
     public function submit(SubmitAttendanceSessionRequest $request, AttendanceSession $session): JsonResponse
     {
+        $this->authorize('submit', $session);
+
         $submittedSession = $this->attendanceService->submitSession(
             session: $session,
             studentMarks: $request->getStudentMarks(),
@@ -206,6 +214,8 @@ class AttendanceController extends Controller
      */
     public function correct(CorrectAttendanceMarksRequest $request, AttendanceSession $session): JsonResponse
     {
+        $this->authorize('correct', $session);
+
         $updatedSession = $this->attendanceService->correctMarks(
             session: $session,
             correctedStudentMarks: $request->getCorrectedStudentMarks(),

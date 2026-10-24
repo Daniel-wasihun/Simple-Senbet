@@ -32,7 +32,7 @@ class PaymentController extends Controller
      */
     public function rules(): JsonResponse
     {
-        $this->authorize('viewAny', MemberPayment::class);
+        $this->authorize('manageRules', MemberPayment::class);
 
         $rules = MonthlyPaymentRule::with(['schoolClass', 'minimumSchoolClass', 'creator'])
             ->orderByDesc('effective_from')
@@ -49,10 +49,6 @@ class PaymentController extends Controller
         $this->authorize('manageRules', MemberPayment::class);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer'])) {
-            return ApiResponse::forbidden('Only administrators can configure payment rules.');
-        }
-
         $validated = $request->validated();
         if (isset($validated['target_class_id']) && ! isset($validated['class_id'])) {
             $validated['class_id'] = $validated['target_class_id'];
@@ -72,10 +68,9 @@ class PaymentController extends Controller
     /**
      * Get class IDs assigned to the user if teacher, or null if administrator.
      */
-    protected function getTeacherAssignedClassIds($user): ?array
+    protected function getTeacherAssignedClassIds($user, string $globalPermission = 'payments.view.all'): ?array
     {
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer']);
-        if ($isAdmin) {
+        if ($user->hasPermission($globalPermission)) {
             return null;
         }
 
@@ -93,10 +88,6 @@ class PaymentController extends Controller
         $this->authorize('viewAny', MemberPayment::class);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
-            return ApiResponse::forbidden('You do not have permission to access payment records.');
-        }
-
         $assignedClassIds = $this->getTeacherAssignedClassIds($user);
         $month = (string) $request->query('month', now()->format('Y-m'));
         $classId = $request->query('class_id') ? (int) $request->query('class_id') : null;
@@ -120,10 +111,6 @@ class PaymentController extends Controller
         $this->authorize('viewAny', MemberPayment::class);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
-            return ApiResponse::forbidden('You do not have permission to access payment records.');
-        }
-
         $assignedClassIds = $this->getTeacherAssignedClassIds($user);
         $requestedClassId = $request->query('class_id') ? (int) $request->query('class_id') : null;
 
@@ -165,10 +152,6 @@ class PaymentController extends Controller
         $this->authorize('viewAny', MemberPayment::class);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
-            return ApiResponse::forbidden('You do not have permission to access payment records.');
-        }
-
         $assignedClassIds = $this->getTeacherAssignedClassIds($user);
         if ($assignedClassIds !== null) {
             if (! $member->class_id || ! in_array($member->class_id, $assignedClassIds, true)) {
@@ -198,11 +181,7 @@ class PaymentController extends Controller
         $this->authorize('create', MemberPayment::class);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
-            return ApiResponse::forbidden('You do not have permission to record payments.');
-        }
-
-        $assignedClassIds = $this->getTeacherAssignedClassIds($user);
+        $assignedClassIds = $this->getTeacherAssignedClassIds($user, 'payments.record.all');
         $memberId = (int) $request->validated()['member_id'];
         $member = Member::findOrFail($memberId);
 
@@ -225,10 +204,6 @@ class PaymentController extends Controller
         $this->authorize('void', $payment);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer'])) {
-            return ApiResponse::forbidden('Only administrators can void payments.');
-        }
-
         $voided = $this->paymentService->voidPayment($payment, $request->validated()['reason'], $user);
 
         return ApiResponse::success($voided->load(['member', 'voidedByUser', 'auditLogs']), 'Payment voided successfully.');
@@ -242,10 +217,6 @@ class PaymentController extends Controller
         $this->authorize('view', $payment);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
-            return ApiResponse::forbidden('You do not have permission to access payment records.');
-        }
-
         $assignedClassIds = $this->getTeacherAssignedClassIds($user);
         if ($assignedClassIds !== null) {
             if (! $payment->member?->class_id || ! in_array($payment->member->class_id, $assignedClassIds, true)) {

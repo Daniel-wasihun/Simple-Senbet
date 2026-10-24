@@ -8,7 +8,6 @@ use App\Http\Requests\Promotion\PromotionDryRunRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\AcademicYear;
 use App\Models\Member;
-use App\Models\TeachingAssignment;
 use App\Services\PromotionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,26 +21,7 @@ class PromotionController extends Controller
      */
     public function evaluateStudent(Request $request, Member $student): JsonResponse
     {
-        $user = $request->user();
-
-        // 1. Authorization: Admins, users with promotions/reports permission, or assigned teachers
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator'])
-            || $user->can('promotions.manage')
-            || $user->can('reports.view');
-        if (! $isAdmin) {
-            $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
-                ->where('class_id', $student->class_id)
-                ->when($student->section, function ($query, $section) {
-                    $query->where(function ($q) use ($section) {
-                        $q->whereNull('section')->orWhere('section', $section);
-                    });
-                })
-                ->exists();
-
-            if (! $isAssigned) {
-                return ApiResponse::forbidden('You do not have permission to view this student promotion evaluation.');
-            }
-        }
+        $this->authorize('promotion.evaluate-student', $student);
 
         // 2. Resolve Academic Year
         $academicYearId = (int) $request->query('academic_year_id');
@@ -62,11 +42,6 @@ class PromotionController extends Controller
      */
     public function dryRun(PromotionDryRunRequest $request): JsonResponse
     {
-        $user = $request->user();
-        if (! ($user->hasRole(['superadmin', 'academic_director', 'academic_administrator']) || $user->can('promotions.manage'))) {
-            return ApiResponse::forbidden('Only administrative roles can simulate cohort promotions.');
-        }
-
         $validated = $request->validated();
 
         $simulation = $this->promotionService->dryRunPromotion(
@@ -85,11 +60,6 @@ class PromotionController extends Controller
      */
     public function commit(PromotionCommitRequest $request): JsonResponse
     {
-        $user = $request->user();
-        if (! ($user->hasRole(['superadmin', 'academic_director']) || $user->can('promotions.manage'))) {
-            return ApiResponse::forbidden('Only superadmin or academic director can execute promotion commits.');
-        }
-
         $validated = $request->validated();
 
         $result = $this->promotionService->commitPromotion(

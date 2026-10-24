@@ -96,21 +96,18 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('can:register,App\Models\User')
         ->name('auth.register');
 
-    // Superadmin: RBAC and User Administration
-    Route::middleware('role:superadmin')->group(function () {
-        Route::apiResource('users', UserController::class);
-        Route::apiResource('permissions', PermissionController::class)->except(['show']);
-        Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
-        Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
-        Route::get('roles/{role}/permissions', [RolePermissionController::class, 'index'])->name('roles.permissions.index');
-        Route::put('roles/{role}/permissions', [RolePermissionController::class, 'sync'])->name('roles.permissions.sync');
-    });
+    // User and access administration is authorized by each resource policy.
+    Route::apiResource('users', UserController::class);
+    Route::put('users/{user}/roles', [UserController::class, 'syncRoles'])->name('users.roles.sync');
+    Route::apiResource('permissions', PermissionController::class)->except(['show']);
+    Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+    Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
+    Route::get('roles/{role}/permissions', [RolePermissionController::class, 'index'])->name('roles.permissions.index');
+    Route::put('roles/{role}/permissions', [RolePermissionController::class, 'sync'])->name('roles.permissions.sync');
 
     // Academic Years: Discovery & Administrative CRUD
     Route::get('/academic-years/current', [AcademicYearController::class, 'current'])->name('academic-years.current');
-    Route::middleware('role:superadmin')->group(function () {
-        Route::apiResource('academic-years', AcademicYearController::class);
-    });
+    Route::apiResource('academic-years', AcademicYearController::class);
 
     // Core Academic Resources (Governed by CrudPolicy & Spatie Permissions)
     Route::apiResource('school-classes', SchoolClassController::class);

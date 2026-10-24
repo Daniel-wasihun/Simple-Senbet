@@ -7,6 +7,8 @@ use Illuminate\Validation\Rule;
 
 class PromotionCommitRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->user()?->can('promotion.commit') ?? false; }
+
     public function rules(): array
     {
         return [

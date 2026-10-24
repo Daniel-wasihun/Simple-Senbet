@@ -7,6 +7,8 @@ use Illuminate\Validation\Rule;
 
 class PromotionDryRunRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->user()?->can('promotion.dry-run') ?? false; }
+
     public function rules(): array
     {
         return [

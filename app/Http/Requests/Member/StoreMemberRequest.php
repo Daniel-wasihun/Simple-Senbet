@@ -6,6 +6,8 @@ use App\Http\Requests\BaseRequest;
 
 class StoreMemberRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->authorizePolicy('create', \App\Models\Member::class); }
+
     public function rules(): array
     {
         return [

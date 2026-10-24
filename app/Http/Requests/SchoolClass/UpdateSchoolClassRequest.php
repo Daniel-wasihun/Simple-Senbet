@@ -6,6 +6,8 @@ use App\Http\Requests\BaseRequest;
 
 class UpdateSchoolClassRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->authorizePolicy('update', \App\Models\SchoolClass::class, 'school_class'); }
+
     public function rules(): array
     {
         return [

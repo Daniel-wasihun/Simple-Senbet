@@ -10,7 +10,9 @@ class AssessmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $subject = $this->route('assessment') ?? Assessment::class;
+
+        return $this->user()?->can($this->isMethod('POST') ? 'create' : 'update', $subject) ?? false;
     }
 
     public function rules(): array

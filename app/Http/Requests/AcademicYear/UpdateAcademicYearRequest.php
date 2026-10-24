@@ -6,6 +6,11 @@ use App\Http\Requests\BaseRequest;
 
 class UpdateAcademicYearRequest extends BaseRequest
 {
+    public function authorize(): bool
+    {
+        return $this->authorizePolicy('update', \App\Models\AcademicYear::class, 'academic_year');
+    }
+
     public function rules(): array
     {
         return [

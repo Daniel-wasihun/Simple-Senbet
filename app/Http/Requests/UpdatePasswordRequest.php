@@ -7,6 +7,6 @@ use Illuminate\Validation\Rules\Password;
 
 class UpdatePasswordRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool { return $this->user()?->can('update', $this->user()) ?? false; }
     public function rules(): array { return ['current_password' => ['required', 'current_password'], 'password' => ['required', 'confirmed', Password::defaults()]]; }
 }

@@ -13,12 +13,15 @@ class ProfileController extends Controller
 {
     public function show(Request $request)
     {
+        $this->authorize('view', $request->user());
+
         return response()->json(['user' => $this->userData($request->user())]);
     }
 
     public function update(Request $request)
     {
         $user = $request->user();
+        $this->authorize('update', $user);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
@@ -30,6 +33,8 @@ class ProfileController extends Controller
 
     public function updatePassword(Request $request)
     {
+        $this->authorize('update', $request->user());
+
         $data = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', Password::defaults()],

@@ -8,20 +8,11 @@ use App\Models\User;
 class StudentEnrollmentPolicy
 {
     /**
-     * Superadmins bypass all authorization checks.
-     */
-    public function before(User $user): ?bool
-    {
-        return $user->hasRole('superadmin') ? true : null;
-    }
-
-    /**
      * Determine whether the user can view any student enrollments.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('student-enrollments.view')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator', 'teacher']);
+        return $user->hasPermission('student-enrollments.view');
     }
 
     /**
@@ -37,8 +28,7 @@ class StudentEnrollmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('student-enrollments.create')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator']);
+        return $user->hasPermission('student-enrollments.create');
     }
 
     /**
@@ -46,8 +36,7 @@ class StudentEnrollmentPolicy
      */
     public function update(User $user, StudentEnrollment $enrollment): bool
     {
-        return $user->can('student-enrollments.update')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator']);
+        return $user->hasPermission('student-enrollments.update');
     }
 
     /**
@@ -55,8 +44,7 @@ class StudentEnrollmentPolicy
      */
     public function transfer(User $user): bool
     {
-        return $user->can('student-enrollments.update')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator']);
+        return $user->hasPermission('student-enrollments.update');
     }
 
     /**
@@ -64,8 +52,7 @@ class StudentEnrollmentPolicy
      */
     public function withdraw(User $user): bool
     {
-        return $user->can('student-enrollments.delete')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'member_coordinator']);
+        return $user->hasPermission('student-enrollments.delete');
     }
 
     /**
@@ -73,7 +60,6 @@ class StudentEnrollmentPolicy
      */
     public function delete(User $user, StudentEnrollment $enrollment): bool
     {
-        return $user->can('student-enrollments.delete')
-            || $user->hasRole(['academic_director']);
+        return $user->hasPermission('student-enrollments.delete');
     }
 }

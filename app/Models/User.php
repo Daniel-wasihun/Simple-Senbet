@@ -69,11 +69,13 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has the given permission (alias for Spatie/Gate can).
+     * Check whether any assigned role grants a permission by name.
      */
     public function hasPermission(string $permission): bool
     {
-        return $this->can($permission);
+        return $this->roles()
+            ->whereHas('permissions', fn ($query) => $query->where('permissions.name', $permission))
+            ->exists();
     }
 
     /**

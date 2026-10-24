@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class UserService
@@ -69,6 +72,32 @@ class UserService
         $this->cache->invalidate(User::class);
 
         return $user->fresh(['roles']);
+    }
+
+    /** Replace a user's role set after enforcing system-role assignment authority. */
+    public function syncRoles(User $actor, User $user, array $roleIds): User
+    {
+        return DB::transaction(function () use ($actor, $user, $roleIds): User {
+            $roleIds = array_values(array_unique(array_map('intval', $roleIds)));
+            $roles = Role::query()->where('guard_name', 'web')->whereIn('id', $roleIds)->get();
+
+            if ($roleIds === [] || $roles->count() !== count($roleIds)) {
+                throw ValidationException::withMessages([
+                    'role_ids' => 'Select one or more valid roles.',
+                ]);
+            }
+
+            if ($roles->contains(fn (Role $role): bool => $role->name === 'superadmin')
+                && ! $actor->hasPermission('roles.assign-system')) {
+                throw new AuthorizationException('You are not authorized to assign the superadmin role.');
+            }
+
+            $user->syncRoles($roles);
+            $user->forceFill(['role_id' => $roles->firstWhere('id', $roleIds[0])?->id])->save();
+            $this->cache->invalidate(User::class);
+
+            return $user->fresh(['roles']);
+        });
     }
 
     /**

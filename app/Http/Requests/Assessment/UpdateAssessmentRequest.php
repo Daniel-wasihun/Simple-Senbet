@@ -6,6 +6,8 @@ use App\Http\Requests\BaseRequest;
 
 class UpdateAssessmentRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->authorizePolicy('update', \App\Models\Assessment::class, 'assessment'); }
+
     public function rules(): array
     {
         return [

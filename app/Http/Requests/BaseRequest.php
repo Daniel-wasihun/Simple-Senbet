@@ -17,12 +17,24 @@ use Illuminate\Validation\Rules\Unique;
  */
 abstract class BaseRequest extends FormRequest
 {
+    protected function authorizePolicy(string $ability, string $modelClass, ?string $routeKey = null): bool
+    {
+        $user = $this->user();
+        if (! $user) {
+            return false;
+        }
+
+        $subject = $routeKey ? $this->route($routeKey) : $modelClass;
+
+        return $subject !== null && $user->can($ability, $subject);
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true;
+        return false;
     }
 
     /**

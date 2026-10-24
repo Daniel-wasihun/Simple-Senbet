@@ -9,14 +9,9 @@ abstract class CrudPolicy
 {
     protected string $permissionPrefix;
 
-    public function before(User $user): ?bool
-    {
-        return $user->hasRole('superadmin') ? true : null;
-    }
-
     public function viewAny(User $user): bool
     {
-        return $user->can("{$this->permissionPrefix}.view");
+        return $user->hasPermission("{$this->permissionPrefix}.view");
     }
 
     public function view(User $user, Model $model): bool
@@ -26,16 +21,16 @@ abstract class CrudPolicy
 
     public function create(User $user): bool
     {
-        return $user->can("{$this->permissionPrefix}.create");
+        return $user->hasPermission("{$this->permissionPrefix}.create");
     }
 
     public function update(User $user, Model $model): bool
     {
-        return $user->can("{$this->permissionPrefix}.update");
+        return $user->hasPermission("{$this->permissionPrefix}.update");
     }
 
     public function delete(User $user, Model $model): bool
     {
-        return $user->can("{$this->permissionPrefix}.delete");
+        return $user->hasPermission("{$this->permissionPrefix}.delete");
     }
 }

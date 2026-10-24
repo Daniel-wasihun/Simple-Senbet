@@ -14,9 +14,7 @@ class AttendanceSessionPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('superadmin')
-            || $user->can('attendance.view')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer', 'teacher']);
+        return $user->hasPermission('attendance.view');
     }
 
     /**
@@ -24,7 +22,11 @@ class AttendanceSessionPolicy
      */
     public function view(User $user, AttendanceSession $session): bool
     {
-        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])) {
+        if (! $user->hasPermission('attendance.view')) {
+            return false;
+        }
+
+        if (! $user->hasRole('teacher')) {
             return true;
         }
 
@@ -38,12 +40,12 @@ class AttendanceSessionPolicy
      */
     public function create(User $user, ?int $classId = null, ?int $courseId = null, ?string $date = null): bool
     {
-        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])) {
-            return true;
+        if (! $user->hasPermission('attendance.create')) {
+            return false;
         }
 
-        if (! $user->hasRole('teacher') && ! $user->can('attendance.create')) {
-            return false;
+        if (! $user->hasRole('teacher')) {
+            return true;
         }
 
         // Apply deny-by-default when assignment context cannot be verified
@@ -77,7 +79,11 @@ class AttendanceSessionPolicy
             return false;
         }
 
-        if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])) {
+        if (! $user->hasPermission('attendance.submit')) {
+            return false;
+        }
+
+        if (! $user->hasRole('teacher')) {
             return true;
         }
 
@@ -98,15 +104,16 @@ class AttendanceSessionPolicy
         }
 
         if ($session->isTeacherEditable()) {
-            if ($user->hasRole('superadmin') || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer'])) {
+            if ($user->hasPermission('attendance.correct') && ! $user->hasRole('teacher')) {
                 return true;
             }
 
-            return $this->isTeacherAssignedToSession($user, $session);
+            return $user->hasPermission('attendance.correct')
+                && $this->isTeacherAssignedToSession($user, $session);
         }
 
-        // 24-hour deadline has passed: only administrative override authority is permitted
-        return $user->hasRole('superadmin');
+        // Late corrections require the separately seeded override permission.
+        return $user->hasPermission('attendance.override');
     }
 
     /**
@@ -121,9 +128,7 @@ class AttendanceSessionPolicy
             return false;
         }
 
-        return $user->hasRole('superadmin')
-            || $user->can('attendance.close')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer']);
+        return $user->hasPermission('attendance.close');
     }
 
     /**
@@ -135,9 +140,7 @@ class AttendanceSessionPolicy
             return false;
         }
 
-        return $user->hasRole('superadmin')
-            || $user->can('attendance.delete')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer']);
+        return $user->hasPermission('attendance.delete');
     }
 
     /**

@@ -26,7 +26,7 @@ class TeachingAssignmentController extends Controller
         $this->authorize('viewAny', TeachingAssignment::class);
 
         $user = $request->user();
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
+        $isAdmin = ! $user->hasRole('teacher');
 
         $query = TeachingAssignment::with(['teacher', 'schoolClass', 'course', 'academicYear']);
 

@@ -8,6 +8,8 @@ use Illuminate\Validation\Rules\Enum;
 
 class UpdateTeachingAssignmentRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->authorizePolicy('update', \App\Models\TeachingAssignment::class, 'teachingAssignment'); }
+
     public function rules(): array
     {
         return [

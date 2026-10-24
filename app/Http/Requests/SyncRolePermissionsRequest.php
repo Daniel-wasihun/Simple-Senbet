@@ -6,6 +6,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class SyncRolePermissionsRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool { return $this->user()?->can('assignPermissions', $this->route('role')) ?? false; }
     public function rules(): array { return ['permission_ids' => ['present', 'array'], 'permission_ids.*' => ['integer', 'exists:permissions,id']]; }
 }

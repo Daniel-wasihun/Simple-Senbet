@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\SyncUserRolesRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Services\UserService;
@@ -24,6 +25,7 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         $this->authorize('create', User::class);
+        $this->authorize('assignRoleName', [User::class, $request->validated('role')]);
         $user = $this->userService->create($request->validated());
 
         return response()->json([
@@ -43,7 +45,27 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
         $this->authorize('update', $user);
+
+        if ($request->filled('role')) {
+            $this->authorize('assignRoleTo', [$user, $request->input('role')]);
+        }
+
         $updatedUser = $this->userService->update($user, $request->validated());
+
+        return response()->json([
+            'message' => __('auth.user_updated'),
+            'user' => $this->userData($updatedUser),
+        ]);
+    }
+
+    public function syncRoles(SyncUserRolesRequest $request, User $user): JsonResponse
+    {
+        $this->authorize('assignRoles', [$user, $request->validated('role_ids')]);
+        $updatedUser = $this->userService->syncRoles(
+            $request->user(),
+            $user,
+            $request->validated('role_ids')
+        );
 
         return response()->json([
             'message' => __('auth.user_updated'),
@@ -71,6 +93,7 @@ class UserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->getRoleNames()->first() ?? 'student',
+            'roles' => $user->getRoleNames()->values(),
             'created_at' => $user->created_at?->toISOString(),
         ];
     }

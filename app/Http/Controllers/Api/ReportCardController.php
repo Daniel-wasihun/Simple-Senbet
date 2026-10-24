@@ -7,7 +7,6 @@ use App\Http\Responses\ApiResponse;
 use App\Models\AcademicYear;
 use App\Models\Member;
 use App\Models\SchoolClass;
-use App\Models\TeachingAssignment;
 use App\Services\GradebookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,28 +22,7 @@ class ReportCardController extends Controller
      */
     public function showStudent(Request $request, Member $student): JsonResponse
     {
-        $user = $request->user();
-
-        // 1. Authorization: Admins or assigned teachers with reports view permission
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
-        if (! $isAdmin) {
-            if (! $user->can('reports.view') && ! $user->hasRole('teacher')) {
-                return ApiResponse::forbidden('You do not have permission to view report cards.');
-            }
-
-            $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
-                ->where('class_id', $student->class_id)
-                ->when($student->section, function ($query, $section) {
-                    $query->where(function ($q) use ($section) {
-                        $q->whereNull('section')->orWhere('section', $section);
-                    });
-                })
-                ->exists();
-
-            if (! $isAssigned) {
-                return ApiResponse::forbidden('You do not have permission to view this student report card.');
-            }
-        }
+        $this->authorize('report-card.view-student', $student);
 
         // 2. Resolve Academic Year and Semester
         $academicYearId = $this->resolveAcademicYearId($request);
@@ -61,23 +39,7 @@ class ReportCardController extends Controller
      */
     public function showClass(Request $request, SchoolClass $schoolClass): JsonResponse
     {
-        $user = $request->user();
-
-        // 1. Authorization: Admins or assigned teachers with reports view permission
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
-        if (! $isAdmin) {
-            if (! $user->can('reports.view') && ! $user->hasRole('teacher')) {
-                return ApiResponse::forbidden('You do not have permission to view class gradebooks.');
-            }
-
-            $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
-                ->where('class_id', $schoolClass->id)
-                ->exists();
-
-            if (! $isAssigned) {
-                return ApiResponse::forbidden('You do not have permission to view this class gradebook.');
-            }
-        }
+        $this->authorize('report-card.view-class', $schoolClass);
 
         // 2. Resolve Academic Year and Semester
         $academicYearId = $this->resolveAcademicYearId($request);
@@ -101,22 +63,7 @@ class ReportCardController extends Controller
     public function exportCsv(Request $request, SchoolClass $schoolClass): StreamedResponse|JsonResponse
     {
         $user = $request->user();
-
-        // 1. Authorization: Admins or assigned teachers with reports export permission
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
-        if (! $isAdmin) {
-            if (! $user->can('reports.export') && ! $user->hasRole('teacher')) {
-                return ApiResponse::forbidden('You do not have permission to export class gradebooks.');
-            }
-
-            $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
-                ->where('class_id', $schoolClass->id)
-                ->exists();
-
-            if (! $isAssigned) {
-                return ApiResponse::forbidden('You do not have permission to export this class gradebook.');
-            }
-        }
+        $this->authorize('report-card.export-class', $schoolClass);
 
         // 2. Resolve Academic Year and Semester
         $academicYearId = $this->resolveAcademicYearId($request);
@@ -244,23 +191,7 @@ class ReportCardController extends Controller
      */
     public function exportPrint(Request $request, SchoolClass $schoolClass): Response|JsonResponse
     {
-        $user = $request->user();
-
-        // 1. Authorization: Admins or assigned teachers with reports export permission
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator']);
-        if (! $isAdmin) {
-            if (! $user->can('reports.export') && ! $user->hasRole('teacher')) {
-                return ApiResponse::forbidden('You do not have permission to view this printable gradebook.');
-            }
-
-            $isAssigned = TeachingAssignment::where('teacher_id', $user->id)
-                ->where('class_id', $schoolClass->id)
-                ->exists();
-
-            if (! $isAssigned) {
-                return ApiResponse::forbidden('You do not have permission to view this printable gradebook.');
-            }
-        }
+        $this->authorize('report-card.export-class', $schoolClass);
 
         // 2. Resolve Academic Year and Semester
         $academicYearId = $this->resolveAcademicYearId($request);

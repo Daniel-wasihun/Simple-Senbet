@@ -8,20 +8,11 @@ use App\Models\User;
 class TeachingAssignmentPolicy
 {
     /**
-     * Superadmins bypass all authorization checks.
-     */
-    public function before(User $user): ?bool
-    {
-        return $user->hasRole('superadmin') ? true : null;
-    }
-
-    /**
      * Determine whether the user can view any teaching assignments.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('teaching-assignments.view')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'attendance_officer', 'teacher']);
+        return $user->hasPermission('teaching-assignments.view');
     }
 
     /**
@@ -29,11 +20,13 @@ class TeachingAssignmentPolicy
      */
     public function view(User $user, TeachingAssignment $assignment): bool
     {
-        if ($user->can('teaching-assignments.view') || $user->hasRole(['academic_director', 'academic_administrator'])) {
+        if ($user->hasPermission('teaching-assignments.view') && ! $user->hasRole('teacher')) {
             return true;
         }
 
-        return (int) $assignment->teacher_id === (int) $user->id;
+        return $user->hasPermission('teaching-assignments.view')
+            && $user->hasRole('teacher')
+            && (int) $assignment->teacher_id === (int) $user->id;
     }
 
     /**
@@ -41,8 +34,7 @@ class TeachingAssignmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('teaching-assignments.create')
-            || $user->hasRole(['academic_director', 'academic_administrator']);
+        return $user->hasPermission('teaching-assignments.create');
     }
 
     /**
@@ -50,8 +42,7 @@ class TeachingAssignmentPolicy
      */
     public function update(User $user, TeachingAssignment $assignment): bool
     {
-        return $user->can('teaching-assignments.update')
-            || $user->hasRole(['academic_director', 'academic_administrator']);
+        return $user->hasPermission('teaching-assignments.update');
     }
 
     /**
@@ -59,8 +50,7 @@ class TeachingAssignmentPolicy
      */
     public function delete(User $user, TeachingAssignment $assignment): bool
     {
-        return $user->can('teaching-assignments.delete')
-            || $user->hasRole(['academic_director']);
+        return $user->hasPermission('teaching-assignments.delete');
     }
 
     /**

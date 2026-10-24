@@ -8,20 +8,12 @@ use App\Models\User;
 class PermissionPolicy
 {
     /**
-     * Superadmins bypass all permission checks.
-     */
-    public function before(User $user): ?bool
-    {
-        return $user->hasRole('superadmin') ? true : null;
-    }
-
-    /**
      * Determine whether the user can view permissions.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('roles.view')
-            || $user->can('roles.manage');
+        return $user->hasPermission('permissions.view')
+            || $user->hasPermission('roles.view');
     }
 
     /**
@@ -29,7 +21,7 @@ class PermissionPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('roles.manage');
+        return $user->hasPermission('permissions.create');
     }
 
     /**
@@ -37,7 +29,7 @@ class PermissionPolicy
      */
     public function update(User $user, Permission $permission): bool
     {
-        return $user->can('roles.manage');
+        return $user->hasPermission('permissions.update');
     }
 
     /**
@@ -45,6 +37,6 @@ class PermissionPolicy
      */
     public function delete(User $user, Permission $permission): bool
     {
-        return $user->can('roles.manage');
+        return $user->hasPermission('permissions.delete');
     }
 }

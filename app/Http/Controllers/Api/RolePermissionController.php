@@ -35,7 +35,7 @@ class RolePermissionController extends Controller
      */
     public function sync(SyncRolePermissionsRequest $request, Role $role): JsonResponse
     {
-        $this->authorize('update', $role);
+        $this->authorize('assignPermissions', $role);
 
         return response()->json([
             'message' => __('auth.permissions_updated'),

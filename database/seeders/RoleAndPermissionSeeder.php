@@ -61,15 +61,27 @@ class RoleAndPermissionSeeder extends Seeder
                 'users.update' => ['en' => 'Update Users', 'am' => 'የተጠቃሚ መረጃ ያሻሽሉ'],
                 'users.delete' => ['en' => 'Delete Users', 'am' => 'ተጠቃሚዎችን ይሰርዙ'],
                 'users.register' => ['en' => 'Register Users', 'am' => 'አዲስ ተጠቃሚ ይመዝግቡ'],
+                'profile.view' => ['en' => 'View Own Profile', 'am' => 'የራስዎን መገለጫ ይመልከቱ'],
+                'profile.update' => ['en' => 'Update Own Profile', 'am' => 'የራስዎን መገለጫ ያዘምኑ'],
             ],
             'roles' => [
                 'roles.view' => ['en' => 'View Roles', 'am' => 'ሚናዎችን ይመልከቱ'],
+                'roles.create' => ['en' => 'Create Roles', 'am' => 'ሚናዎችን ይፍጠሩ'],
+                'roles.update' => ['en' => 'Update Roles', 'am' => 'ሚናዎችን ያዘምኑ'],
+                'roles.delete' => ['en' => 'Delete Roles', 'am' => 'ሚናዎችን ይሰርዙ'],
+                'roles.assign' => ['en' => 'Assign Roles to Users', 'am' => 'ሚናዎችን ለተጠቃሚዎች ይመድቡ'],
+                'roles.assign-system' => ['en' => 'Assign System Administrator Roles', 'am' => 'የስርዓት አስተዳዳሪ ሚናዎችን ይመድቡ'],
                 'roles.manage' => ['en' => 'Manage Roles and Permissions', 'am' => 'ሚናዎችንና ፈቃዶችን ያስተዳድሩ'],
+                'permissions.view' => ['en' => 'View Permissions', 'am' => 'ፈቃዶችን ይመልከቱ'],
+                'permissions.create' => ['en' => 'Create Permissions', 'am' => 'ፈቃዶችን ይፍጠሩ'],
+                'permissions.update' => ['en' => 'Update Permissions', 'am' => 'ፈቃዶችን ያዘምኑ'],
+                'permissions.delete' => ['en' => 'Delete Permissions', 'am' => 'ፈቃዶችን ይሰርዙ'],
+                'permissions.assign' => ['en' => 'Assign Permissions to Roles', 'am' => 'ፈቃዶችን ለሚናዎች ይመድቡ'],
             ],
             'academic-years' => [
                 'academic-years.view' => ['en' => 'View Academic Years', 'am' => 'የትምህርት ዘመናትን ይመልከቱ'],
-                'academic-years.create' => ['en' => 'Create Academic Years', 'am' => 'የትምህርት ዘመን ይመዝግቡ'],
-                'academic-years.update' => ['en' => 'Update Academic Years', 'am' => 'የትምህርት ዘመንን ያሻሽሉ'],
+                'academic-years.create' => ['en' => 'Create Academic Years', 'am' => 'የትምህርት ዘመን ይፍጠሩ'],
+                'academic-years.update' => ['en' => 'Update Academic Years', 'am' => 'የትምህርት ዘመንን ያዘምኑ'],
                 'academic-years.delete' => ['en' => 'Delete Academic Years', 'am' => 'የትምህርት ዘመንን ይሰርዙ'],
             ],
             'school-classes' => [
@@ -107,6 +119,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'attendance.create' => ['en' => 'Create Attendance Session', 'am' => 'የአቴንዳንስ ክፍለ-ጊዜ ይመዝግቡ'],
                 'attendance.submit' => ['en' => 'Submit Attendance Marks', 'am' => 'የአቴንዳንስ ምልክት ያስገቡ'],
                 'attendance.correct' => ['en' => 'Correct Attendance Marks', 'am' => 'የአቴንዳንስ ምልክት ያርሙ'],
+                'attendance.override' => ['en' => 'Override Attendance Correction Window', 'am' => 'የአቴንዳንስ ማስተካከያ ጊዜን ይለፉ'],
                 'attendance.close' => ['en' => 'Close Attendance Session', 'am' => 'የአቴንዳንስ ክፍለ-ጊዜ ያጠናቁ'],
                 'attendance.delete' => ['en' => 'Delete Attendance Session', 'am' => 'የአቴንዳንስ ክፍለ-ጊዜ ይሰርዙ'],
             ],
@@ -149,6 +162,22 @@ class RoleAndPermissionSeeder extends Seeder
             }
         }
 
+        // Separate global access from teacher class scope.
+        $globalScopePermissions = [
+            'payments.view.all' => ['payments', ['en' => 'View Payments Across All Classes', 'am' => 'የሁሉንም ክፍሎች ክፍያ ይመልከቱ']],
+            'payments.record.all' => ['payments', ['en' => 'Record Payments Across All Classes', 'am' => 'በሁሉም ክፍሎች ክፍያ ይመዝግቡ']],
+            'payments.export.all' => ['payments', ['en' => 'Export Payments Across All Classes', 'am' => 'የሁሉንም ክፍሎች ክፍያ ወደ ውጭ ያውጡ']],
+            'reports.view.all' => ['reports', ['en' => 'View Reports Across All Classes', 'am' => 'የሁሉንም ክፍሎች ሪፖርት ይመልከቱ']],
+            'reports.export.all' => ['reports', ['en' => 'Export Reports Across All Classes', 'am' => 'የሁሉንም ክፍሎች ሪፖርት ወደ ውጭ ያውጡ']],
+        ];
+
+        foreach ($globalScopePermissions as $permissionName => [$groupName, $label]) {
+            $permissions[$permissionName] = Permission::firstOrCreate(
+                ['name' => $permissionName, 'guard_name' => 'web'],
+                ['group_name' => $groupName, 'label' => $label]
+            );
+        }
+
         // Helper to extract Permission instances by array of names
         $filterPerms = fn (array $names) => collect($names)->map(fn ($name) => $permissions[$name] ?? null)->filter()->values();
 
@@ -159,7 +188,7 @@ class RoleAndPermissionSeeder extends Seeder
 
         // (b) Academic Director: Academic curriculum, classes, teachers, assessments, promotions, view finance/reports
         $roles['academic_director']->syncPermissions($filterPerms([
-            'academic-years.view',
+            'academic-years.view', 'academic-years.create', 'academic-years.update',
             'school-classes.view', 'school-classes.create', 'school-classes.update', 'school-classes.delete',
             'courses.view', 'courses.create', 'courses.update', 'courses.delete',
             'teaching-assignments.view', 'teaching-assignments.create', 'teaching-assignments.update', 'teaching-assignments.delete',
@@ -168,8 +197,8 @@ class RoleAndPermissionSeeder extends Seeder
             'attendance.view', 'attendance.create', 'attendance.submit', 'attendance.correct', 'attendance.close', 'attendance.delete',
             'assessments.view', 'assessments.create', 'assessments.update', 'assessments.delete',
             'assessment-results.view', 'assessment-results.create', 'assessment-results.update', 'assessment-results.delete',
-            'reports.view', 'reports.export', 'promotions.manage',
-            'payments.view', 'payments.export',
+            'reports.view', 'reports.view.all', 'reports.export', 'reports.export.all', 'promotions.manage',
+            'payments.view', 'payments.view.all', 'payments.record', 'payments.record.all', 'payments.void', 'payments.export', 'payments.export.all', 'payments.rules',
             'roles.view',
         ]));
 
@@ -181,16 +210,16 @@ class RoleAndPermissionSeeder extends Seeder
             'teaching-assignments.view', 'teaching-assignments.create', 'teaching-assignments.update',
             'members.view', 'members.create', 'members.update',
             'student-enrollments.view', 'student-enrollments.create', 'student-enrollments.update', 'student-enrollments.delete',
-            'attendance.view', 'attendance.create', 'attendance.submit', 'attendance.correct', 'attendance.close',
+            'attendance.view', 'attendance.create', 'attendance.submit', 'attendance.correct', 'attendance.close', 'attendance.delete',
             'assessments.view', 'assessments.create', 'assessments.update',
             'assessment-results.view', 'assessment-results.create', 'assessment-results.update',
-            'reports.view', 'reports.export', 'promotions.manage',
-            'payments.view', 'payments.record', 'payments.export',
+            'reports.view', 'reports.view.all', 'reports.export', 'reports.export.all', 'promotions.manage',
+            'payments.view', 'payments.view.all', 'payments.record', 'payments.record.all', 'payments.void', 'payments.export', 'payments.export.all', 'payments.rules',
         ]));
 
         // (d) Finance Officer: Payment transactions, voids, monthly rules, receipts, financial exports
         $roles['finance_officer']->syncPermissions($filterPerms([
-            'payments.view', 'payments.record', 'payments.void', 'payments.export', 'payments.rules',
+            'payments.view', 'payments.view.all', 'payments.record', 'payments.record.all', 'payments.void', 'payments.export', 'payments.export.all', 'payments.rules',
             'members.view',
             'school-classes.view',
             'reports.view', 'reports.export',
@@ -237,6 +266,12 @@ class RoleAndPermissionSeeder extends Seeder
             'assessments.view',
             'reports.view',
         ]));
+
+        // Every account can access and maintain its own profile. UserPolicy
+        // still requires users.view/users.update to access another account.
+        foreach ($roles as $role) {
+            $role->givePermissionTo($permissions['profile.view'], $permissions['profile.update']);
+        }
 
         // Clear cached permissions once more
         app()[PermissionRegistrar::class]->forgetCachedPermissions();

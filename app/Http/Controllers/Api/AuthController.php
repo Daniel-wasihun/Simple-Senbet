@@ -26,6 +26,7 @@ class AuthController extends Controller
         ]);
 
         $roleName = $data['role'] ?? 'student';
+        $this->authorize('assignRoleName', [User::class, $roleName]);
         $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         $user = User::create([
             'name' => $data['name'],

@@ -29,10 +29,7 @@ class SubmitAttendanceSessionRequest extends BaseRequest
             return $user->can('submit', $session);
         }
 
-        // Fail-closed for non-staff roles; fallback for unrouted/standalone tests
-        return $user->hasRole('superadmin')
-            || $user->hasRole('teacher')
-            || $user->hasRole(['academic_director', 'academic_administrator']);
+        return false;
     }
 
     /**

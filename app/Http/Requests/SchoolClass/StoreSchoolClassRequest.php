@@ -6,6 +6,8 @@ use App\Http\Requests\BaseRequest;
 
 class StoreSchoolClassRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->authorizePolicy('create', \App\Models\SchoolClass::class); }
+
     public function rules(): array
     {
         return [

@@ -10,7 +10,9 @@ class CourseRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $subject = $this->route('course') ?? Course::class;
+
+        return $this->user()?->can($this->isMethod('POST') ? 'create' : 'update', $subject) ?? false;
     }
 
     public function rules(): array

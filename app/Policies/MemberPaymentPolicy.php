@@ -8,20 +8,11 @@ use App\Models\User;
 class MemberPaymentPolicy
 {
     /**
-     * Superadmins bypass all payment checks.
-     */
-    public function before(User $user): ?bool
-    {
-        return $user->hasRole('superadmin') ? true : null;
-    }
-
-    /**
      * Determine whether the user can view payment records and ledger.
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('payments.view')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'finance_officer', 'teacher']);
+        return $user->hasPermission('payments.view');
     }
 
     /**
@@ -37,8 +28,7 @@ class MemberPaymentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('payments.record')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'finance_officer', 'teacher']);
+        return $user->hasPermission('payments.record');
     }
 
     /**
@@ -46,8 +36,7 @@ class MemberPaymentPolicy
      */
     public function void(User $user, ?MemberPayment $payment = null): bool
     {
-        return $user->can('payments.void')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'finance_officer']);
+        return $user->hasPermission('payments.void');
     }
 
     /**
@@ -55,8 +44,7 @@ class MemberPaymentPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('payments.export')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'finance_officer', 'teacher']);
+        return $user->hasPermission('payments.export');
     }
 
     /**
@@ -64,7 +52,6 @@ class MemberPaymentPolicy
      */
     public function manageRules(User $user): bool
     {
-        return $user->can('payments.rules')
-            || $user->hasRole(['academic_director', 'academic_administrator', 'finance_officer']);
+        return $user->hasPermission('payments.rules');
     }
 }

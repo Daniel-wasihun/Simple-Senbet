@@ -6,6 +6,8 @@ use App\Http\Requests\BaseRequest;
 
 class StoreAssessmentResultRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->authorizePolicy('create', \App\Models\AssessmentResult::class); }
+
     public function rules(): array
     {
         return [

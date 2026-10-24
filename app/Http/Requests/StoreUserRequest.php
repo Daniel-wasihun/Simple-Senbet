@@ -10,7 +10,12 @@ class StoreUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+        $role = (string) $this->input('role', 'student');
+
+        return $user !== null
+            && $user->can('create', \App\Models\User::class)
+            && $user->can('assignRoleName', [\App\Models\User::class, $role]);
     }
 
     public function rules(): array

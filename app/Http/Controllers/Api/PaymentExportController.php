@@ -30,10 +30,6 @@ class PaymentExportController extends Controller
         $this->authorize('export', MemberPayment::class);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
-            return ApiResponse::forbidden('You do not have permission to export payment records.');
-        }
-
         $month = (string) $request->query('month', now()->format('Y-m'));
         if (! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
             return ApiResponse::error('Invalid billing month format. Expected YYYY-MM.', null, 400);
@@ -154,10 +150,6 @@ class PaymentExportController extends Controller
         $this->authorize('export', MemberPayment::class);
 
         $user = $request->user();
-        if (! $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer', 'teacher'])) {
-            return ApiResponse::forbidden('You do not have permission to export payment records.');
-        }
-
         $month = $request->query('month');
         if ($month && ! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
             return ApiResponse::error('Invalid billing month format. Expected YYYY-MM.', null, 400);
@@ -249,8 +241,7 @@ class PaymentExportController extends Controller
      */
     protected function getTeacherAssignedClassIds($user): ?array
     {
-        $isAdmin = $user->hasRole(['superadmin', 'academic_director', 'academic_administrator', 'finance_officer']);
-        if ($isAdmin) {
+        if ($user->hasPermission('payments.export.all')) {
             return null;
         }
 

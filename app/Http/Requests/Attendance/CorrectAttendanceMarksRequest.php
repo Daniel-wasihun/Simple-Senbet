@@ -42,8 +42,7 @@ class CorrectAttendanceMarksRequest extends BaseRequest
             return $user->can('correct', $session);
         }
 
-        // Fail-closed for non-staff roles; fallback when unrouted
-        return $user->hasRole('superadmin') || $user->hasRole('teacher');
+        return false;
     }
 
     /**

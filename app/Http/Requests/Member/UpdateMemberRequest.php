@@ -6,6 +6,8 @@ use App\Http\Requests\BaseRequest;
 
 class UpdateMemberRequest extends BaseRequest
 {
+    public function authorize(): bool { return $this->authorizePolicy('update', \App\Models\Member::class, 'member'); }
+
     public function rules(): array
     {
         return [
