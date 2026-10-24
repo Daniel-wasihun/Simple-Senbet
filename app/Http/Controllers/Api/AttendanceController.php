@@ -64,15 +64,15 @@ class AttendanceController extends Controller
                         ->whereColumn('teaching_assignments.class_id', 'attendance_sessions.class_id')
                         ->where(function ($cq) {
                             $cq->whereNull('attendance_sessions.course_id')
-                               ->orWhereColumn('teaching_assignments.course_id', 'attendance_sessions.course_id');
+                                ->orWhereColumn('teaching_assignments.course_id', 'attendance_sessions.course_id');
                         })
                         ->where(function ($tq) {
                             $tq->whereNull('teaching_assignments.start_date')
-                               ->orWhereColumn('teaching_assignments.start_date', '<=', 'attendance_sessions.date');
+                                ->orWhereColumn('teaching_assignments.start_date', '<=', 'attendance_sessions.date');
                         })
                         ->where(function ($tq) {
                             $tq->whereNull('teaching_assignments.end_date')
-                               ->orWhereColumn('teaching_assignments.end_date', '>', 'attendance_sessions.date');
+                                ->orWhereColumn('teaching_assignments.end_date', '>', 'attendance_sessions.date');
                         });
                 });
             });
@@ -158,7 +158,7 @@ class AttendanceController extends Controller
             'students' => $students->map(function ($member) {
                 return [
                     'id' => $member->id,
-                    'name' => $member->name ?? trim(($member->first_name ?? '') . ' ' . ($member->last_name ?? '')),
+                    'name' => $member->name ?? trim(($member->first_name ?? '').' '.($member->last_name ?? '')),
                     'first_name' => $member->first_name ?? null,
                     'last_name' => $member->last_name ?? null,
                     'gender' => $member->gender ?? null,
@@ -255,6 +255,21 @@ class AttendanceController extends Controller
     }
 
     /**
+     * Delete an unclosed attendance session.
+     */
+    public function destroy(Request $request, AttendanceSession $session): JsonResponse
+    {
+        $this->authorize('delete', $session);
+
+        $session->delete();
+
+        return ApiResponse::success(
+            null,
+            'Attendance session deleted successfully'
+        );
+    }
+
+    /**
      * Retrieve daily attendance summary and absentee list.
      */
     public function summary(Request $request): JsonResponse
@@ -281,4 +296,3 @@ class AttendanceController extends Controller
         );
     }
 }
-
