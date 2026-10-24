@@ -1,6 +1,6 @@
 "use client";
 import { useLanguage } from "@/context/LanguageContext";
-import { BodyLarge, Heading2, Heading3, Heading4, Heading5 } from "../ui/typography";
+import { BodyLarge, Heading2 } from "../ui/typography";
 
 interface StatCardProps {
   value: string;

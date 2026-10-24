@@ -47,7 +47,7 @@ clientAxiosInstance.interceptors.request.use((config) => {
 export const setupCsrf = async () => {
   try {
     // Ensure we have a fresh CSRF cookie before making requests
-    const response = await clientAxiosInstance.get("/sanctum/csrf-cookie");
+    await clientAxiosInstance.get("/sanctum/csrf-cookie");
 
     // Wait briefly to ensure the cookie is set in the browser
     await new Promise(resolve => setTimeout(resolve, 100));

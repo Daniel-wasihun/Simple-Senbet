@@ -92,7 +92,7 @@ import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ShoppingCart, Package, PackageCheck, Clock } from "lucide-react";
+import { ShoppingCart, PackageCheck, Clock } from "lucide-react";
 
 interface ImportProductCardProps {
   image: string;
