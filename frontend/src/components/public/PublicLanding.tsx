@@ -1,84 +1,521 @@
-﻿import Link from "next/link";
-import { ArrowRight, BookOpen, CalendarDays, Check, ChevronDown, CircleHelp, GraduationCap, UsersRound } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarCheck,
+  CheckCircle2,
+  ChevronDown,
+  DollarSign,
+  GraduationCap,
+  HeartHandshake,
+  Music,
+  Scroll,
+  ShieldCheck,
+  UsersRound,
+} from "lucide-react";
 import { PublicSiteLayout } from "@/components/public/PublicSiteLayout";
 
-const services = [
-  { icon: UsersRound, number: "01", title: "Student records", copy: "Keep student profiles and family details organized, with the context your school needs." },
-  { icon: CalendarDays, number: "02", title: "Attendance & classes", copy: "Coordinate weekly attendance, class groups, and teaching assignments with less manual work." },
-  { icon: BookOpen, number: "03", title: "Learning progress", copy: "Bring courses, assessments, and academic progress into one reliable school record." },
+const PILLARS = [
+  {
+    number: "፩",
+    amharicTitle: "ቅዱሳት መጻሕፍትና ትምህርተ ሃይማኖት",
+    title: "Scripture & Dogmatics",
+    icon: BookOpen,
+    description:
+      "Deepening understanding of the Holy Scriptures (ብሉይና ሐዲስ ኪዳን), Orthodox Creed (ጸሎተ ሃይማኖት), and Patristic teachings handed down through church fathers.",
+    highlight: "Old & New Testament, Dogma, Mystery of Incarnation",
+  },
+  {
+    number: "፪",
+    amharicTitle: "የቅዱስ ያሬድ ዜማና ሥርዓተ ማኅሌት",
+    title: "St. Yared Hymnology",
+    icon: Music,
+    description:
+      "Imparting sacred Ethiopian chant traditions composed by St. Yared (ድጓ፣ ጾመ ድጓ፣ ዝማሬ፣ መዋሥዕት) along with sacred ceremonial instruments (ከበሮ፣ ጸናጽል፣ መቋሚያ) and liturgical hymns.",
+    highlight: "Zema notations, Liturgical Mahlet, Aquaquam",
+  },
+  {
+    number: "፫",
+    amharicTitle: "ሥርዓተ ቤተ ክርስቲያንና ታሪክ",
+    title: "Church Liturgy & History",
+    icon: Scroll,
+    description:
+      "Guiding students through the Seven Holy Mysteries (ሰባቱ ምሥጢራተ ቤተ ክርስቲያን), Divine Liturgy (ቅዳሴ), canonical feasts, fasts, and the profound history of the Ethiopian Church.",
+    highlight: "Sacraments, Ecclesiastical History, Canonical Fasts",
+  },
+  {
+    number: "፬",
+    amharicTitle: "ክርስቲያናዊ ሥነ ምግባርና ማኅበራዊ አገልግሎት",
+    title: "Christian Ethics & Diaconia",
+    icon: HeartHandshake,
+    description:
+      "Fostering Christian charity, humility, moral uprightness, parish fellowship, and active volunteer service to the sick, elderly, and parish community.",
+    highlight: "Youth fellowship, Charity, Pastoral visitation",
+  },
 ];
 
-function ProductPreview() {
-  return <div className="relative mx-auto w-full max-w-[600px]">
-    <div className="absolute -inset-5 -rotate-2 rounded-2xl bg-[#dce5ee]/40" aria-hidden="true" />
-    <div className="relative overflow-hidden rounded-xl border border-[#dce2e6] bg-white shadow-[0_28px_70px_-28px_rgba(9,31,57,.35)]">
-      <div className="flex h-12 items-center justify-between border-b border-[#e9edf0] bg-[#fbfcfd] px-4 sm:px-5"><div className="flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-md bg-[#102746] text-[10px] font-bold text-white">S</span><span className="text-[11px] font-semibold text-[#35485b]">Simple Senbet</span></div><div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#7b8792] sm:block">Parish Sunday School | Preview</span><span className="grid h-7 w-7 place-items-center rounded-full bg-[#e8eef4] text-[9px] font-bold text-[#315071]">AD</span></div></div>
-      <div className="grid min-h-[335px] grid-cols-[112px_1fr] sm:grid-cols-[145px_1fr]">
-        <aside className="border-r border-[#e9edf0] bg-[#f8fafb] px-2 py-4 sm:px-3"><p className="px-2 text-[8px] font-semibold uppercase tracking-[.16em] text-[#9aa4ac]">School office</p><div className="mt-3 space-y-1"><div className="flex items-center gap-2 rounded-md bg-[#e8eef4] px-2 py-2 text-[9px] font-semibold text-[#102746]"><span className="h-1.5 w-1.5 rounded-full bg-[#806943]"/>Overview</div>{["Students", "Classes", "Attendance", "Assessments"].map((item) => <div key={item} className="px-2 py-2 text-[9px] text-[#71808d]">{item}</div>)}</div><div className="mt-7 border-t border-[#e4e9ec] pt-3"><p className="px-2 text-[8px] font-semibold uppercase tracking-[.15em] text-[#9aa4ac]">Administration</p><p className="px-2 py-2 text-[9px] text-[#71808d]">School settings</p></div></aside>
-        <div className="p-4 sm:p-5"><div className="flex items-start justify-between"><div><p className="text-[8px] font-semibold uppercase tracking-[.15em] text-[#82909b]">Sample school dashboard</p><p className="mt-1 font-serif text-lg font-semibold text-[#19334f] sm:text-xl">Good morning, Hana</p></div><span className="rounded-md border border-[#e0e5e8] px-2.5 py-1.5 text-[8px] font-medium text-[#647383]">This term</span></div>
-          <div className="mt-4 grid grid-cols-3 gap-2"><div className="rounded-md border border-[#e6eaed] p-2.5 sm:p-3"><p className="text-[8px] text-[#81909d]">Enrolled students</p><p className="mt-1 text-lg font-semibold text-[#213c57]">248</p><p className="mt-1 text-[8px] text-[#5079a0]">+ 12 this term</p></div><div className="rounded-md border border-[#e6eaed] p-2.5 sm:p-3"><p className="text-[8px] text-[#81909d]">Present today</p><p className="mt-1 text-lg font-semibold text-[#213c57]">216</p><p className="mt-1 text-[8px] text-[#5079a0]">87% attendance</p></div><div className="rounded-md border border-[#e6eaed] p-2.5 sm:p-3"><p className="text-[8px] text-[#81909d]">Active classes</p><p className="mt-1 text-lg font-semibold text-[#213c57]">12</p><p className="mt-1 text-[8px] text-[#81909d]">Across 4 levels</p></div></div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-[1.3fr_.7fr]"><div className="rounded-md border border-[#e6eaed] p-3"><div className="flex items-center justify-between"><p className="text-[9px] font-semibold text-[#35485b]">Attendance overview</p><span className="text-[8px] text-[#86929b]">Last 6 weeks</span></div><div className="mt-3 flex h-[88px] items-end justify-around gap-2 border-b border-l border-[#e9edef] px-3"><div className="h-[52%] w-5 rounded-t-sm bg-[#c9d6e3]"/><div className="h-[73%] w-5 rounded-t-sm bg-[#8fa9c2]"/><div className="h-[64%] w-5 rounded-t-sm bg-[#c9d6e3]"/><div className="h-[82%] w-5 rounded-t-sm bg-[#5e84a7]"/><div className="h-[70%] w-5 rounded-t-sm bg-[#c9d6e3]"/><div className="h-[91%] w-5 rounded-t-sm bg-[#806943]"/></div><div className="mt-1 flex justify-around text-[7px] text-[#98a2aa]"><span>W1</span><span>W2</span><span>W3</span><span>W4</span><span>W5</span><span>W6</span></div></div>
-            <div className="rounded-md border border-[#e6eaed] p-3"><p className="text-[9px] font-semibold text-[#35485b]">Today's classes</p><div className="mt-3 space-y-3"><div className="flex gap-2"><span className="mt-0.5 h-7 w-0.5 bg-[#806943]"/><div><p className="text-[8px] font-semibold text-[#3c5061]">Lower Primary</p><p className="mt-0.5 text-[7px] text-[#8b969f]">09:00 | Room 2</p></div></div><div className="flex gap-2"><span className="mt-0.5 h-7 w-0.5 bg-[#b59660]"/><div><p className="text-[8px] font-semibold text-[#3c5061]">Middle School</p><p className="mt-0.5 text-[7px] text-[#8b969f]">10:30 | Main Hall</p></div></div></div><div className="mt-3 flex items-center gap-1 text-[8px] font-semibold text-[#806943]">View schedule <ArrowRight className="h-2.5 w-2.5"/></div></div></div>
+const DEPARTMENTS = [
+  {
+    icon: GraduationCap,
+    number: "01",
+    title: "የትምህርት ክፍል (Academics)",
+    desc: "Oversee academic years, curriculum progression, course syllabi, semester schedules, and teaching assignments across all Sunday school levels.",
+    link: "/login",
+  },
+  {
+    icon: CalendarCheck,
+    number: "02",
+    title: "የቁጥጥርና ክትትል (Attendance)",
+    desc: "Seamless weekly recording of Divine Liturgy participation, Sunday school class attendance, and student punctuality with instant analytics.",
+    link: "/login",
+  },
+  {
+    icon: DollarSign,
+    number: "03",
+    title: "የሂሳብና በጀት ክፍል (Finance)",
+    desc: "Record monthly contributions, feast-day dues, book sales, and receipts with role-governed transparency and exportable financial summaries.",
+    link: "/login",
+  },
+  {
+    icon: UsersRound,
+    number: "04",
+    title: "የአባላትና ምዝገባ (Registrar & Members)",
+    desc: "Organize baptized student directories, family contacts, spiritual father details, and demographic cohorts with strict role confidentiality.",
+    link: "/login",
+  },
+];
+
+const FAQS = [
+  {
+    q: "What is Simple Senbet?",
+    a: "Simple Senbet is a specialized, modern institutional management platform designed specifically for Ethiopian Orthodox Tewahedo Church Sunday Schools (የሰንበት ትምህርት ቤቶች). It streamlines academic records, liturgical attendance, course assessments, member directories, and contributions in one secure workspace.",
+  },
+  {
+    q: "How does role-based security protect our parish data?",
+    a: "Every staff member (Super Administrator, Academic Director, Finance Officer, Attendance Coordinator, Teacher, or Student) is bound by strict role policies. Teachers only access their assigned classes, finance officers manage transactions with audit logs, and member records remain confidential.",
+  },
+  {
+    q: "Can teachers record attendance and grades from mobile devices?",
+    a: "Yes. The platform is fully responsive and optimized for smartphones, tablets, and desktop workstations, allowing teachers to mark attendance directly during Sunday school sessions or after Holy Liturgy.",
+  },
+  {
+    q: "How does our parish Sunday School get access?",
+    a: "Accounts are provisioned by your parish Sunday School administrator or lead coordinator. To get your parish setup or acquire credentials, please sign in through the School Portal or contact your parish office.",
+  },
+];
+
+function InteractivePortalPreview() {
+  return (
+    <div className="relative mx-auto w-full max-w-[620px]">
+      <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-[#c5a866]/30 to-[#0f243e]/20 blur-lg" />
+      <div className="relative overflow-hidden rounded-2xl border border-[#d8ccb4] bg-[#fdfbf6] shadow-[0_25px_60px_-15px_rgba(15,36,62,0.35)]">
+        {/* Top OS Window Header */}
+        <div className="flex h-12 items-center justify-between border-b border-[#ebd8b7] bg-[#f4ebda] px-4 sm:px-5">
+          <div className="flex items-center gap-2">
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-[#0f243e] text-[11px] font-bold text-[#dfc896]">
+              ✝
+            </span>
+            <span className="text-xs font-bold text-[#0f243e]">Simple Senbet</span>
+            <span className="text-[10px] text-[#8c7140] font-medium hidden sm:inline">
+              | ደብረ ምጥማቅ ሰንበት ት/ቤት
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-[#102746]/10 px-2 py-0.5 text-[9px] font-semibold text-[#102746]">
+              2026/2027 Academic Year
+            </span>
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-[#0f243e] text-[10px] font-bold text-white">
+              AD
+            </span>
+          </div>
+        </div>
+
+        {/* Dashboard Preview Inner */}
+        <div className="grid min-h-[340px] grid-cols-[125px_1fr] sm:grid-cols-[150px_1fr]">
+          {/* Sidebar */}
+          <aside className="border-r border-[#ebd8b7] bg-[#faf6ed] p-3 text-left">
+            <p className="px-2 text-[9px] font-bold uppercase tracking-[0.14em] text-[#8c7140]">
+              የክፍል ክፍሎች
+            </p>
+            <div className="mt-2.5 space-y-1">
+              <div className="flex items-center gap-2 rounded-lg bg-[#0f243e] px-2.5 py-1.5 text-[10px] font-semibold text-[#f8f4ea]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#dfc896]" />
+                ዋና ገጽ (Overview)
+              </div>
+              <div className="px-2.5 py-1.5 text-[10px] text-[#556778] hover:text-[#0f243e]">
+                ተማሪዎች (Students)
+              </div>
+              <div className="px-2.5 py-1.5 text-[10px] text-[#556778] hover:text-[#0f243e]">
+                ትምህርቶች (Courses)
+              </div>
+              <div className="px-2.5 py-1.5 text-[10px] text-[#556778] hover:text-[#0f243e]">
+                ክትትል (Attendance)
+              </div>
+              <div className="px-2.5 py-1.5 text-[10px] text-[#556778] hover:text-[#0f243e]">
+                ውጤት (Gradebook)
+              </div>
+            </div>
+            <div className="mt-6 border-t border-[#ebd8b7] pt-3">
+              <p className="px-2 text-[9px] font-bold uppercase tracking-[0.14em] text-[#8c7140]">
+                ሥርዓት (System)
+              </p>
+              <div className="px-2.5 py-1.5 text-[10px] text-[#556778]">ቅንብሮች (Settings)</div>
+            </div>
+          </aside>
+
+          {/* Body */}
+          <div className="p-4 sm:p-5 text-left">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#8c7140]">
+                  Parish Dashboard Preview
+                </p>
+                <h4 className="font-serif text-lg font-bold text-[#0f243e]">
+                  እንኳን ደህና መጡ (Welcome)
+                </h4>
+              </div>
+              <span className="rounded-md border border-[#c5a866]/40 bg-[#f7f2e4] px-2 py-1 text-[9px] font-semibold text-[#7d6738]">
+                Sem. I - 2026
+              </span>
+            </div>
+
+            {/* Metrics */}
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-[#ebd8b7] bg-white p-2.5">
+                <p className="text-[9px] font-medium text-[#738392]">Active Students</p>
+                <p className="mt-1 text-base font-bold text-[#0f243e]">342</p>
+                <p className="text-[8px] font-medium text-[#3b7c5e]">+28 enrolled</p>
+              </div>
+              <div className="rounded-xl border border-[#ebd8b7] bg-white p-2.5">
+                <p className="text-[9px] font-medium text-[#738392]">Today's Liturgy</p>
+                <p className="mt-1 text-base font-bold text-[#0f243e]">93.4%</p>
+                <p className="text-[8px] font-medium text-[#3b7c5e]">319 Present</p>
+              </div>
+              <div className="rounded-xl border border-[#ebd8b7] bg-white p-2.5">
+                <p className="text-[9px] font-medium text-[#738392]">Classes</p>
+                <p className="mt-1 text-base font-bold text-[#0f243e]">14</p>
+                <p className="text-[8px] text-[#8c7140]">4 Divisions</p>
+              </div>
+            </div>
+
+            {/* Timetable row */}
+            <div className="mt-4 rounded-xl border border-[#ebd8b7] bg-white p-3">
+              <div className="flex items-center justify-between text-[10px] font-bold text-[#0f243e] border-b border-[#f2ebd9] pb-1.5">
+                <span>የዛሬ ክፍለ ጊዜያት (Today's Sunday Classes)</span>
+                <span className="text-[#8c7140] font-medium">ጥቅምት 15</span>
+              </div>
+              <div className="mt-2.5 space-y-2 text-[10px]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[#8c7140]" />
+                    <span className="font-semibold text-[#2c3e50]">የያሬድ ዜማ (St. Yared Chant)</span>
+                  </div>
+                  <span className="text-[#738392]">09:00 - 10:15 | አዳራሽ</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[#0f243e]" />
+                    <span className="font-semibold text-[#2c3e50]">ትምህርተ ሃይማኖት (Orthodox Creed)</span>
+                  </div>
+                  <span className="text-[#738392]">10:30 - 11:45 | ክፍል ፫</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer status bar */}
+        <div className="flex items-center justify-between border-t border-[#ebd8b7] bg-[#f4ebda] px-4 py-2 text-[9px] text-[#6b7c8c]">
+          <span className="flex items-center gap-1.5 font-medium text-[#3b7c5e]">
+            <CheckCircle2 className="h-3 w-3" /> All parish records encrypted & synced
+          </span>
+          <span className="text-[#8c7140] font-semibold">Simple Senbet v2.0</span>
         </div>
       </div>
-      <div className="flex items-center justify-between border-t border-[#e9edf0] bg-[#fbfcfd] px-4 py-2.5"><span className="text-[8px] text-[#85929c]">School overview | Updated just now</span><span className="flex items-center gap-1 text-[8px] font-medium text-[#5079a0]"><Check className="h-2.5 w-2.5"/> All records synced</span></div>
     </div>
-  </div>;
-}
-
-function ChurchIllustration() {
-  return <div className="relative mx-auto max-w-[430px]">
-    <div className="absolute inset-x-7 top-4 h-[390px] rounded-t-[13rem] border border-[#c5a866]/50" aria-hidden="true" />
-    <div className="relative mx-10 overflow-hidden rounded-t-[12rem] border border-[#cfb579] bg-[#e9dfc9] px-5 pt-10 shadow-[0_24px_70px_-30px_rgba(0,0,0,.4)] sm:mx-12">
-      <div className="flex h-[310px] items-end justify-center overflow-hidden rounded-t-[10rem] bg-[#142b47] px-6">
-        <svg viewBox="0 0 300 310" className="h-full w-full max-w-[310px]" fill="none" role="img" aria-label="Illustration of an Orthodox church entrance">
-          <path d="M28 298V164c0-65 54-118 122-118s122 53 122 118v134" stroke="#b89b60" strokeWidth="1.5" opacity=".65"/>
-          <path d="M54 298V166c0-52 42-94 96-94s96 42 96 94v132" stroke="#dbc99d" strokeWidth="1" opacity=".45"/>
-          <path d="M68 298v-92l82-51 82 51v92" fill="#e9dfc9" stroke="#c5a866" strokeWidth="2"/>
-          <path d="m58 208 92-58 92 58" stroke="#c5a866" strokeWidth="5" strokeLinejoin="round"/>
-          <path d="M119 298v-65a31 31 0 0 1 62 0v65" fill="#102746" stroke="#b89b60" strokeWidth="2"/>
-          <path d="M92 225v25m0 8v25m116-58v25m0 8v25" stroke="#b89b60" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M149 150V91m-15 15h30m-24 14h18m-17 17 8 6 8-6" stroke="#d5bd83" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M48 298h204m-224 8h244" stroke="#b89b60" strokeWidth="2" strokeLinecap="round"/>
-          <circle cx="150" cy="25" r="3" fill="#d5bd83"/><path d="M150 3v44m-10-33h20m-16 11h12" stroke="#d5bd83" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M38 126h18m188 0h18M47 105h12m182 0h12" stroke="#b89b60" strokeWidth="1.5" opacity=".8"/>
-        </svg>
-      </div>
-      <div className="flex items-center justify-center gap-3 py-4 text-[#665335]"><span className="h-px w-8 bg-[#b89b60]"/><p className="text-[9px] font-semibold uppercase tracking-[.2em]">Faith | Learning | Service</p><span className="h-px w-8 bg-[#b89b60]"/></div>
-    </div>
-  </div>;
+  );
 }
 
 export function PublicLanding() {
-  return <PublicSiteLayout>
-    <main>
-      <section className="relative overflow-hidden bg-[#102746] text-[#f8f3e7]">
-        <div className="pointer-events-none absolute inset-0 opacity-[.14]" style={{ backgroundImage: "repeating-linear-gradient(135deg, transparent 0 28px, #d5bd83 29px, transparent 30px 58px)" }}/>
-        <div className="pointer-events-none absolute -right-20 -top-32 h-[32rem] w-[32rem] rounded-full border border-[#d5bd83]/20"/>
-        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 sm:py-20 lg:grid-cols-[1fr_.9fr] lg:px-8 lg:py-24">
-          <div className="relative z-10 max-w-xl"><p className="inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.18em] text-[#e2ca91]"><span className="h-px w-8 bg-[#c5a866]"/> Ethiopian Orthodox Tewahedo Sunday School</p>
-            <h1 className="mt-6 font-serif text-[2.8rem] font-medium leading-[1.08] tracking-[-.025em] text-[#fbf6eb] sm:text-6xl">Rooted in the<br/>faith of the Church.</h1>
-            <p className="mt-6 max-w-lg text-[15px] leading-7 text-white/75">A place for children to learn the teachings of the Ethiopian Orthodox Tewahedo Church, grow in prayer, and serve their parish community.</p>
-            <div className="mt-8 flex flex-wrap items-center gap-3"><Link href="#sunday-school" className="inline-flex items-center gap-2 rounded-md bg-[#d2b77f] px-5 py-3 text-sm font-semibold text-[#102746] transition hover:bg-[#e4d2a9]">Discover Sunday School <ArrowRight className="h-4 w-4"/></Link><Link href="/login" className="inline-flex items-center gap-2 rounded-md border border-white/30 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">School portal <ArrowRight className="h-4 w-4"/></Link></div>
-            <div className="mt-8 flex items-center gap-2 text-xs text-white/60"><CircleHelp className="h-4 w-4 text-[#d2b77f]"/><span>For enrollment and account access, contact your parish school.</span></div>
+  return (
+    <PublicSiteLayout>
+      <main>
+        {/* HERO SECTION */}
+        <section className="relative overflow-hidden bg-[#0a192e] text-[#fbf6ec]">
+          {/* Atmospheric background */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.18]"
+            style={{
+              backgroundImage:
+                "radial-gradient(#d4af37 1px, transparent 1px), radial-gradient(#d4af37 1px, #0a192e 1px)",
+              backgroundSize: "32px 32px",
+              backgroundPosition: "0 0, 16px 16px",
+            }}
+          />
+          <div className="pointer-events-none absolute -top-40 -right-40 h-[38rem] w-[38rem] rounded-full border border-[#c5a866]/20 bg-[#c5a866]/5 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-40 -left-40 h-[38rem] w-[38rem] rounded-full border border-[#0f243e]/40 bg-[#16355d]/10 blur-3xl" />
+
+          <div className="relative mx-auto max-w-7xl px-5 py-16 sm:py-24 lg:px-8">
+            <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
+              {/* Text content */}
+              <div className="space-y-6 text-left">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#c5a866]/60 bg-[#c5a866]/15 px-4 py-1.5 text-xs font-semibold text-[#f5e6c2] backdrop-blur-md">
+                  <span className="text-[#e2ca91] font-bold">✝</span>
+                  <span>የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን ሰንበት ትምህርት ቤት</span>
+                </div>
+
+                <h1 className="font-serif text-4xl sm:text-6xl font-medium tracking-tight text-[#fdfbf6] leading-[1.12]">
+                  Rooted in the Faith. <br />
+                  <span className="text-[#dfc896] italic">Equipped for Generations.</span>
+                </h1>
+
+                <p className="max-w-xl text-[16px] leading-8 text-[#d4dde5]">
+                  Simple Senbet is a purposeful management system created to serve Ethiopian Orthodox
+                  Tewahedo Church Sunday Schools. Seamlessly organize spiritual curricula, weekly
+                  liturgical attendance, student registries, and parish contributions in one dependable home.
+                </p>
+
+                {/* Biblical Banner */}
+                <div className="rounded-xl border-l-4 border-[#c5a866] bg-white/5 backdrop-blur-md p-4 text-xs text-[#ebd9b2]">
+                  <p className="font-serif text-[15px] italic text-[#fbf6ec]">
+                    «ልጅን በሚሄድበት መንገድ ምራው፥ በሸመገለም ጊዜ ከእርሱ ፈቀቅ አይልም።»
+                  </p>
+                  <p className="mt-1 font-semibold uppercase tracking-[0.14em] text-[#c5a866]">
+                    ምሳሌ ፳፪፥፮ | Proverbs 22:6
+                  </p>
+                </div>
+
+                {/* Call To Actions */}
+                <div className="pt-2 flex flex-wrap items-center gap-4">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2.5 rounded-xl bg-[#c5a866] px-6 py-3.5 text-sm font-bold text-[#0a192e] shadow-lg shadow-[#c5a866]/20 transition-all hover:bg-[#d6bc7e] hover:scale-[1.02] active:scale-[0.99]"
+                  >
+                    <span>Enter School Portal</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+
+                  <Link
+                    href="#curriculum"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/10"
+                  >
+                    <span>Explore Curriculum</span>
+                    <ArrowRight className="h-4 w-4 text-[#c5a866]" />
+                  </Link>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2 text-xs text-[#a2b2c4]">
+                  <span className="flex items-center gap-1 text-[#dfc896]">
+                    <ShieldCheck className="h-4 w-4" /> Role-Governed Access
+                  </span>
+                  <span>•</span>
+                  <span>Parish Sunday School Records</span>
+                  <span>•</span>
+                  <span>Amharic & English</span>
+                </div>
+              </div>
+
+              {/* Graphic illustration / interactive preview */}
+              <div className="w-full">
+                <InteractivePortalPreview />
+              </div>
+            </div>
           </div>
-          <ChurchIllustration/>
-        </div>
-        <div className="h-1 border-y border-[#c5a866]/40 bg-[#bca063]"/>
-      </section>
 
-      <section id="sunday-school" className="scroll-mt-24 border-b border-[#e5dcc8] bg-[#fbf9f3]"><div className="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-y divide-[#e5dcc8] px-5 sm:grid-cols-4 sm:divide-y-0 lg:px-8">{[{icon:UsersRound,title:"Learners",copy:"Known and encouraged"},{icon:GraduationCap,title:"Teachers",copy:"Serving with care"},{icon:CalendarDays,title:"Worship & study",copy:"Growing in the Church"},{icon:BookOpen,title:"Faith formation",copy:"Learning through the year"}].map(({icon:Icon,title,copy})=><div key={title} className="flex items-start gap-3 px-3 py-5 sm:px-5 sm:py-6"><span className="mt-0.5 text-[#8c7140]"><Icon className="h-4 w-4"/></span><div><p className="text-xs font-semibold text-[#263e55]">{title}</p><p className="mt-1 text-[10px] leading-4 text-[#87908a]">{copy}</p></div></div>)}</div></section>
+          <div className="h-1.5 border-y border-[#c5a866]/50 bg-gradient-to-r from-[#0a192e] via-[#c5a866] to-[#0a192e]" />
+        </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:py-20 lg:px-8"><div className="grid items-center gap-10 lg:grid-cols-[.8fr_1.2fr] lg:gap-16"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#8c7140]">A Sunday School home</p><h2 className="mt-4 max-w-md font-serif text-4xl font-medium leading-tight tracking-tight text-[#102746] sm:text-[2.8rem]">Learning the faith. Living it together.</h2><p className="mt-5 text-[15px] leading-8 text-[#68746c]">Sunday School brings together scripture, prayer, the teachings of the Church, friendship, and service. It is part of the life of the parish, where each generation helps the next grow in faith.</p><Link href="/about-us" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#765d31] hover:text-[#102746]">Learn about our ministry <ArrowRight className="h-4 w-4"/></Link></div><div className="relative mx-auto w-full max-w-lg"><div className="absolute -inset-3 rounded-[2rem] border border-[#c5a866]/50"/><div className="relative rounded-t-[11rem] border border-[#c5a866] bg-[#eee5d2] px-5 pt-8 sm:px-8"><div className="rounded-t-[9rem] bg-[#102746] px-7 pb-8 pt-16 text-center text-white"><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#ddc98f]">In the life of the Church</p><p className="mt-5 font-serif text-3xl leading-snug">"Teach them diligently to your children."</p><p className="mt-4 text-[10px] font-semibold uppercase tracking-[.16em] text-white/60">Deuteronomy 6:7</p><div className="mx-auto mt-7 h-px w-12 bg-[#c5a866]"/><p className="mt-4 text-xs leading-6 text-white/70">Learning, worship, fellowship, and service-held together in the parish community.</p></div><div className="py-3 text-center text-[9px] font-semibold uppercase tracking-[.18em] text-[#806943]">Faith | Family | Parish</div></div></div></div></section>
+        {/* FOUR PILLARS SECTION */}
+        <section id="curriculum" className="scroll-mt-20 bg-[#faf6ee] py-20 px-5 lg:px-8 border-b border-[#e5dcc8]">
+          <div className="mx-auto max-w-7xl">
+            <div className="text-center max-w-3xl mx-auto space-y-3">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#8c7140]">
+                <span>✝</span>
+                <span>የሰንበት ትምህርት ቤት ማዕዘናት</span>
+                <span>✝</span>
+              </div>
+              <h2 className="font-serif text-3xl sm:text-5xl font-medium tracking-tight text-[#0f243e]">
+                Four Sacred Pillars of Learning
+              </h2>
+              <p className="text-sm sm:text-base leading-7 text-[#607182]">
+                Our curriculum reflects the depth of the Ethiopian Orthodox Tewahedo Church,
+                providing structured pathways from early childhood through deaconate and youth maturity.
+              </p>
+            </div>
 
-      <section id="school-life" className="scroll-mt-24 border-y border-[#e5dcc8] bg-[#f0eadc]"><div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-16 lg:grid-cols-[.8fr_1.2fr] lg:px-8"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#8c7140]">Supporting the parish school</p><h2 className="mt-3 font-serif text-3xl font-medium leading-tight text-[#102746] sm:text-4xl">Care for the school's work with a little more order.</h2><p className="mt-4 text-sm leading-7 text-[#6e776f]">Simple Senbet helps authorized school staff keep records for students, classes, attendance, and learning in one place.</p></div><div className="overflow-hidden rounded-lg border border-[#ded7c8] bg-white shadow-[0_20px_60px_-35px_rgba(24,44,34,.35)]"><ProductPreview/></div></div></section>
+            <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {PILLARS.map((pillar) => {
+                const Icon = pillar.icon;
+                return (
+                  <article
+                    key={pillar.title}
+                    className="relative rounded-2xl border border-[#d8ccb4] bg-white p-6 sm:p-7 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-[#c5a866] flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-5">
+                        <span className="grid h-12 w-12 place-items-center rounded-xl bg-[#f7f2e6] text-[#8c7140] border border-[#e5dcce]">
+                          <Icon className="h-6 w-6" />
+                        </span>
+                        <span className="font-serif text-xl font-bold text-[#c5a866]">
+                          {pillar.number}
+                        </span>
+                      </div>
+                      <p className="text-xs font-bold text-[#8c7140] mb-1">
+                        {pillar.amharicTitle}
+                      </p>
+                      <h3 className="font-serif text-xl font-bold text-[#0f243e] mb-3">
+                        {pillar.title}
+                      </h3>
+                      <p className="text-xs leading-6 text-[#5c6e80]">
+                        {pillar.description}
+                      </p>
+                    </div>
 
-      <section id="how-it-works" className="scroll-mt-24 mx-auto max-w-7xl px-5 py-20 sm:py-24 lg:px-8"><div className="grid gap-8 lg:grid-cols-[.78fr_1.22fr] lg:gap-20"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#806943]">A clearer way to serve</p><h2 className="mt-4 max-w-md font-serif text-4xl font-medium leading-tight tracking-tight text-[#102746] sm:text-[2.8rem]">Less time on paperwork. More time with your community.</h2></div><div className="self-end"><p className="max-w-2xl text-[15px] leading-8 text-[#687786]">Simple Senbet brings the everyday work of a Sunday School into one dependable system. Leaders can keep information current, teachers can focus on their classes, and school records stay easy to find.</p><Link href="/contact-us" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#806943] hover:text-[#102746]">Talk with us <ArrowRight className="h-4 w-4"/></Link></div></div>
-        <div className="mt-12 grid gap-px overflow-hidden rounded-lg border border-[#e5dcc8] bg-[#e5dcc8] md:grid-cols-3">{services.map(({icon:Icon,number,title,copy})=><article key={number} className="bg-white p-6 sm:p-7"><div className="flex items-center justify-between"><span className="grid h-9 w-9 place-items-center rounded-md bg-[#f4efdf] text-[#806943]"><Icon className="h-4 w-4"/></span><span className="text-[10px] font-semibold tracking-[.16em] text-[#a1aaa9]">{number}</span></div><h3 className="mt-5 font-serif text-xl font-semibold text-[#102746]">{title}</h3><p className="mt-2 text-sm leading-6 text-[#74818a]">{copy}</p></article>)}</div>
-      </section>
-      <section className="border-y border-[#e2e9e6] bg-[#f0eadc]"><div className="mx-auto max-w-7xl px-5 py-16 lg:px-8"><div className="grid gap-8 lg:grid-cols-[.72fr_1.28fr] lg:gap-20"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#806943]">Getting started</p><h2 className="mt-3 font-serif text-3xl font-medium leading-tight text-[#102746] sm:text-4xl">A simple path from setup to a well-run school.</h2></div><div className="grid gap-0 sm:grid-cols-3">{[{n:"01",title:"Set up your school",copy:"School leaders establish the academic year, classes, and teaching structure."},{n:"02",title:"Bring people together",copy:"Authorized staff add learners, teachers, and the right school roles."},{n:"03",title:"Keep the record current",copy:"Record attendance and learning as your school year moves forward."}].map(({n,title,copy},i)=><article key={n} className={`${i?"border-t sm:border-l sm:border-t-0":""} border-[#dbd1b9] px-1 py-5 sm:px-5 sm:py-1 ${i===0?"sm:pl-0":""}`}><p className="text-[10px] font-semibold tracking-[.15em] text-[#806943]">{n}</p><h3 className="mt-3 text-sm font-semibold text-[#263e55]">{title}</h3><p className="mt-2 text-xs leading-6 text-[#71808a]">{copy}</p></article>)}</div></div></div></section>
-      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8"><div className="grid gap-10 lg:grid-cols-[.7fr_1.3fr]"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#806943]">Questions</p><h2 className="mt-3 font-serif text-3xl font-medium text-[#102746]">A few helpful answers.</h2><p className="mt-3 text-sm leading-6 text-[#71808a]">Still have a question? Our team can point you in the right direction.</p><Link href="/contact-us" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#806943]">Contact us <ArrowRight className="h-4 w-4"/></Link></div><div className="divide-y divide-[#e5dcc8] border-y border-[#e5dcc8]">{[{q:"Who can use the school portal?",a:"Access is provided by your Sunday School administrator. Ask your parish school office to create or update your account."},{q:"Can families register themselves?",a:"Public self-registration is not enabled. Authorized school staff manage accounts and assign roles for their community."},{q:"What can school staff manage?",a:"Depending on their role and permissions, staff can manage student information, classes, attendance, assessments, and school records."},{q:"I need help signing in. What should I do?",a:"Use the password reset page if your account email is active, or contact your school administrator for help with your account."}].map(({q,a})=><details key={q} className="group py-4"><summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-[#2d465e] marker:hidden">{q}<ChevronDown className="h-4 w-4 shrink-0 text-[#806943] transition group-open:rotate-180"/></summary><p className="mt-3 max-w-2xl text-sm leading-6 text-[#71808a]">{a}</p></details>)}</div></div></section>
-      <section className="bg-[#102746] text-white"><div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-12 sm:flex-row sm:items-center sm:justify-between lg:px-8"><div><p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#91c1b6]">Made for the people who make Sunday School possible</p><h2 className="mt-2 font-serif text-2xl font-medium sm:text-3xl">Bring your school's work into focus.</h2></div><Link href="/contact-us" className="inline-flex items-center gap-2 self-start rounded-md bg-white px-5 py-3 text-sm font-semibold text-[#102746] transition hover:bg-[#e9f1ee] sm:self-auto">Contact us <ArrowRight className="h-4 w-4"/></Link></div></section>
-    </main>
-  </PublicSiteLayout>;
+                    <div className="mt-5 pt-4 border-t border-[#f2ebd9] text-[11px] font-semibold text-[#7d6738]">
+                      {pillar.highlight}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* DEPARTMENTS & CAPABILITIES SECTION */}
+        <section id="sunday-school" className="scroll-mt-20 bg-white py-20 px-5 lg:px-8 border-b border-[#e5dcc8]">
+          <div className="mx-auto max-w-7xl">
+            <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr] items-center">
+              <div className="space-y-5 text-left">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#8c7140]">
+                  የአገልግሎት ክፍሎችና ተግባራት
+                </span>
+                <h2 className="font-serif text-3xl sm:text-5xl font-medium tracking-tight text-[#0f243e] leading-tight">
+                  Tailored Workspaces for Every Sunday School Role.
+                </h2>
+                <p className="text-sm sm:text-base leading-7 text-[#5d6f80]">
+                  Every parish department operates with clarity. From curriculum directors scheduling courses
+                  to teachers marking attendance after divine liturgy and finance officers tracking contributions,
+                  Simple Senbet coordinates every responsibility.
+                </p>
+                <div className="pt-2">
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#0f243e] px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1a385f] transition-all"
+                  >
+                    <span>Sign in to your role</span>
+                    <ArrowRight className="h-4 w-4 text-[#dfc896]" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Department Cards Grid */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                {DEPARTMENTS.map((dept) => {
+                  const Icon = dept.icon;
+                  return (
+                    <div
+                      key={dept.number}
+                      className="rounded-xl border border-[#e5dcc8] bg-[#fbf9f4] p-5 transition-all hover:bg-white hover:border-[#b89b60] hover:shadow-sm"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#0f243e] text-[#dfc896]">
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <span className="text-xs font-bold text-[#b89b60]">{dept.number}</span>
+                      </div>
+                      <h4 className="font-serif text-base font-bold text-[#0f243e] mb-1.5">
+                        {dept.title}
+                      </h4>
+                      <p className="text-xs leading-5 text-[#5e7081]">{dept.desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* PARISH TESTIMONIAL & PATRISTIC BANNER */}
+        <section className="relative overflow-hidden bg-[#0f243e] py-16 px-5 lg:px-8 text-white text-center">
+          <div className="relative mx-auto max-w-4xl space-y-6">
+            <span className="text-3xl text-[#dfc896]">✝</span>
+            <blockquote className="font-serif text-2xl sm:text-4xl font-normal leading-snug tracking-tight text-[#fbf8f0]">
+              «የእግዚአብሔርን ቃል የነገሯችሁን ዋናዎቻችሁን አስቡ፥ የኑሯቸውንም ፍሬ እየተመለከታችሁ በእምነት ምሰሏቸው።»
+            </blockquote>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#dfc896]">
+              ወደ ዕብራውያን ፲፫፥፯ | Hebrews 13:7
+            </p>
+            <div className="mx-auto h-px w-16 bg-[#c5a866]/50" />
+            <p className="text-xs sm:text-sm text-[#cbd6e2] max-w-xl mx-auto">
+              Preserving sacred heritage, teaching with dedication, and building a united Christian family for our Sunday Schools worldwide.
+            </p>
+          </div>
+        </section>
+
+        {/* FAQ SECTION */}
+        <section className="bg-[#faf6ee] py-20 px-5 lg:px-8 border-b border-[#e5dcc8]">
+          <div className="mx-auto max-w-5xl">
+            <div className="text-center space-y-3 mb-12">
+              <span className="text-xs font-bold uppercase tracking-[0.16em] text-[#8c7140]">
+                ተደጋግመው የሚጠየቁ ጥያቄዎች
+              </span>
+              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#0f243e]">
+                Frequently Asked Questions
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              {FAQS.map((faq) => (
+                <details
+                  key={faq.q}
+                  className="group rounded-xl border border-[#d8ccb4] bg-white p-5 transition-all open:border-[#b89b60] open:shadow-sm"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between text-left font-serif text-base sm:text-lg font-semibold text-[#0f243e] marker:hidden">
+                    <span>{faq.q}</span>
+                    <ChevronDown className="h-5 w-5 shrink-0 text-[#8c7140] transition-transform duration-200 group-open:rotate-180" />
+                  </summary>
+                  <p className="mt-3 text-xs sm:text-sm leading-6 text-[#5b6e80] pt-2 border-t border-[#f0ebd9]">
+                    {faq.a}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* READY TO BEGIN SECTION */}
+        <section className="bg-[#0a192e] py-16 px-5 lg:px-8 text-white border-t border-[#c5a866]/40">
+          <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="space-y-2 text-center md:text-left">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#dfc896]">
+                የሰንበት ትምህርት ቤት አገልግሎትዎን ያዘምኑ
+              </p>
+              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white">
+                Ready to empower your Sunday School ministry?
+              </h3>
+              <p className="text-xs sm:text-sm text-[#cbd6e2] max-w-xl">
+                Sign in to your assigned role or get in touch with the parish administration team to configure your school.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#c5a866] px-6 py-3.5 text-sm font-bold text-[#0a192e] shadow-md transition hover:bg-[#d8bf84]"
+              >
+                <span>Access Portal</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/contact-us"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                <span>Contact Parish Support</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+    </PublicSiteLayout>
+  );
 }

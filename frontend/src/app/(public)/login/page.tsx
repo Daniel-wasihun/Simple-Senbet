@@ -1,65 +1,387 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, LoaderCircle, LockKeyhole } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LoaderCircle,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { getDashboardRouteForRole } from "@/utils/roleNavigation";
 
-function homeForRole(role?: string) {
-  if (role === "teacher") return "/attendance/super-admin/dashboard";
-  if (role === "academic_director" || role === "academic_administrator") return "/acadamic/super-admin/dashboard";
-  if (role === "superadmin") return "/super-admin/dashboard";
-  return "/member/super-admin/dashboard";
+interface DemoAccount {
+  role: string;
+  label: string;
+  amharicLabel: string;
+  email: string;
+  pass: string;
+  targetDashboard: string;
 }
+
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  {
+    role: "superadmin",
+    label: "Super Admin",
+    amharicLabel: "ዋና አስተዳዳሪ",
+    email: "admin@example.com",
+    pass: "ChangeMe123!",
+    targetDashboard: "/super-admin/dashboard",
+  },
+  {
+    role: "academic_director",
+    label: "Academic Director",
+    amharicLabel: "የትምህርት ኃላፊ",
+    email: "director@example.com",
+    pass: "Director123!",
+    targetDashboard: "/acadamic/super-admin/dashboard",
+  },
+  {
+    role: "finance_officer",
+    label: "Finance Officer",
+    amharicLabel: "የሂሳብ ኃላፊ",
+    email: "finance@example.com",
+    pass: "Finance123!",
+    targetDashboard: "/finance/super-admin/dashboard",
+  },
+  {
+    role: "teacher",
+    label: "Lead Teacher",
+    amharicLabel: "የሰንበት መምህር",
+    email: "teacher@example.com",
+    pass: "Teacher123!",
+    targetDashboard: "/attendance/super-admin/dashboard",
+  },
+  {
+    role: "attendance_officer",
+    label: "Attendance Officer",
+    amharicLabel: "የቁጥጥር ኃላፊ",
+    email: "attendance@example.com",
+    pass: "Attendance123!",
+    targetDashboard: "/attendance/super-admin/dashboard",
+  },
+  {
+    role: "member_coordinator",
+    label: "Registrar / Member",
+    amharicLabel: "የምዝገባ ኃላፊ",
+    email: "registrar@example.com",
+    pass: "Registrar123!",
+    targetDashboard: "/member/super-admin/dashboard",
+  },
+  {
+    role: "student",
+    label: "Sample Student",
+    amharicLabel: "ተማሪ",
+    email: "student@example.com",
+    pass: "Student123!",
+    targetDashboard: "/member/super-admin/dashboard",
+  },
+];
 
 export default function LoginPage() {
   const { user, isLoading, login } = useAuth();
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
 
+  // If already logged in, redirect immediately to the user's role-specific dashboard
   useEffect(() => {
-    if (!isLoading && user) router.replace(homeForRole(user.role));
+    if (!isLoading && user) {
+      const destination = getDashboardRouteForRole(user.role);
+      router.replace(destination);
+    }
   }, [isLoading, router, user]);
+
+  const handleSelectDemo = (account: DemoAccount) => {
+    setEmail(account.email);
+    setPassword(account.pass);
+    setSelectedDemo(account.role);
+    setError("");
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setBusy(true);
+
     const result = await login(email.trim(), password);
     if (!result.success) {
-      setError(result.message || "We could not sign you in. Check your details and try again.");
+      setError(
+        result.message ||
+          "Could not sign you in. Please check your credentials or contact the parish Sunday School office."
+      );
       setBusy(false);
       return;
     }
-    router.replace(homeForRole(result.user?.role));
+
+    const destination = getDashboardRouteForRole(result.user?.role);
+    router.replace(destination);
     router.refresh();
   }
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-14rem)] max-w-6xl items-center gap-12 px-5 py-14 lg:grid-cols-[1fr_.8fr] lg:px-8">
-      <section className="hidden max-w-lg lg:block">
-        <div className="inline-flex items-center gap-2 border-l-2 border-[#b59660] pl-3 px-3 py-1.5 text-xs font-bold uppercase tracking-[.16em] text-[#456250]"><LockKeyhole className="h-3.5 w-3.5" /> Your school community</div>
-        <h1 className="mt-6 font-serif text-5xl font-semibold leading-tight tracking-tight text-[#102746]">Welcome back to your Sunday School.</h1>
-        <p className="mt-5 text-base leading-8 text-[#687586]">Sign in to continue supporting the students, teachers, and families entrusted to your care.</p>
-        <div className="mt-9 border-l-2 border-[#b59660] bg-[#efede6] p-5"><p className="font-serif text-xl font-semibold text-[#102746]">"Teach them to your children..."</p><p className="mt-2 text-xs font-semibold uppercase tracking-[.16em] text-[#8c7140]">Deuteronomy 6:7</p></div>
-      </section>
-      <section className="mx-auto w-full max-w-md border-t-2 border-[#102746] bg-[#f8f7f3] p-7 sm:p-9">
-        <div className="grid h-12 w-12 place-items-center border-b border-[#b59660] text-[#244a72]"><KeyRound className="h-5 w-5" /></div>
-        <p className="mt-6 text-xs font-bold uppercase tracking-[.2em] text-[#8c7140]">Member access</p><h2 className="mt-2 font-serif text-3xl font-semibold text-[#102746]">Sign in</h2><p className="mt-2 text-sm leading-6 text-[#78818b]">Use the account provided by your Sunday School administrator.</p>
-        {error && <div role="alert" className="mt-6 rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>}
-        <form onSubmit={handleSubmit} className="mt-7 space-y-5">
-          <div><label htmlFor="email" className="mb-2 block text-sm font-semibold text-[#34465b]">Email address</label><input id="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy || isLoading} className="w-full rounded-sm border border-[#d5d8da] bg-[#fbfaf7] px-4 py-3 text-sm outline-none transition placeholder:text-[#a1a8ae] focus:border-[#244a72] focus:ring-4 focus:ring-[#244a72]/10" placeholder="you@example.com" /></div>
-          <div><div className="mb-2 flex items-center justify-between"><label htmlFor="password" className="text-sm font-semibold text-[#34465b]">Password</label><Link href="/forgot-password" className="text-xs font-bold text-[#244a72] hover:text-[#8c7140]">Forgot password?</Link></div><div className="relative"><input id="password" type={visible ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy || isLoading} className="w-full rounded-sm border border-[#d5d8da] bg-[#fbfaf7] px-4 py-3 pr-12 text-sm outline-none transition focus:border-[#244a72] focus:ring-4 focus:ring-[#244a72]/10" placeholder="Enter your password" /><button type="button" onClick={() => setVisible((value) => !value)} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-[#85909a] hover:text-[#102746]" aria-label={visible ? "Hide password" : "Show password"}>{visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
-          <button type="submit" disabled={busy || isLoading} className="flex w-full items-center justify-center gap-2 rounded-sm bg-[#102746] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#102746]/15 transition hover:bg-[#17385e] disabled:cursor-not-allowed disabled:opacity-60">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Signing in...</> : <>Continue to your portal <ArrowRight className="h-4 w-4" /></>}</button>
-        </form>
-        <div className="mt-6 flex items-center justify-between border-t border-[#ece8df] pt-5 text-xs"><Link href="/" className="inline-flex items-center gap-1.5 font-semibold text-[#697687] hover:text-[#102746]"><ArrowLeft className="h-3.5 w-3.5" /> Back home</Link><Link href="/register" className="font-bold text-[#244a72] hover:text-[#8c7140]">Create an account</Link></div>
-        <p className="mt-5 text-center text-[11px] leading-5 text-[#9aa2aa]">Sign-in is protected by your school's account and access permissions.</p>
-      </section>
+    <main className="relative min-h-[calc(100vh-12rem)] bg-[#fbf9f4] py-12 px-4 sm:px-6 lg:px-8">
+      {/* Decorative Orthodox motifs */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(#b89b60_1px,transparent_1px)] [background-size:16px_16px]" />
+
+      <div className="relative mx-auto max-w-6xl grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
+        {/* Left Column: Ethiopian Orthodox Church Sunday School Heritage */}
+        <section className="space-y-7 lg:pr-6">
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-[#c5a866]/60 bg-[#f4ecd9] px-3.5 py-1 text-xs font-semibold text-[#665335]">
+            <span className="text-[#8c7140] font-bold">✝</span>
+            <span>የሰንበት ትምህርት ቤት ፖርታል | Sunday School Portal</span>
+          </div>
+
+          <h1 className="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-[#0f243e] leading-[1.15]">
+            Rooted in Faith, <br />
+            <span className="text-[#8c7140] italic">United in Service.</span>
+          </h1>
+
+          <p className="max-w-lg text-[15px] leading-7 text-[#556778]">
+            Sign in to manage student records, coordinate liturgical attendance, review academic
+            courses, and guide the next generation in the Ethiopian Orthodox Tewahedo Church tradition.
+          </p>
+
+          {/* Scriptural Pillar Box */}
+          <div className="relative rounded-xl border border-[#d6c7a7] bg-white/90 p-5 shadow-sm backdrop-blur-sm sm:p-6">
+            <div className="flex items-start gap-4">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#f7f2e6] text-[#8c7140] border border-[#e5dcc8]">
+                <ShieldCheck className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-serif text-lg font-medium text-[#102746]">
+                  «ልጅን በሚሄድበት መንገድ ምራው፥ በሸመገለም ጊዜ ከእርሱ ፈቀቅ አይልም።»
+                </p>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.15em] text-[#8c7140]">
+                  ምሳሌ ፳፪፥፮ | Proverbs 22:6
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#f0ebd9] grid grid-cols-3 gap-2 text-center text-[11px] font-medium text-[#6c7b88]">
+              <div>✝ ሃይማኖትና ሥርዓት</div>
+              <div>📖 መንፈሳዊ ትምህርት</div>
+              <div>🤝 ማኅበራዊ አገልግሎት</div>
+            </div>
+          </div>
+
+          {/* Role Routing Overview */}
+          <div className="rounded-xl border border-[#e5dcc8] bg-[#f5efe3]/70 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7d6738] mb-2">
+              Automated Role-Based Redirection
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-[#4d5e6e]">
+              <div className="flex items-center gap-1.5 bg-white/80 rounded px-2 py-1 border border-[#e9e1cf]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#102746]" />
+                Super Admin
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/80 rounded px-2 py-1 border border-[#e9e1cf]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#8c7140]" />
+                Academic Director
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/80 rounded px-2 py-1 border border-[#e9e1cf]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#276e5c]" />
+                Finance Officer
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/80 rounded px-2 py-1 border border-[#e9e1cf]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#9c542b]" />
+                Teachers & Attendance
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/80 rounded px-2 py-1 border border-[#e9e1cf]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#3d5a80]" />
+                Member Coordinator
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/80 rounded px-2 py-1 border border-[#e9e1cf]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#6a4c93]" />
+                Students & Families
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Right Column: Interactive Login Card */}
+        <section className="relative mx-auto w-full max-w-md rounded-2xl border border-[#d8ccb4] bg-white p-7 sm:p-9 shadow-[0_20px_50px_-20px_rgba(16,39,70,0.18)]">
+          {/* Top Header */}
+          <div className="flex items-center justify-between border-b border-[#f0ebd9] pb-5">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#102746] text-[#dfc896] shadow-sm">
+                <KeyRound className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8c7140]">
+                  ደህንነቱ የተጠበቀ መግቢያ
+                </p>
+                <h2 className="font-serif text-2xl font-bold text-[#102746]">Sign In to Portal</h2>
+              </div>
+            </div>
+            <span className="text-xl text-[#8c7140]" title="Ethiopian Cross">
+              ✝
+            </span>
+          </div>
+
+          {/* Quick-Fill Demo Roles Picker */}
+          <div className="mt-5 rounded-xl border border-[#e8dfc9] bg-[#fbf9f4] p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#71592c]">
+                <Sparkles className="h-3 w-3 text-[#b89b60]" /> Quick-Fill Demo Credentials
+              </span>
+              <span className="text-[10px] text-[#8e9aa5]">Click role to autofill</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {DEMO_ACCOUNTS.map((acc) => {
+                const isActive = selectedDemo === acc.role;
+                return (
+                  <button
+                    key={acc.role}
+                    type="button"
+                    onClick={() => handleSelectDemo(acc)}
+                    className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-all ${
+                      isActive
+                        ? "bg-[#102746] text-[#f4eedb] shadow-sm font-semibold"
+                        : "bg-white text-[#465a6e] border border-[#e5dcce] hover:border-[#b89b60] hover:text-[#102746]"
+                    }`}
+                  >
+                    {acc.label}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedDemo && (
+              <div className="mt-2.5 pt-2 border-t border-[#f0ebd9] flex items-center justify-between text-[10px] text-[#637483]">
+                <span>
+                  Redirects to: <code className="font-semibold text-[#102746]">{DEMO_ACCOUNTS.find(a => a.role === selectedDemo)?.targetDashboard}</code>
+                </span>
+                <span className="text-[#3c763d] flex items-center gap-0.5 font-medium">
+                  <CheckCircle2 className="h-3 w-3" /> Ready
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Error Alert */}
+          {error && (
+            <div
+              role="alert"
+              className="mt-4 rounded-lg border border-rose-200 bg-rose-50/90 px-4 py-3 text-xs text-rose-800 leading-relaxed"
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            <div>
+              <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-[#2c3e50]">
+                Email Address / ኢሜይል
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setSelectedDemo(null);
+                }}
+                disabled={busy || isLoading}
+                className="w-full rounded-lg border border-[#d2d8dc] bg-[#fcfbf9] px-3.5 py-2.5 text-sm outline-none transition placeholder:text-[#a0a8b0] focus:border-[#102746] focus:ring-4 focus:ring-[#102746]/10"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="text-xs font-semibold text-[#2c3e50]"
+                >
+                  Password / የይለፍ ቃል
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-[#8c7140] hover:text-[#102746] transition"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={visible ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setSelectedDemo(null);
+                  }}
+                  disabled={busy || isLoading}
+                  className="w-full rounded-lg border border-[#d2d8dc] bg-[#fcfbf9] px-3.5 py-2.5 pr-11 text-sm outline-none transition focus:border-[#102746] focus:ring-4 focus:ring-[#102746]/10"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setVisible((v) => !v)}
+                  className="absolute inset-y-0 right-0 grid w-11 place-items-center text-[#7e8c99] hover:text-[#102746]"
+                  aria-label={visible ? "Hide password" : "Show password"}
+                >
+                  {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={busy || isLoading}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#102746] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-[#102746]/20 transition hover:bg-[#1a385f] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin text-[#dfc896]" />
+                  <span>Verifying credentials...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In to Dashboard</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer links */}
+          <div className="mt-6 pt-4 border-t border-[#f0ebd9] flex items-center justify-between text-xs">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 font-medium text-[#657686] hover:text-[#102746] transition"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Back to Home
+            </Link>
+            <Link
+              href="/register"
+              className="font-semibold text-[#8c7140] hover:text-[#102746] transition"
+            >
+              Member Registration
+            </Link>
+          </div>
+
+          <p className="mt-4 text-center text-[10px] text-[#939da7]">
+            Ethiopian Orthodox Tewahedo Church Sunday School Management System
+          </p>
+        </section>
+      </div>
     </main>
   );
 }

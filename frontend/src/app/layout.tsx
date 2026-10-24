@@ -3,8 +3,8 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "Simple Senbet | Ethiopian Orthodox Sunday School",
-  description: "Supporting learning, prayer, and parish life in Ethiopian Orthodox Tewahedo Sunday Schools.",
+  title: "Simple Senbet | የሰንበት ትምህርት ቤት | Ethiopian Orthodox Sunday School",
+  description: "Administrative & spiritual management platform for Ethiopian Orthodox Tewahedo Church Sunday Schools.",
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen antialiased bg-slate-50 text-slate-900" suppressHydrationWarning>
+      <body className="min-h-screen antialiased bg-[#fcfaf5] text-[#132438]" suppressHydrationWarning>
         <AuthProvider>
           {children}
         </AuthProvider>

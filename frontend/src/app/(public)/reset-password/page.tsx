@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
@@ -17,23 +17,175 @@ function ResetForm() {
   const [done, setDone] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setError("");
+    event.preventDefault();
+    setBusy(true);
+    setError("");
     try {
-      const response = await fetch("/api/auth/reset-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, email: email.trim(), password, password_confirmation: confirmation }) });
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          email: email.trim(),
+          password,
+          password_confirmation: confirmation,
+        }),
+      });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.message || "This reset link is invalid or has expired.");
+      if (!response.ok) throw new Error(data?.message || "This reset token is invalid or has expired.");
       setDone(true);
-    } catch (submissionError) { setError(submissionError instanceof Error ? submissionError.message : "We couldn't reset your password."); }
-    finally { setBusy(false); }
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "Unable to reset password.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  return <section className="w-full max-w-md border-t-2 border-[#102746] bg-[#f8f7f3] p-7 sm:p-9"><div className="grid h-12 w-12 place-items-center border-b border-[#b59660] text-[#244a72]"><KeyRound className="h-5 w-5" /></div><p className="mt-6 text-xs font-bold uppercase tracking-[.2em] text-[#8c7140]">Account recovery</p><h1 className="mt-2 font-serif text-3xl font-semibold text-[#102746]">Choose a new password</h1><p className="mt-2 text-sm leading-6 text-[#78818b]">Use a strong password you haven't used for this account before.</p>
-    {!token && !done && <div role="alert" className="mt-5 rounded-sm border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">This reset link is missing its token. Request a new link to continue.</div>}
-    {error && <div role="alert" className="mt-5 rounded-sm border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>}
-    {done ? <div role="status" className="mt-6 rounded-sm border border-emerald-200 bg-emerald-50 p-5"><div className="flex items-center gap-2 font-semibold text-emerald-900"><CheckCircle2 className="h-5 w-5" /> Password updated</div><p className="mt-2 text-sm leading-6 text-emerald-800">Your password has been changed. Sign in with your new password.</p><Link href="/login" className="mt-4 inline-flex font-bold text-[#244a72] hover:underline">Go to sign in</Link></div> : <form onSubmit={handleSubmit} className="mt-7 space-y-5"><div><label htmlFor="email" className="mb-2 block text-sm font-semibold text-[#34465b]">Email address</label><input id="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="w-full rounded-sm border border-[#d5d8da] bg-[#fbfaf7] px-4 py-3 text-sm outline-none focus:border-[#244a72] focus:ring-4 focus:ring-[#244a72]/10" /></div><div><label htmlFor="password" className="mb-2 block text-sm font-semibold text-[#34465b]">New password</label><input id="password" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-sm border border-[#d5d8da] bg-[#fbfaf7] px-4 py-3 text-sm outline-none focus:border-[#244a72] focus:ring-4 focus:ring-[#244a72]/10" /></div><div><label htmlFor="confirmation" className="mb-2 block text-sm font-semibold text-[#34465b]">Confirm new password</label><input id="confirmation" type="password" autoComplete="new-password" required minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className="w-full rounded-sm border border-[#d5d8da] bg-[#fbfaf7] px-4 py-3 text-sm outline-none focus:border-[#244a72] focus:ring-4 focus:ring-[#244a72]/10" /></div><button type="submit" disabled={busy || !token} className="flex w-full items-center justify-center gap-2 rounded-sm bg-[#102746] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#17385e] disabled:cursor-not-allowed disabled:opacity-55">{busy ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Updating...</> : "Update password"}</button></form>}
-    <Link href="/forgot-password" className="mt-6 inline-flex items-center gap-1.5 text-xs font-semibold text-[#697687] hover:text-[#102746]"><ArrowLeft className="h-3.5 w-3.5" /> Request another link</Link></section>;
+  const inputClass =
+    "w-full rounded-xl border border-[#d2d8dc] bg-[#fdfbf7] px-4 py-2.5 text-sm outline-none transition focus:border-[#0f243e] focus:ring-4 focus:ring-[#0f243e]/10";
+
+  return (
+    <section className="w-full max-w-md rounded-2xl border border-[#d8ccb4] bg-white p-7 sm:p-9 shadow-sm">
+      <div className="flex items-center justify-between border-b border-[#f0ebd9] pb-4 mb-6">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#0f243e] text-[#dfc896]">
+            <KeyRound className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8c7140]">
+              አዲስ የይለፍ ቃል ማዘጋጀት
+            </p>
+            <h1 className="font-serif text-2xl font-bold text-[#0f243e]">New Password</h1>
+          </div>
+        </div>
+        <span className="text-xl text-[#8c7140]">✝</span>
+      </div>
+
+      {!token && !done && (
+        <div
+          role="alert"
+          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 leading-relaxed"
+        >
+          This password reset link is missing a verification token. Please request a fresh reset link.
+        </div>
+      )}
+
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 leading-relaxed"
+        >
+          {error}
+        </div>
+      )}
+
+      {done ? (
+        <div
+          role="status"
+          className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-5 text-center space-y-3"
+        >
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+          <h3 className="font-serif text-base font-bold text-emerald-950">Password Successfully Updated</h3>
+          <p className="text-xs leading-5 text-emerald-800">
+            Your account password has been changed. You can now sign in with your new credentials.
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-xl bg-[#0f243e] px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#1a385f]"
+            >
+              Continue to Sign In
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-[#2c3e50]">
+              Email Address / ኢሜይል
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="mb-1.5 block text-xs font-semibold text-[#2c3e50]">
+              New Password / አዲስ የይለፍ ቃል
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              placeholder="Minimum 8 characters"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="confirmation" className="mb-1.5 block text-xs font-semibold text-[#2c3e50]">
+              Confirm New Password / አረጋግጥ
+            </label>
+            <input
+              id="confirmation"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={confirmation}
+              onChange={(e) => setConfirmation(e.target.value)}
+              className={inputClass}
+              placeholder="Repeat new password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={busy || !token}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f243e] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1a385f] disabled:opacity-50 transition"
+          >
+            {busy ? (
+              <>
+                <LoaderCircle className="h-4 w-4 animate-spin text-[#dfc896]" />
+                <span>Updating password...</span>
+              </>
+            ) : (
+              "Save New Password"
+            )}
+          </button>
+        </form>
+      )}
+
+      <div className="mt-6 pt-4 border-t border-[#f0ebd9] text-center">
+        <Link
+          href="/forgot-password"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#657686] hover:text-[#0f243e]"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Request a New Link
+        </Link>
+      </div>
+    </section>
+  );
 }
 
 export default function ResetPasswordPage() {
-  return <main className="mx-auto flex min-h-[calc(100vh-14rem)] max-w-6xl items-center justify-center px-5 py-14"><Suspense fallback={<div className="text-sm text-[#687586]">Loading reset link...</div>}><ResetForm /></Suspense></main>;
+  return (
+    <main className="min-h-[calc(100vh-12rem)] bg-[#fcfaf5] py-16 px-4 flex items-center justify-center">
+      <Suspense fallback={<div className="text-xs text-[#687586]">Loading verification token...</div>}>
+        <ResetForm />
+      </Suspense>
+    </main>
+  );
 }
