@@ -25,16 +25,20 @@ class PaymentRuleService
         $classId = $this->resolveMemberClassForMonth($member->id, $monthDate) ?? $member->class_id;
 
         // 2. Fetch active rules effective for this month
-        $rules = MonthlyPaymentRule::query()
-            ->where('is_active', true)
-            ->whereDate('effective_from', '<=', $monthDate)
-            ->where(function ($q) use ($monthDate) {
-                $q->whereNull('effective_to')
-                    ->orWhereDate('effective_to', '>=', $monthDate);
-            })
-            ->orderByDesc('class_id') // Class-specific rules take precedence over global (null class_id)
-            ->orderByDesc('effective_from')
-            ->get();
+        try {
+            $rules = MonthlyPaymentRule::query()
+                ->where('is_active', true)
+                ->whereDate('effective_from', '<=', $monthDate)
+                ->where(function ($q) use ($monthDate) {
+                    $q->whereNull('effective_to')
+                        ->orWhereDate('effective_to', '>=', $monthDate);
+                })
+                ->orderByDesc('class_id') // Class-specific rules take precedence over global (null class_id)
+                ->orderByDesc('effective_from')
+                ->get();
+        } catch (\Throwable $e) {
+            $rules = collect();
+        }
 
         if ($rules->isEmpty()) {
             return [

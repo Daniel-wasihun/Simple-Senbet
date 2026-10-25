@@ -93,7 +93,11 @@ class PaymentDashboardService
             ? round(($totalCollectedEligible / $totalExpected) * 100, 2)
             : 0.00;
 
-        $activeRules = MonthlyPaymentRule::where('is_active', true)->get();
+        try {
+            $activeRules = MonthlyPaymentRule::where('is_active', true)->get();
+        } catch (\Throwable $e) {
+            $activeRules = collect();
+        }
 
         return [
             'payment_month' => $paymentMonth,

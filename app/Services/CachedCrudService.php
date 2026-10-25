@@ -22,9 +22,23 @@ class CachedCrudService
         $page = request()->integer('page', 1);
         $key = $this->key($model, "index.p{$page}.n{$perPage}");
 
-        return Cache::remember($key, now()->addMinutes($this->ttlMinutes), function () use ($model, $with, $perPage) {
-            return $model::with($with)->latest()->paginate($perPage);
-        });
+        try {
+            $cached = Cache::get($key);
+            if ($cached instanceof LengthAwarePaginator) {
+                return $cached;
+            }
+        } catch (\Throwable $e) {
+            Cache::forget($key);
+        }
+
+        $fresh = $model::with($with)->latest()->paginate($perPage);
+        try {
+            Cache::put($key, $fresh, now()->addMinutes($this->ttlMinutes));
+        } catch (\Throwable $e) {
+            // Non-critical cache write failure
+        }
+
+        return $fresh;
     }
 
     /**
@@ -34,9 +48,23 @@ class CachedCrudService
     {
         $key = $this->key($model::class, 'show.' . $model->getKey());
 
-        return Cache::remember($key, now()->addMinutes($this->ttlMinutes), function () use ($model, $with) {
-            return $model->fresh($with);
-        });
+        try {
+            $cached = Cache::get($key);
+            if ($cached instanceof Model) {
+                return $cached;
+            }
+        } catch (\Throwable $e) {
+            Cache::forget($key);
+        }
+
+        $fresh = $model->fresh($with);
+        try {
+            Cache::put($key, $fresh, now()->addMinutes($this->ttlMinutes));
+        } catch (\Throwable $e) {
+            // Non-critical cache write failure
+        }
+
+        return $fresh;
     }
 
     /**

@@ -27,12 +27,8 @@ function getCachedUser(): User | null {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Synchronously initialize with cached user if available for INSTANT dashboard display
-  const [user, setUser] = useState<User | null>(() => getCachedUser());
-  const [isLoading, setIsLoading] = useState<boolean>(() => {
-    // If cached user exists, do not block initial render with a loading spinner
-    return typeof window === "undefined" ? true : !getCachedUser();
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
 
   const refreshUser = useCallback(async () => {
@@ -58,6 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const cached = getCachedUser();
+    if (cached) {
+      setUser(cached);
+      setIsLoading(false);
+    }
     refreshUser();
   }, [refreshUser]);
 
