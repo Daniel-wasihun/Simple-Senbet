@@ -41,81 +41,94 @@ const links = [
   { href: "/contact-us", label: "Contact", amharic: "አድራሻ" },
 ];
 
-export function PublicSiteLayout({ children }: { children: React.ReactNode }) {
+export function PublicSiteLayout({
+  children,
+  hideFooter = false,
+  hideHeader = false,
+}: {
+  children: React.ReactNode;
+  hideFooter?: boolean;
+  hideHeader?: boolean;
+}) {
   return (
     <div className="min-h-screen bg-[#fcfaf5] text-[#132438] flex flex-col font-sans">
-      {/* Top Banner Notice */}
-      <div className="bg-[#0b1c34] text-[#e8d5a8] text-[11px] py-1.5 px-4 text-center border-b border-[#c5a866]/30 flex items-center justify-center gap-2 font-medium">
-        <span>✝ የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን የሰንበት ትምህርት ቤት አስተዳደር መድረክ</span>
-        <span className="hidden sm:inline text-white/40">|</span>
-        <span className="hidden sm:inline text-white/80">Ethiopian Orthodox Tewahedo Church Sunday School Platform</span>
-      </div>
+      {!hideHeader && (
+        <>
+          {/* Top Banner Notice */}
+          <div className="bg-[#0b1c34] text-[#e8d5a8] text-[11px] py-1.5 px-4 text-center border-b border-[#c5a866]/30 flex items-center justify-center gap-2 font-medium">
+            <span>✝ የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን የሰንበት ትምህርት ቤት አስተዳደር መድረክ</span>
+            <span className="hidden sm:inline text-white/40">|</span>
+            <span className="hidden sm:inline text-white/80">Ethiopian Orthodox Tewahedo Church Sunday School Platform</span>
+          </div>
 
-      {/* Main Header */}
-      <header className="sticky top-0 z-40 border-b border-[#e5dcc8] bg-[#fdfbf6]/95 backdrop-blur-md shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 lg:px-8">
-          <Link href="/" className="flex items-center gap-3 group" aria-label="Simple Senbet Home">
-            <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#c5a866] bg-[#f5ecda] text-[#7d612e] shadow-sm transition-transform group-hover:scale-105">
-              <EthiopianOrthodoxCross className="h-7 w-7 text-[#8c7140]" />
-            </span>
-            <span>
-              <span className="block font-serif text-[18px] font-bold leading-tight tracking-tight text-[#0f243e]">
-                Simple Senbet
-              </span>
-              <span className="block text-[10px] font-medium tracking-[0.08em] text-[#8c7140]">
-                ሰንበት ትምህርት ቤት | Orthodox Sunday School
-              </span>
-            </span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden items-center gap-8 text-[13px] font-medium text-[#4c5e70] md:flex" aria-label="Main navigation">
-            {links.map(({ href, label }) => (
-              <Link
-                key={label}
-                href={href}
-                className="transition-colors hover:text-[#8c7140] hover:underline underline-offset-4 decoration-[#c5a866]"
-              >
-                {label}
+          {/* Main Header */}
+          <header className="sticky top-0 z-40 border-b border-[#e5dcc8] bg-[#fdfbf6]/95 backdrop-blur-md shadow-sm">
+            <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 lg:px-8">
+              <Link href="/" className="flex items-center gap-3 group" aria-label="Simple Senbet Home">
+                <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#c5a866] bg-[#f5ecda] text-[#7d612e] shadow-sm transition-transform group-hover:scale-105">
+                  <EthiopianOrthodoxCross className="h-7 w-7 text-[#8c7140]" />
+                </span>
+                <span>
+                  <span className="block font-serif text-[18px] font-bold leading-tight tracking-tight text-[#0f243e]">
+                    Simple Senbet
+                  </span>
+                  <span className="block text-[10px] font-medium tracking-[0.08em] text-[#8c7140]">
+                    ሰንበት ትምህርት ቤት | Orthodox Sunday School
+                  </span>
+                </span>
               </Link>
-            ))}
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#0f243e] px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-[#0f243e]/20 transition-all hover:bg-[#1a385f] hover:shadow-md"
+
+              {/* Desktop Nav */}
+              <nav className="hidden items-center gap-8 text-[13px] font-medium text-[#4c5e70] md:flex" aria-label="Main navigation">
+                {links.map(({ href, label }) => (
+                  <Link
+                    key={label}
+                    href={href}
+                    className="transition-colors hover:text-[#8c7140] hover:underline underline-offset-4 decoration-[#c5a866]"
+                  >
+                    {label}
+                  </Link>
+                ))}
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#0f243e] px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-[#0f243e]/20 transition-all hover:bg-[#1a385f] hover:shadow-md"
+                >
+                  <span>School Portal</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 text-[#dfc896]" />
+                </Link>
+              </nav>
+
+              {/* Mobile Portal CTA */}
+              <Link
+                href="/login"
+                className="rounded-lg bg-[#0f243e] px-3.5 py-2 text-xs font-semibold text-white shadow-sm md:hidden flex items-center gap-1.5"
+              >
+                <span>Sign In</span>
+                <ArrowUpRight className="h-3 w-3 text-[#dfc896]" />
+              </Link>
+            </div>
+
+            {/* Mobile Horizontal Sub-nav */}
+            <nav
+              className="flex gap-4 overflow-x-auto border-t border-[#f0ebd9] px-5 py-2 text-[12px] font-medium text-[#5e7081] md:hidden scrollbar-none"
+              aria-label="Mobile navigation"
             >
-              <span>School Portal</span>
-              <ArrowUpRight className="h-3.5 w-3.5 text-[#dfc896]" />
-            </Link>
-          </nav>
-
-          {/* Mobile Portal CTA */}
-          <Link
-            href="/login"
-            className="rounded-lg bg-[#0f243e] px-3.5 py-2 text-xs font-semibold text-white shadow-sm md:hidden flex items-center gap-1.5"
-          >
-            <span>Sign In</span>
-            <ArrowUpRight className="h-3 w-3 text-[#dfc896]" />
-          </Link>
-        </div>
-
-        {/* Mobile Horizontal Sub-nav */}
-        <nav
-          className="flex gap-4 overflow-x-auto border-t border-[#f0ebd9] px-5 py-2 text-[12px] font-medium text-[#5e7081] md:hidden scrollbar-none"
-          aria-label="Mobile navigation"
-        >
-          {links.map(({ href, label }) => (
-            <Link key={label} href={href} className="shrink-0 hover:text-[#8c7140] whitespace-nowrap">
-              {label}
-            </Link>
-          ))}
-        </nav>
-      </header>
+              {links.map(({ href, label }) => (
+                <Link key={label} href={href} className="shrink-0 hover:text-[#8c7140] whitespace-nowrap">
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </header>
+        </>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1">{children}</div>
 
       {/* Footer */}
-      <footer className="border-t border-[#e2d8c3] bg-[#f3ede1] text-[#2c3e50]">
+      {!hideFooter && (
+        <footer className="border-t border-[#e2d8c3] bg-[#f3ede1] text-[#2c3e50]">
         <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {/* Identity */}
@@ -185,6 +198,7 @@ export function PublicSiteLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+      )}
     </div>
   );
 }

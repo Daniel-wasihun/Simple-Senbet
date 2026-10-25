@@ -246,3 +246,9 @@
     @apply text-red-600 dark:text-red-400;
   }
 }
+
+/* Suppress legacy redundant header inside unified dashboard shell */
+.dashboard-content > div > header {
+  display: none !important;
+}
+

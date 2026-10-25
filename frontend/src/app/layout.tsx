@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Simple Senbet | የሰንበት ትምህርት ቤት | Ethiopian Orthodox Sunday School",
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body className="min-h-screen antialiased bg-[#fcfaf5] text-[#132438]" suppressHydrationWarning>
         <AuthProvider>
           {children}
+          <Toaster position="top-right" richColors closeButton />
         </AuthProvider>
       </body>
     </html>
