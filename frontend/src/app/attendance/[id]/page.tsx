@@ -4,8 +4,14 @@ import React, { useEffect, useState, useCallback, useMemo, Suspense } from "reac
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+<<<<<<< HEAD
 import { AdminModal } from "@/components/admin/AdminModal";
 import { attendanceService } from "@/services/attendance.service";
+=======
+import { formatText } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+>>>>>>> a378e74b7d0c0655c530b3caf73fb1fc9f00426b
 import {
   AttendanceMark,
   AttendanceDetailSession,
@@ -440,10 +446,19 @@ function AttendanceTakingContent() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-slate-600">Loading Attendance Roster...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e1a] p-4 sm:p-6 lg:p-8">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#111624] border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+          <div className="p-6 rounded-3xl bg-white dark:bg-[#111624] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="h-8 w-28 rounded-xl" />
+            </div>
+            <TableShimmerSkeleton rows={8} columns={5} />
+          </div>
         </div>
       </div>
     );
@@ -517,7 +532,7 @@ function AttendanceTakingContent() {
               <div>
                 <div className="inline-flex items-center flex-wrap gap-2 text-xs font-semibold text-indigo-600 mb-1">
                   <GraduationCap className="w-4 h-4" />
-                  <span>{session.school_class?.name || `Class #${session.class_id}`}</span>
+                  <span>{formatText(session.school_class?.name) || `Class #${session.class_id}`}</span>
                   <span>•</span>
                   {matchingAssignments.length > 1 && isDraft ? (
                     <div className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-200 rounded-md px-2 py-0.5">
@@ -542,7 +557,7 @@ function AttendanceTakingContent() {
                     <span>Section {selectedSection || "Unassigned"}</span>
                   )}
                   <span>•</span>
-                  <span>{session.course?.name || "Homeroom Roll Call"}</span>
+                  <span>{session.course?.name ? formatText(session.course.name) : "Homeroom Roll Call"}</span>
                   {selectedSemester && (
                     <>
                       <span>•</span>
@@ -728,7 +743,7 @@ function AttendanceTakingContent() {
                 >
                   <div>
                     <p className="text-xs font-bold text-slate-900">
-                      {tr.teacher?.name || `Teacher #${tr.teacher_id}`}
+                      {formatText(tr.teacher?.name) || `Teacher #${tr.teacher_id}`}
                     </p>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                       {tr.remarks || "Attendance session conducted"}
@@ -771,7 +786,7 @@ function AttendanceTakingContent() {
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-bold text-slate-900">
-                            {student.name || `${student.first_name || ""} ${student.last_name || ""}`.trim() || `Student #${student.id}`}
+                            {formatText(student.name) || `${student.first_name || ""} ${student.last_name || ""}`.trim() || `Student #${student.id}`}
                           </h3>
                           {hasChanged && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
@@ -905,7 +920,7 @@ function AttendanceTakingContent() {
             <h3 className="text-lg font-bold text-slate-900">Confirm Attendance Submission</h3>
             <p className="text-xs text-slate-600 mt-2">
               You are about to record attendance for <strong>{counts.total} students</strong> in{" "}
-              <strong>{session?.school_class?.name || `Class #${session?.class_id}`}</strong> (Section{" "}
+              <strong>{formatText(session?.school_class?.name) || `Class #${session?.class_id}`}</strong> (Section{" "}
               <strong>{selectedSection}</strong>,{" "}
               <span className="capitalize">{selectedSemester?.replace("_", " ")}</span>):
             </p>
@@ -963,7 +978,7 @@ function AttendanceTakingContent() {
             </div>
             <h3 className="text-lg font-bold text-slate-900">Close Attendance Session</h3>
             <p className="text-xs text-slate-600 mt-2">
-              You are about to close and archive the session for <strong>{session?.school_class?.name || `Class #${session?.class_id}`}</strong> ({session?.date}, {session?.time_slot}).
+              You are about to close and archive the session for <strong>{formatText(session?.school_class?.name) || `Class #${session?.class_id}`}</strong> ({session?.date}, {session?.time_slot}).
             </p>
 
             <div className="my-4 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs text-left">

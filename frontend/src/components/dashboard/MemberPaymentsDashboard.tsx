@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 import { useRouter } from "next/navigation";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { paymentsService } from "@/services/payments.service";
@@ -420,10 +421,19 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
   };
 
   // Format Helper
-  const formatText = (text: string | { en?: string; am?: string } | undefined | null) => {
-    if (!text) return "—";
+  const formatText = (text: any, fallback: string = "—"): string => {
+    if (text === null || text === undefined || text === "") return fallback;
     if (typeof text === "string") return text;
-    return text.en || text.am || "—";
+    if (typeof text === "number") return String(text);
+    if (typeof text === "object") {
+      if (text.am && text.en) return text.am || text.en;
+      if (text.am) return text.am;
+      if (text.en) return text.en;
+      const values = Object.values(text).filter((v) => typeof v === "string" || typeof v === "number");
+      if (values.length > 0) return String(values[0]);
+      return fallback;
+    }
+    return String(text);
   };
 
   const getStatusBadge = (status: MemberMonthlyStatus["status"]) => {
@@ -827,11 +837,8 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
               <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
-                      <div className="flex items-center justify-center gap-2">
-                        <RefreshCw className="w-5 h-5 animate-spin text-emerald-600" />
-                        <span>Loading payment ledger records...</span>
-                      </div>
+                    <td colSpan={7} className="p-4">
+                      <TableShimmerSkeleton rows={5} columns={7} />
                     </td>
                   </tr>
                 ) : members.length === 0 ? (
@@ -1128,7 +1135,7 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                       <div>
                         <span>Method: {p.payment_method}</span>
                         {p.payment_reference && <span> • Ref: {p.payment_reference}</span>}
-                        {p.recorded_by_user && <span> • Cashier: {p.recorded_by_user.name}</span>}
+                        {p.recorded_by_user && <span> • Cashier: {formatText(p.recorded_by_user.name)}</span>}
                       </div>
                       <span>{new Date(p.paid_at).toLocaleDateString()}</span>
                     </div>
@@ -1353,7 +1360,7 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
               </div>
 
               <div className="pt-3 border-t border-slate-200 text-center text-[10px] text-slate-400 font-sans">
-                Cashier: {activeReceipt.recorded_by?.name || "System"} • Thank you for your faithful contribution!
+                Cashier: {formatText(activeReceipt.recorded_by?.name) || "System"} • Thank you for your faithful contribution!
               </div>
             </div>
 
