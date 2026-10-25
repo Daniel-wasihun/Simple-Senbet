@@ -40,8 +40,23 @@ class UserPolicy
 
     public function assignRoleName(User $actor, string $roleName): bool
     {
-        return $actor->hasPermission('roles.assign')
-            && ($roleName !== 'superadmin' || $actor->hasPermission('roles.assign-system'));
+        if (! $actor->hasPermission('roles.assign')
+            || ($roleName === 'superadmin' && ! $actor->hasPermission('roles.assign-system'))) {
+            return false;
+        }
+
+        if ($actor->hasPermission('roles.manage')) {
+            return true;
+        }
+
+        $role = Role::query()->where('guard_name', 'web')->where('name', $roleName)->first();
+        if (! $role) {
+            return false;
+        }
+
+        $delegable = $actor->getAllPermissions()->pluck('name')->all();
+
+        return $role->permissions()->whereNotIn('name', $delegable)->doesntExist();
     }
 
     public function assignRoleTo(User $actor, User $target, string $roleName): bool
@@ -64,9 +79,19 @@ class UserPolicy
         $roleIds = array_values(array_unique(array_map('intval', $roleIds)));
         $roles = Role::query()->where('guard_name', 'web')->whereIn('id', $roleIds)->get();
 
-        return $roles->count() === count($roleIds)
-            && (! $roles->contains(fn (Role $role): bool => $role->name === 'superadmin')
-                || $actor->hasPermission('roles.assign-system'));
+        if ($roles->count() !== count($roleIds)
+            || ($roles->contains(fn (Role $role): bool => $role->name === 'superadmin')
+                && ! $actor->hasPermission('roles.assign-system'))) {
+            return false;
+        }
+
+        if ($actor->hasPermission('roles.manage')) {
+            return true;
+        }
+
+        $delegable = $actor->getAllPermissions()->pluck('name')->all();
+
+        return $roles->every(fn (Role $role): bool => $role->permissions()->whereNotIn('name', $delegable)->doesntExist());
     }
 
     public function delete(User $actor, User $target): bool

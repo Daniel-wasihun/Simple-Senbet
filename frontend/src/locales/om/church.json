@@ -1,0 +1,212 @@
+{
+  "navigation": {
+    "curriculum": "Qabiyyee barnootaa",
+    "parishLife": "Jireenya waldaa",
+    "ministry": "Tajaajila keenya",
+    "contact": "Nu qunnamaa",
+    "portal": "Seensa mana barumsaa",
+    "dashboard": "Gara gabatee hojii deemi",
+    "signIn": "Gahee keetiin seeni"
+  },
+  "layout": {
+    "banner": "Waldaa Ortodoksii Tawaahidoo Itoophiyaa · Hawaasa Barnoota Dilbataa",
+    "tagline": "Barnoota Dilbataa Ortodoksii",
+    "footerDescription": "Waldaa Ortodoksii Tawaahidoo Itoophiyaa keessatti guddina amantii, aadaa qulqulluu fi tajaajila dargaggootaa deeggaruu.",
+    "curriculum": "Qabiyyee Barnoota Dilbataa",
+    "scripture": "Kitaaba Qulqulluu",
+    "zema": "Zema fi liturjii",
+    "dogma": "Barsiisa Ortodoksii",
+    "history": "Seenaa Waldaa",
+    "departments": "Kutaa mana barumsaa",
+    "academics": "Barnoota",
+    "finance": "Maallaqa fi gumaacha",
+    "attendance": "Argamuu",
+    "members": "Miseensotaa fi maatii",
+    "quickLinks": "Geessituuwwan saffisaa",
+    "schoolOffice": "Waajjira mana barumsaa qunnamaa",
+    "about": "Waa'ee Simple Senbet",
+    "resetPassword": "Jecha icciitii haaromsi",
+    "copyright": "Hawaasa Barnoota Dilbataa Ortodoksii Tawaahidoo Itoophiyaa.",
+    "photoCredits": "Suuraawwan: Debre Libanos MarcD (CC BY-SA 3.0); luba Lalibela Lucy Shaw (CC BY-SA 4.0); fannoo sirnaa A. Davey (CC BY 2.0). Suuraawwan dabalataa: Biete Ghiorgis Sailko (CC BY 3.0); mana Finfinnee VBzi (CC BY 2.0); tajaajila St Michael Gyrofrog (CC BY-SA 3.0)."
+  },
+  "home": {
+    "heroEyebrow": "Barnoota Dilbataa Waldaa Ortodoksii Tawaahidoo Itoophiyaa",
+    "heroTitle1": "Amantiidhaan hundeeffame.",
+    "heroTitle2": "Dhalootaaf qophaa'e.",
+    "heroCopy": "Simple Senbet sirna bulchiinsa mana barumsaa Barnoota Dilbataa Ortodoksii Tawaahidoo Itoophiyaatiif qophaa'e dha. Qabiyyee amantii, argamuu liturjii, galmee barattootaa fi gumaacha waldaa bakka amanamaa tokko keessatti qindeessaa.",
+    "scripture": "Ijoollee karaa irra deemuu qabu barsiisi; yeroo dulloomus irraa hin deebi'u.",
+    "scriptureReference": "Fakkeenya 22:6",
+    "portal": "Gara Seensa Mana Barumsaa",
+    "dashboard": "Gara Gabatee Hojii Deemi",
+    "roleSignIn": "Gahee keetiin seeni",
+    "openDashboard": "Gabatee hojii bani",
+    "explore": "Qabiyyee barnootaa ilaali",
+    "secureAccess": "Seensa gahee irratti hundaa'e",
+    "records": "Galmee mana barumsaa waldaa",
+    "languages": "Afaan Oromoo, Amaariffaa fi Ingiliffa",
+    "pillarsEyebrow": "Qabiyyee Barnoota Dilbataa",
+    "pillarsTitle": "Utubaalee guddina amantii afur",
+    "pillarsIntro": "Karaa qindaa'aa amantii fi aadaa Waldaa Ortodoksii Tawaahidoo Itoophiyaa barachuuf, ijoollummaa irraa hanga tajaajila dargaggootaatti.",
+    "pillars": [
+      {
+        "title": "Kitaaba Qulqulluu fi Barsiisa Ortodoksii",
+        "description": "Kakuu Moofaa fi Haaraa, Amantii Ortodoksii, iccitii amantii fi barsiisa abbootii Waldaa qo'adhaa.",
+        "highlight": "Kitaaba Qulqulluu · Amantii · Abbootii Waldaa"
+      },
+      {
+        "title": "Faaruu Qulqulluu Yared",
+        "description": "Aadaa zema Itoophiyaa Qulqulluu Yared, mallattoolee isaa, faaruu liturjii fi sirna qulqulluu baradhaa.",
+        "highlight": "Zema · Mahlet · Aqwaqwam"
+      },
+      {
+        "title": "Liturjii fi Seenaa Waldaa",
+        "description": "Iccitiiwwan Qulqulluu Torban, Liturjii Waaqayyoo, kaalaandarii Waldaa, sooma fi seenaa Waldaa Itoophiyaa qo'adhaa.",
+        "highlight": "Iccitii · Liturjii · Seenaa"
+      },
+      {
+        "title": "Jireenya Kiristaanaa fi Tajaajila",
+        "description": "Jaallala, gad of qabuu, tokkummaa fi dhukkubsattoota, maanguddoota fi hawaasa waldaa tajaajiluun guddadhaa.",
+        "highlight": "Tokkummaa · Arjooma · Tajaajila"
+      }
+    ],
+    "departmentsEyebrow": "Kutaa mana barumsaa fi hojiiwwan",
+    "departmentsTitle": "Gahee Barnoota Dilbataa hundaaf bakka hojii.",
+    "departmentsIntro": "Kutaan waldaa tokkoon tokkoon hojii isaa ifaan akka raawwatu gargaaraa: karoora barnootaa, argamuu, maallaqa fi qindoomina miseensotaa.",
+    "departments": [
+      {
+        "title": "Barnoota",
+        "description": "Waggaa barnootaa, qabiyyee, karoora koorsii, sagantaa yeroo fi ramaddii barsiisotaa bulchaa."
+      },
+      {
+        "title": "Argamuu",
+        "description": "Hirmaannaa Liturjii Waaqayyoo fi dareewwan Barnoota Dilbataa galmeessaa; argamuu barattootaa hordofaa."
+      },
+      {
+        "title": "Maallaqa",
+        "description": "Gumaacha, kaffaltii ayyaanaa, gurgurtaa kitaabaa, nagahee fi cuunfaa maallaqaa galmeessaa."
+      },
+      {
+        "title": "Miseensotaa fi maatii",
+        "description": "Galmee barattootaa fi maatii, quunnamtii waldaa fi gareewwan miseensotaa hayyama irratti hundaa'een qindeessaa."
+      }
+    ],
+    "quote": "Geggeessitoota keessan, warra dubbii Waaqayyoo isinitti himan yaadadhaa; jireenya isaanii ilaalaa amantii isaanii fakkaadhaa.",
+    "quoteReference": "Ibroota 13:7",
+    "commitmentTitle": "Itti gaafatamummaa amanamaa fi tajaajila hawaasaa",
+    "commitments": [
+      "Kutaa fi itti gaafatamummaa Barnoota Dilbataa Ortodoksii Itoophiyaa irratti hundaa'ee qophaa'e.",
+      "Hayyamni gahee barnootaa, maallaqaa, barsiisotaa fi galmee miseensotaa addaan baasa.",
+      "Waltajjichi Afaan Oromoo, Amaariffaa fi Ingiliffa ni deeggera."
+    ],
+    "valuesEyebrow": "Waliigaltee keenya",
+    "valuesTitle": "Gatiiwwan Simple Senbet qajeelchan",
+    "values": [
+      {
+        "title": "Amantii fi aadaa qulqulluu",
+        "description": "Beekumsa Kitaaba Qulqulluu, barsiisa Ortodoksii fi faaruu Qulqulluu Yared guddisaa."
+      },
+      {
+        "title": "Barataa hunda kunuunsuu",
+        "description": "Galmee mana barumsaa amanamaa ta'een barsiisonni fi geggeessitoonni waldaa barataa hunda akka deeggaran gargaaraa."
+      },
+      {
+        "title": "Tajaajila hawaasaa",
+        "description": "Tokkummaa, arjooma fi tajaajila hawaasa waldaa keessatti jajjabeessaa."
+      }
+    ],
+    "ctaEyebrow": "Barnoota Dilbataa waldaa tajaajiltuu?",
+    "ctaTitle": "Hawaasa Barnoota Dilbataa keessan walitti fidaa.",
+    "contactSupport": "Deeggarsa qunnamaa",
+    "preview": {
+      "schoolLabel": "Barnoota Dilbataa",
+      "schoolYear": "Waggaa barnootaa 2026/2027",
+      "departments": "Kutaa mana barumsaa",
+      "overview": "Cuunfaa",
+      "students": "Barattoota",
+      "courses": "Koorsii",
+      "attendance": "Argamuu",
+      "grades": "Galmee qabxii",
+      "system": "Sirna",
+      "settings": "Qindaa'ina",
+      "dashboard": "Fakkii gabatee hojii waldaa",
+      "welcome": "Gara mana barumsaa keessaniitti baga nagaan dhuftan",
+      "term": "Kutaa I · 2026",
+      "activeStudents": "Barattoota hojii irra jiran",
+      "enrolled": "+28 galmaa'an",
+      "liturgy": "Liturjii har'aa",
+      "present": "319 argamaniiru",
+      "classes": "Dareewwan",
+      "divisions": "Garee 4",
+      "todaysClasses": "Dareewwan Dilbataa har'aa",
+      "day15": "Dilbata 15",
+      "yaredChant": "Zema Qulqulluu Yared",
+      "orthodoxCreed": "Amantii Ortodoksii",
+      "hall": "09:00 - 10:15 | Galma guddaa",
+      "room3": "10:30 - 11:45 | Kutaa 3",
+      "synced": "Galmeewwan waldaa eegamanii wal-simsiifamaniiru"
+    },
+    "heroImageAlt": "Mana qulqullummaa Debre Libanos, Itoophiyaa",
+    "photoCaption": "Mana qulqullummaa Debre Libanos · Itoophiyaa",
+    "priestImageAlt": "Luba Ortodoksii Itoophiyaa mana dhagaa Lalibela keessatti",
+    "priestPhotoCaption": "Luba Lalibela keessatti · Suuraa Lucy Shaw (CC BY-SA 4.0)",
+    "previousImage": "Suuraa duraa",
+    "nextImage": "Suuraa itti aanu",
+    "pauseImages": "Suuraa dhaabi",
+    "playImages": "Suuraa taphachiisi",
+    "ceremonyImageAlt": "Luba Ortodoksii Itoophiyaa Lalibela keessatti fannoo sirna amantii agarsiisaa jiru",
+    "ceremonyPhotoCaption": "Fannoo sirna amantii Bet Abba Libanos · Suuraa A. Davey (CC BY 2.0)",
+    "galleryEyebrow": "Iddoowwan qulqulluu",
+    "galleryTitle": "Waldaalee amantiifi seenaadhaan bocaman",
+    "galleryIntro": "Iddoowwan Ortodoksii Itoophiyaa muraasa maqaa fi madda suuraa isaanii waliin ilaalaa.",
+    "gallery": {
+      "debreTitle": "Mana Monastirii Debre Libanos",
+      "debreDescription": "Mana monastirii Ortodoksii Itoophiyaa seena qabeessa naannoo Shewaa olka’aa jiru.",
+      "debreAlt": "Mana monastirii Debre Libanos Itoophiyaa",
+      "georgeTitle": "Biete Ghiorgis, Lalibela",
+      "georgeDescription": "Mana qulqullummaa dhagaa keessaa soofame kan walxaxaa manneen qulqullaa’oo Lalibela UNESCO keessatti argamu.",
+      "georgeAlt": "Ala mana qulqullummaa Biete Ghiorgis, Lalibela",
+      "addisTitle": "Mana Ortodoksii Itoophiyaa Finfinnee",
+      "addisDescription": "Mana Ortodoksii Itoophiyaa magaalaa guddoo keessatti argamu, bara 2007 kaafame.",
+      "addisAlt": "Mana qulqullummaa Ortodoksii Itoophiyaa Finfinnee"
+    },
+    "educationEyebrow": "Barnoota mana barumsaa Dilbataa",
+    "educationTitle": "Barnoota, hirmaannaa fi kunuunsa",
+    "educationIntro": "Hojiiwwan barnootaa Simple Senbet deeggaru, karoora barnootaa irraa hanga hirmaannaa fi madaallii ilaalaa.",
+    "educationPhotoNote": "Kutaan kun dandeettiiwwan marsariitichaa fakkiiwwaniin agarsiisa; suuraan barattootaa hin fayyadamu.",
+    "educationItems": [
+      {
+        "title": "Karoora barnoota amantii",
+        "description": "Waggaa barnootaa, koorsii fi ramaddii barsiisotaa qindeessaa."
+      },
+      {
+        "title": "Hirmaannaa kutaa",
+        "description": "Hirmaannaa barnoota Dilbataa fi liturjii kutaa ramadame keessatti galmeessaa."
+      },
+      {
+        "title": "Galmee madaallii",
+        "description": "Bu’aa madaallii fi kaardii gabaasaa karaa hojii barnootaa mana barumsaa ilaalaa."
+      },
+      {
+        "title": "Galmee miseensotaa",
+        "description": "Galmee barattootaa fi maatii hayyama gahee irratti hundaa’een qindeessaa."
+      }
+    ],
+    "servicesEyebrow": "Waaqeffannaa fi tajaajila",
+    "servicesTitle": "Kadhannaa fi tajaajilaan walitti qabamuu",
+    "servicesIntro": "Suuraawwan abbootii amantii Ortodoksii Itoophiyaa fi sirna waldaa madda fi hayyama isaanii waliin.",
+    "services": {
+      "liturgyTitle": "Liturjii Qulqulluu",
+      "liturgyDescription": "Abbootii amantii fi diyaaqonota Waldaa Ortodoksii Tewaahidoo Itoophiyaa St. Michael, Washington DC keessatti tajaajilan.",
+      "liturgyAlt": "Abbootii amantii fi diyaaqonota Ortodoksii Itoophiyaa sirna waldaa gaggeessan",
+      "crossesTitle": "Fannoo sirna amantii Lalibela",
+      "crossesDescription": "Abbaa amantii Bet Abba Libanos keessatti, gaaddisa sirnaa jala fannoo aadaa qabatee.",
+      "crossesAlt": "Abbaa amantii Bet Abba Libanos keessatti fannoo sirnaa agarsiisaa jiru"
+    },
+    "goToSlide": "Gara fakkii deemaa",
+    "carouselPagination": "Fuulaalee fakkii",
+    "fallbackChurchAlt": "Ijaarsa mana qulqullummaa Ortodoksii Itoophiyaa",
+    "fallbackClergyAlt": "Abbaa amantii Ortodoksii Itoophiyaa Lalibela jiru",
+    "fallbackChurchCaption": "Mana Ortodoksii Itoophiyaa Finfinnee · Suuraa VBzi (CC BY 2.0)",
+    "viewSource": "Madda suuraa ilaali"
+  }
+}

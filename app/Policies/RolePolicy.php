@@ -36,7 +36,7 @@ class RolePolicy
      */
     public function update(User $user, Role $role): bool
     {
-        return $user->hasPermission('roles.update');
+        return $role->name !== 'superadmin' && $user->hasPermission('roles.update');
     }
 
     /**
@@ -44,7 +44,9 @@ class RolePolicy
      */
     public function delete(User $user, Role $role): bool
     {
-        return $user->hasPermission('roles.delete') && ! $role->users()->exists();
+        return $role->name !== 'superadmin'
+            && $user->hasPermission('roles.delete')
+            && ! $role->users()->exists();
     }
 
     /**
@@ -52,6 +54,6 @@ class RolePolicy
      */
     public function assignPermissions(User $user, Role $role): bool
     {
-        return $user->hasPermission('permissions.assign');
+        return $role->name !== 'superadmin' && $user->hasPermission('permissions.assign');
     }
 }

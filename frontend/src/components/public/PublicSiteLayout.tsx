@@ -1,228 +1,130 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { LanguageSwitcher } from "@/components/layout/navbar/languageSwicher";
 import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "@/hooks/useTranslation";
 import { getDashboardRouteForRole } from "@/utils/roleNavigation";
 
 export function EthiopianOrthodoxCross({ className = "" }: { className?: string }) {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 36 44"
-      fill="none"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Central Shaft and Cross arms with Lalibela motif */}
-      <path
-        d="M18 2V42M6 14H30M10 24H26M13 36L18 42L23 36M13 14L18 7L23 14"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Geometric ornaments */}
-      <circle cx="18" cy="7" r="1.5" fill="currentColor" />
-      <circle cx="6" cy="14" r="1.5" fill="currentColor" />
-      <circle cx="30" cy="14" r="1.5" fill="currentColor" />
-      <circle cx="18" cy="24" r="2" fill="currentColor" />
-      <path
-        d="M10 8L14 12M26 8L22 12M10 20L14 16M26 20L22 16"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
+    <svg aria-hidden="true" viewBox="0 0 36 44" fill="none" className={className} xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 2V42M6 14H30M10 24H26M13 36L18 42L23 36M13 14L18 7L23 14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="18" cy="7" r="1.5" fill="currentColor" /><circle cx="6" cy="14" r="1.5" fill="currentColor" /><circle cx="30" cy="14" r="1.5" fill="currentColor" /><circle cx="18" cy="24" r="2" fill="currentColor" />
+      <path d="M10 8L14 12M26 8L22 12M10 20L14 16M26 20L22 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
 
-const links = [
-  { href: "/#sunday-school", label: "Sunday School", amharic: "ሰንበት ት/ቤት" },
-  { href: "/#curriculum", label: "Curriculum", amharic: "ስርዓተ ትምህርት" },
-  { href: "/#school-life", label: "Parish Life", amharic: "የቤተክርስቲያን ኅብረት" },
-  { href: "/about-us", label: "Our Ministry", amharic: "ስለ አገልግሎቱ" },
-  { href: "/contact-us", label: "Contact", amharic: "አድራሻ" },
+const navigation = [
+  { href: "/#curriculum", key: "church.navigation.curriculum" },
+  { href: "/#sunday-school", key: "church.navigation.parishLife" },
+  { href: "/about-us", key: "church.navigation.ministry" },
+  { href: "/contact-us", key: "church.navigation.contact" },
 ];
 
-export function PublicSiteLayout({
-  children,
-  hideFooter = false,
-  hideHeader = false,
-}: {
+export function PublicSiteLayout({ children, hideFooter = false, hideHeader = false }: {
   children: React.ReactNode;
   hideFooter?: boolean;
   hideHeader?: boolean;
 }) {
   const { user } = useAuth();
-  const portalHref = user ? getDashboardRouteForRole(user.role) : "/login";
-  const portalLabel = user ? "Dashboard / ዋና ገጽ" : "School Portal";
-  const mobilePortalLabel = user ? "Dashboard" : "Sign In";
+  const { t } = useTranslation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const portalHref = user ? getDashboardRouteForRole(user.role, user.permissions) : "/login";
+  const portalLabel = t(user ? "church.navigation.dashboard" : "church.navigation.portal");
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      } else if (event.key === "Tab") {
+        const focusable = drawerRef.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), select:not([disabled])");
+        if (!focusable?.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.requestAnimationFrame(() => drawerRef.current?.querySelector<HTMLElement>("button, select, a[href]")?.focus());
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
 
   return (
-    <div className="min-h-screen bg-[#fcfaf5] dark:bg-[#0a0e1a] text-[#132438] dark:text-[#f1f5f9] flex flex-col font-sans transition-colors duration-0">
-      {!hideHeader && (
-        <>
-          {/* Top Banner Notice */}
-          <div className="bg-[#0b1c34] dark:bg-[#060a12] text-[#e8d5a8] dark:text-[#fba81c] text-[11px] py-1.5 px-4 text-center border-b border-[#c5a866]/30 dark:border-slate-800 flex items-center justify-center gap-2 font-medium">
-            <span>✝ የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን የሰንበት ትምህርት ቤት አስተዳደር መድረክ</span>
-            <span className="hidden sm:inline text-white/40">|</span>
-            <span className="hidden sm:inline text-white/80 dark:text-slate-300">Ethiopian Orthodox Tewahedo Church Sunday School Platform</span>
+    <div className="flex min-h-screen flex-col bg-white font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      {!hideHeader && <header className="relative z-40 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="mx-auto flex min-h-[76px] max-w-7xl items-center justify-between gap-5 px-5 lg:px-8">
+          <Link href="/" className="group flex shrink-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950" aria-label="Simple Senbet home">
+            <span className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-[#1D4ED8] dark:border-slate-700 dark:bg-slate-900 dark:text-blue-200"><EthiopianOrthodoxCross className="h-7 w-7" /></span>
+            <span><span className="block font-serif text-lg font-semibold leading-tight tracking-tight text-[#1D4ED8] dark:text-white">Simple Senbet</span><span className="mt-0.5 block text-[10px] font-medium tracking-wide text-slate-500 dark:text-slate-400">{t("church.layout.tagline")}</span></span>
+          </Link>
+
+          <nav className="hidden items-center gap-7 text-[13px] font-medium text-slate-600 dark:text-slate-300 lg:flex" aria-label={t("navigation.main")}>
+            {navigation.map(({ href, key }) => <Link key={key} href={href} className="rounded-sm transition-colors hover:text-[#1D4ED8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] dark:hover:text-blue-200">{t(key)}</Link>)}
+          </nav>
+
+          <div className="hidden shrink-0 items-center gap-3 lg:flex">
+            <LanguageSwitcher />
+            <ThemeToggle />
+            <Link href={portalHref} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#1D4ED8] px-4 text-xs font-semibold text-white transition-colors hover:bg-[#2563EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2 dark:bg-[#2563EB] dark:text-white dark:hover:bg-[#315c86] dark:focus-visible:ring-offset-slate-950">
+              {portalLabel}<ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
           </div>
 
-          {/* Main Header */}
-          <header className="sticky top-0 z-40 border-b border-[#e5dcc8] dark:border-slate-800 bg-[#fdfbf6]/95 dark:bg-[#0e1424]/95 backdrop-blur-md shadow-xs">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 lg:px-8">
-              <Link href="/" className="flex items-center gap-3 group" aria-label="Simple Senbet Home">
-                <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#c5a866] dark:border-[#fba81c]/40 bg-[#f5ecda] dark:bg-[#141a29] text-[#7d612e] dark:text-[#fba81c] shadow-xs transition-transform group-hover:scale-105">
-                  <EthiopianOrthodoxCross className="h-7 w-7 text-[#8c7140] dark:text-[#fba81c]" />
-                </span>
-                <span>
-                  <span className="block font-serif text-[18px] font-bold leading-tight tracking-tight text-[#0f243e] dark:text-slate-100">
-                    Simple Senbet
-                  </span>
-                  <span className="block text-[10px] font-medium tracking-[0.08em] text-[#8c7140] dark:text-[#fba81c]">
-                    ሰንበት ትምህርት ቤት | Orthodox Sunday School
-                  </span>
-                </span>
-              </Link>
+          <div className="flex items-center lg:hidden">
+          <button ref={menuButtonRef} type="button" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen} aria-controls="public-mobile-navigation" aria-label={menuOpen ? t("navigation.closeMenu") : t("navigation.openMenu")} className="grid h-10 w-10 place-items-center rounded-md border border-slate-200 text-[#1D4ED8] transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] dark:border-slate-700 dark:text-white dark:hover:bg-slate-900">
+              {menuOpen ? <X aria-hidden="true" className="h-5 w-5" /> : <Menu aria-hidden="true" className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
 
-              {/* Desktop Nav */}
-              <nav className="hidden items-center gap-5 text-[13px] font-medium text-[#4c5e70] dark:text-slate-300 md:flex" aria-label="Main navigation">
-                {links.map(({ href, label }) => (
-                  <Link
-                    key={label}
-                    href={href}
-                    className="transition-colors hover:text-[#8c7140] dark:hover:text-[#fba81c] hover:underline underline-offset-4 decoration-[#c5a866]"
-                  >
-                    {label}
-                  </Link>
-                ))}
+      </header>}
 
-                {/* Language Switcher */}
-                <LanguageSwitcher />
+      {menuOpen && <>
+        <button type="button" aria-label={t("navigation.closeMenu")} onClick={() => { setMenuOpen(false); menuButtonRef.current?.focus(); }} className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px] lg:hidden" />
+        <div ref={drawerRef} role="dialog" aria-modal="true" aria-label={t("navigation.main")} className="fixed inset-y-0 right-0 z-50 w-[min(88vw,22rem)] overflow-y-auto border-l border-slate-200 bg-white px-5 py-5 shadow-xl dark:border-slate-800 dark:bg-slate-950 lg:hidden">
+          <div className="mb-5 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800"><span className="font-serif text-base font-semibold text-blue-800 dark:text-blue-200">{t("navigation.main")}</span><button type="button" onClick={() => { setMenuOpen(false); menuButtonRef.current?.focus(); }} aria-label={t("navigation.closeMenu")} className="grid h-10 w-10 place-items-center rounded-md border border-slate-200 text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-slate-700 dark:text-slate-200"><X aria-hidden="true" className="h-5 w-5" /></button></div>
+          <div className="mb-4 flex items-center justify-between px-2"><LanguageSwitcher /><ThemeToggle /></div>
+          <nav id="public-mobile-navigation" className="grid gap-1" aria-label={t("navigation.main")}>
+            {navigation.map(({ href, key }) => <Link key={key} href={href} onClick={() => setMenuOpen(false)} className="rounded-md px-3 py-3 text-sm font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-200 dark:hover:bg-slate-900">{t(key)}</Link>)}
+            <Link href={portalHref} onClick={() => setMenuOpen(false)} className="mt-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#1D4ED8] px-4 text-sm font-semibold text-white hover:bg-[#2563EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:bg-[#2563EB] dark:text-white">
+              {portalLabel}<ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
+          </nav>
+        </div>
+      </>}
 
-                {/* Instant Theme Toggle (Light / Dark mode from Senbet System) */}
-                <ThemeToggle />
-
-                <Link
-                  href={portalHref}
-                  prefetch={true}
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#0f243e] dark:bg-[#fba81c] px-4 py-2.5 text-xs font-semibold text-white dark:text-slate-950 shadow-xs shadow-[#0f243e]/20 hover:bg-[#1a385f] dark:hover:bg-[#f59e0b] hover:shadow-md transition-all cursor-pointer"
-                >
-                  <span>{portalLabel}</span>
-                  <ArrowUpRight className="h-3.5 w-3.5 text-[#dfc896] dark:text-slate-900" />
-                </Link>
-              </nav>
-
-              {/* Mobile Portal CTA & Toggles */}
-              <div className="flex items-center gap-2 md:hidden">
-                <LanguageSwitcher />
-                <ThemeToggle />
-                <Link
-                  href={portalHref}
-                  prefetch={true}
-                  className="rounded-lg bg-[#0f243e] dark:bg-[#fba81c] px-3.5 py-2 text-xs font-semibold text-white dark:text-slate-950 shadow-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>{mobilePortalLabel}</span>
-                  <ArrowUpRight className="h-3 w-3 text-[#dfc896] dark:text-slate-900" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Mobile Horizontal Sub-nav */}
-            <nav
-              className="flex gap-4 overflow-x-auto border-t border-[#f0ebd9] dark:border-slate-800/80 px-5 py-2 text-[12px] font-medium text-[#5e7081] dark:text-slate-400 md:hidden scrollbar-none bg-[#fdfbf6] dark:bg-[#0e1424]"
-              aria-label="Mobile navigation"
-            >
-              {links.map(({ href, label }) => (
-                <Link key={label} href={href} className="shrink-0 hover:text-[#8c7140] dark:hover:text-[#fba81c] whitespace-nowrap">
-                  {label}
-                </Link>
-              ))}
-            </nav>
-          </header>
-        </>
-      )}
-
-      {/* Main Content Area */}
       <div className="flex-1">{children}</div>
 
-      {/* Footer */}
-      {!hideFooter && (
-        <footer className="border-t border-[#e2d8c3] dark:border-slate-800 bg-[#f3ede1] dark:bg-[#0e1424] text-[#2c3e50] dark:text-slate-200">
-          <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
-            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Identity */}
-              <div className="space-y-4">
-                <Link href="/" className="inline-flex items-center gap-2.5">
-                  <span className="grid h-9 w-9 place-items-center rounded-lg border border-[#c5a866] dark:border-[#fba81c]/40 bg-[#f7f2e6] dark:bg-[#141a29] text-[#7d612e] dark:text-[#fba81c]">
-                    <EthiopianOrthodoxCross className="h-6 w-6 text-[#8c7140] dark:text-[#fba81c]" />
-                  </span>
-                  <span className="font-serif text-lg font-bold text-[#0f243e] dark:text-slate-100">Simple Senbet</span>
-                </Link>
-                <p className="text-xs leading-relaxed text-[#596a79] dark:text-slate-400">
-                  Dedicated to nurturing Christian faith, Orthodox dogmatics, liturgical Yaredic chant, and youth service in the Ethiopian Orthodox Tewahedo Church.
-                </p>
-                <div className="pt-2 text-[11px] font-medium text-[#7d6738] dark:text-[#fba81c] flex items-center gap-1.5">
-                  <span>✝</span>
-                  <span>«ሕፃናትን ወደ እኔ ይመጡ ዘንድ ተዉአቸው» (ማቴ ፲፱፥፲፬)</span>
-                </div>
-              </div>
-
-              {/* Sunday School Sections */}
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#7d6738] dark:text-[#fba81c]">
-                  ትምህርተ ቤተ ክርስቲያን
-                </p>
-                <ul className="mt-3 space-y-2 text-xs text-[#526475] dark:text-slate-400">
-                  <li><Link href="/#sunday-school" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">ቅዱሳት መጻሕፍት (Scripture)</Link></li>
-                  <li><Link href="/#curriculum" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">ዜማና ሥርዓተ ማኅሌት (Zema & Liturgy)</Link></li>
-                  <li><Link href="/#curriculum" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">ትምህርተ ሃይማኖት (Church Dogma)</Link></li>
-                  <li><Link href="/#school-life" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">ታሪከ ቤተ ክርስቲያን (Church History)</Link></li>
-                </ul>
-              </div>
-
-              {/* Portals & Roles */}
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#7d6738] dark:text-[#fba81c]">
-                  የአገልግሎት ክፍሎች
-                </p>
-                <ul className="mt-3 space-y-2 text-xs text-[#526475] dark:text-slate-400">
-                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የትምህርት ክፍል (Academics)</Link></li>
-                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የፋይናንስ ክፍል (Finance & Contributions)</Link></li>
-                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የቁጥጥርና ክትትል (Attendance)</Link></li>
-                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የአባላትና ምዝገባ (Member Coordination)</Link></li>
-                </ul>
-              </div>
-
-              {/* Quick Links & Contact */}
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#7d6738] dark:text-[#fba81c]">
-                  ድጋፍና አድራሻ
-                </p>
-                <ul className="mt-3 space-y-2 text-xs text-[#526475] dark:text-slate-400">
-                  <li><Link href="/contact-us" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">Contact School Office</Link></li>
-                  <li><Link href="/about-us" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">About the Platform</Link></li>
-                  <li><Link href="/forgot-password" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">Password Reset</Link></li>
-                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition font-semibold text-[#0f243e] dark:text-[#fba81c]">{user ? "Open Dashboard" : "Sign In to Portal"}</Link></li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Bottom Bar */}
-            <div className="mt-10 pt-6 border-t border-[#dfd4be] dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-[#718292] dark:text-slate-400">
-              <p>(c) {new Date().getFullYear()} Simple Senbet | Ethiopian Orthodox Tewahedo Sunday School System.</p>
-              <div className="flex gap-4">
-                <Link href="/privacy-policy" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">Privacy Policy</Link>
-                <Link href="/terms-of-service" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">Terms of Service</Link>
-              </div>
-            </div>
+      {!hideFooter && <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
+            <div className="space-y-3"><Link href="/" className="inline-flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 text-[#1D4ED8] dark:border-slate-700 dark:text-blue-200"><EthiopianOrthodoxCross className="h-6 w-6" /></span><span className="font-serif text-lg font-semibold text-[#1D4ED8] dark:text-white">Simple Senbet</span></Link><p className="max-w-sm text-sm leading-6 text-slate-600 dark:text-slate-400">{t("church.layout.footerDescription")}</p></div>
+            <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("church.layout.quickLinks")}</p><ul className="mt-3 space-y-2.5 text-sm text-slate-600 dark:text-slate-300"><li><Link href="/about-us" className="hover:text-[#1D4ED8] dark:hover:text-blue-200">{t("church.layout.about")}</Link></li><li><Link href="/contact-us" className="hover:text-[#1D4ED8] dark:hover:text-blue-200">{t("church.layout.schoolOffice")}</Link></li><li><Link href="/forgot-password" className="hover:text-[#1D4ED8] dark:hover:text-blue-200">{t("church.layout.resetPassword")}</Link></li></ul></div>
+            <div><p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("navigation.legal")}</p><ul className="mt-3 space-y-2.5 text-sm text-slate-600 dark:text-slate-300"><li><Link href="/privacy-policy" className="hover:text-[#1D4ED8] dark:hover:text-blue-200">{t("footer.privacy")}</Link></li><li><Link href="/terms-of-service" className="hover:text-[#1D4ED8] dark:hover:text-blue-200">{t("footer.terms")}</Link></li></ul></div>
           </div>
-        </footer>
-      )}
+          <div className="mt-8 border-t border-slate-200 pt-5 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400"><p>© {new Date().getFullYear()} Simple Senbet · {t("church.layout.copyright")}</p><p className="mt-2">Photo: MarcD., <Link href="https://commons.wikimedia.org/wiki/File:Debre_Libanos_Monastery,_Ethiopia_-_panoramio.jpg" target="_blank" rel="noreferrer" className=" hover:text-[#1D4ED8] dark:hover:text-blue-200">Debre Libanos Monastery</Link>, licensed under <Link href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="license noreferrer" className=" hover:text-[#1D4ED8] dark:hover:text-blue-200">CC BY-SA 3.0</Link>.</p><p className="mt-2 max-w-4xl leading-5">{t("church.layout.photoCredits")}</p><p className="mt-2 max-w-4xl leading-5">Church and service photos: <Link href="https://commons.wikimedia.org/wiki/File:Lalibela,_san_giorgio,_esterno_24.jpg" target="_blank" rel="noreferrer" className="hover:text-blue-700">Biete Ghiorgis by Sailko</Link> (<Link href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="license noreferrer" className="hover:text-blue-700">CC BY 3.0</Link>); <Link href="https://commons.wikimedia.org/wiki/File:Ethiopian_Orthodox_church_in_Addis_Abeba.jpg" target="_blank" rel="noreferrer" className="hover:text-blue-700">Addis Ababa church by VBzi</Link> (<Link href="https://creativecommons.org/licenses/by/2.0/" target="_blank" rel="license noreferrer" className="hover:text-blue-700">CC BY 2.0</Link>); <Link href="https://commons.wikimedia.org/wiki/File:Ethio-orthodox-priests.jpg" target="_blank" rel="noreferrer" className="hover:text-blue-700">service photo by Gyrofrog</Link> (<Link href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="license noreferrer" className="hover:text-blue-700">CC BY-SA 3.0</Link>); and <Link href="https://commons.wikimedia.org/wiki/File:Jewel_Tones_in_the_Church_of_Bet_Abba_Libanos_(3343044262).jpg" target="_blank" rel="noreferrer" className="hover:text-blue-700">processional crosses by A. Davey</Link> (<Link href="https://creativecommons.org/licenses/by/2.0/" target="_blank" rel="license noreferrer" className="hover:text-blue-700">CC BY 2.0</Link>).</p></div>
+        </div>
+      </footer>}
     </div>
   );
 }

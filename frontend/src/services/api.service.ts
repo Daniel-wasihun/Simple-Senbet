@@ -1,4 +1,5 @@
 import api, { setupCsrf } from "@/lib/clientAxios";
+import type { Method } from "axios";
 
 // Helper function to get cookie by name
 const getCookie = (name: string): string | null => {
@@ -17,10 +18,41 @@ const ensureCsrfToken = async (): Promise<void> => {
   await setupCsrf();
 };
 
+const isBffRequest = (url: string): boolean => url.includes("/api/backend/");
+const withClientOrigin = (url: string): string => {
+  if (typeof window === "undefined" || /^https?:\/\//i.test(url)) return url;
+  return new URL(url, window.location.origin).toString();
+};
+
 export const apiService = {
+  localRequest: async (url: string, init: RequestInit = {}): Promise<Response> => fetch(url, {
+    ...init,
+    credentials: "same-origin",
+    headers: { Accept: "application/json", ...init.headers },
+  }),
+
+  request: async <T>(url: string, method: Method = "GET", data?: unknown) => {
+    const path = url.startsWith("/api/backend/") ? url : `/api/backend/${url.replace(/^\/?api\//, "").replace(/^\/+/, "")}`;
+    const target = withClientOrigin(path);
+    try {
+      let result: T;
+      switch (method.toUpperCase()) {
+        case "POST": result = await apiService.post<T>(target, data); break;
+        case "PUT": result = await apiService.put<T>(target, data); break;
+        case "PATCH": result = await apiService.patch<T>(target, data); break;
+        case "DELETE": result = await apiService.delete<T>(target); break;
+        case "GET": result = await apiService.get<T>(target); break;
+        default: throw new Error(`Unsupported API method: ${method}`);
+      }
+      return { data: result, status: 200, ok: true };
+    } catch (error) {
+      const response = (error as { response?: { status?: number; data?: T } })?.response;
+      return { data: response?.data ?? ({ message: error instanceof Error ? error.message : "The request failed." } as T), status: response?.status ?? 0, ok: false };
+    }
+  },
   get: async <T>(url: string): Promise<T> => {
     // Ensure CSRF token is available before making request
-    await ensureCsrfToken();
+    if (!isBffRequest(url)) await ensureCsrfToken();
 
     // Prepare config to ensure auth headers are set
     const config: any = {
@@ -54,7 +86,7 @@ export const apiService = {
 
   post: async <T>(url: string, data?: any): Promise<T> => {
     // Ensure CSRF token is available before making request
-    await ensureCsrfToken();
+    if (!isBffRequest(url)) await ensureCsrfToken();
 
     const isFormData = data instanceof FormData;
 
@@ -111,7 +143,7 @@ export const apiService = {
 
   put: async <T>(url: string, data?: any): Promise<T> => {
     // Ensure CSRF token is available before making request
-    await ensureCsrfToken();
+    if (!isBffRequest(url)) await ensureCsrfToken();
 
     const isFormData = data instanceof FormData;
 
@@ -164,7 +196,7 @@ export const apiService = {
   },
    patch: async <T>(url: string, data?: any): Promise<T> => {
     // Ensure CSRF token is available before making request
-    await ensureCsrfToken();
+    if (!isBffRequest(url)) await ensureCsrfToken();
 
     const isFormData = data instanceof FormData;
     //console.log("API Service: Sending PATCH request to", url);
@@ -223,7 +255,7 @@ export const apiService = {
 
   delete: async <T>(url: string): Promise<T> => {
     // Ensure CSRF token is available before making request
-    await ensureCsrfToken();
+    if (!isBffRequest(url)) await ensureCsrfToken();
 
     // Prepare config to ensure auth headers are set
     const config: any = {

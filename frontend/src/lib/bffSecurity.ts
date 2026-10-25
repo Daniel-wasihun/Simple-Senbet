@@ -10,6 +10,30 @@ export interface RouteRule {
  * All administrative endpoints, user management, and unlisted CRUD routes are rejected.
  */
 export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
+  { pattern: /^profile$/, allowedMethods: ["GET", "PATCH"], description: "View or update the signed-in user's profile" },
+  { pattern: /^profile\/password$/, allowedMethods: ["PUT"], description: "Change the signed-in user's password" },
+  // Identity and access administration. Laravel policies remain authoritative.
+  { pattern: /^users$/, allowedMethods: ["GET", "POST"], description: "List or create users" },
+  { pattern: /^users\/\d+$/, allowedMethods: ["GET", "PUT", "PATCH", "DELETE"], description: "Read, update, or remove a user" },
+  { pattern: /^users\/\d+\/roles$/, allowedMethods: ["PUT"], description: "Replace a user's assigned roles" },
+  { pattern: /^roles$/, allowedMethods: ["GET", "POST"], description: "List or create system roles" },
+  { pattern: /^roles\/\d+$/, allowedMethods: ["GET", "PUT", "PATCH", "DELETE"], description: "Read, update, or remove a role" },
+  { pattern: /^roles\/\d+\/permissions$/, allowedMethods: ["GET", "PUT"], description: "Read or replace role permissions" },
+  { pattern: /^permissions$/, allowedMethods: ["GET", "POST"], description: "List or create permissions" },
+  { pattern: /^permissions\/\d+$/, allowedMethods: ["PUT", "PATCH", "DELETE"], description: "Update or remove a permission" },
+  // School resource CRUD. Laravel policies authorize each request.
+  { pattern: /^(academic-years|school-classes|courses|assessments|assessment-results)$/, allowedMethods: ["GET", "POST"], description: "List or create school records" },
+  { pattern: /^(academic-years|school-classes|courses|assessments|assessment-results)\/\d+$/, allowedMethods: ["GET", "PUT", "PATCH", "DELETE"], description: "Read, update, or remove school records" },
+  { pattern: /^academic-years\/current$/, allowedMethods: ["GET"], description: "Read current academic year" },
+  { pattern: /^teaching-assignments$/, allowedMethods: ["GET", "POST"], description: "List or create teaching assignments" },
+  { pattern: /^teaching-assignments\/expected$/, allowedMethods: ["GET"], description: "List expected teachers" },
+  { pattern: /^teaching-assignments\/\d+$/, allowedMethods: ["GET", "DELETE"], description: "Read or remove teaching assignments" },
+  { pattern: /^teaching-assignments\/\d+\/end$/, allowedMethods: ["POST"], description: "End a teaching assignment" },
+  { pattern: /^enrollments$/, allowedMethods: ["GET", "POST"], description: "List or create enrollments" },
+  { pattern: /^enrollments\/(roster|\d+)$/, allowedMethods: ["GET"], description: "Read enrollment roster or detail" },
+  { pattern: /^enrollments\/members\/\d+\/(transfer|withdraw)$/, allowedMethods: ["POST"], description: "Transfer or withdraw a student" },
+  { pattern: /^promotion\/student\/\d+$/, allowedMethods: ["GET"], description: "Evaluate an individual student promotion" },
+  { pattern: /^promotion\/(dry-run|commit)$/, allowedMethods: ["POST"], description: "Simulate or commit student promotions" },
   // 1. Attendance Sessions Collection: GET (list/filter), POST (create session)
   {
     pattern: /^attendance\/sessions$/,
@@ -19,8 +43,8 @@ export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
   // 2. Attendance Session Resource: GET (view details with records)
   {
     pattern: /^attendance\/sessions\/\d+$/,
-    allowedMethods: ["GET"],
-    description: "View single attendance session",
+    allowedMethods: ["GET", "DELETE"],
+    description: "View or remove attendance session",
   },
   // 3. Attendance Session Roster: GET (resolve expected student roster for session)
   {
@@ -79,14 +103,14 @@ export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
   // 10. Members: GET (student roster loading for roll-call in Milestone C)
   {
     pattern: /^members$/,
-    allowedMethods: ["GET"],
-    description: "List student members for attendance roster",
+    allowedMethods: ["GET", "POST"],
+    description: "List, register, or update member records",
   },
   // 11. Member Details: GET
   {
     pattern: /^members\/\d+$/,
-    allowedMethods: ["GET"],
-    description: "View member details",
+    allowedMethods: ["GET", "PUT", "PATCH", "DELETE"],
+    description: "View, update, or remove a member record",
   },
   // 12. Student Report Card: GET
   {
@@ -119,6 +143,11 @@ export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
     description: "List or configure monthly payment rules",
   },
   // 17. Payment Dashboard Summary: GET
+  {
+    pattern: /^payments\/export\/(monthly-summary|transactions)$/,
+    allowedMethods: ["GET"],
+    description: "Export authorized payment reports",
+  },
   {
     pattern: /^payments\/dashboard$/,
     allowedMethods: ["GET"],

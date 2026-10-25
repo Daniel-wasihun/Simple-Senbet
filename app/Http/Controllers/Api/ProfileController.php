@@ -53,6 +53,8 @@ class ProfileController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->getRoleNames()->first(),
+            'roles' => $user->getRoleNames()->values()->all(),
+            'permissions' => $user->getAllPermissions()->pluck('name')->unique()->values()->all(),
             'created_at' => $user->created_at?->toIso8601String(),
         ];
 

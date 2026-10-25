@@ -1,6 +1,18 @@
 import api from "@/lib/serverAxios";
+import type { AxiosRequestConfig, Method } from "axios";
 
 export const serverApiService = {
+  requestRaw: async (url: string, config: AxiosRequestConfig & { method?: Method } = {}) => {
+    const response = await api.request<string>({
+      ...config,
+      url,
+      responseType: "text",
+      transformResponse: [(value) => value],
+      validateStatus: () => true,
+    });
+    const contentType = response.headers["content-type"];
+    return { data: response.data, status: response.status, contentType: typeof contentType === "string" ? contentType : undefined };
+  },
   get: async <T>(url: string): Promise<T> => {
     const response = await api.get<T>(url);
     return response.data;

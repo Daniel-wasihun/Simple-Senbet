@@ -20,6 +20,8 @@ export interface User {
   name: string;
   email: string;
   role: 'superadmin' | 'teacher' | 'student' | 'academic_director' | string;
+  roles?: string[];
+  permissions?: string[];
   created_at: string;
   teaching_assignments?: TeachingAssignmentSummary[];
 }

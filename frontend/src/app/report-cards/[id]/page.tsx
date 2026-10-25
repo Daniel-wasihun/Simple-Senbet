@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, use } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { reportsService } from "@/services/reports.service";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -40,9 +41,7 @@ export default function StudentReportCardPage({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/backend/report-cards/student/${id}`, {
-        headers: { Accept: "application/json" },
-      });
+      const res = await reportsService.studentReport(id, user?.id);
 
       if (!res.ok) {
         if (res.status === 403) {

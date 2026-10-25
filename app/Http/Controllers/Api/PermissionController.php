@@ -9,6 +9,7 @@ use App\Http\Resources\PermissionResource;
 use App\Models\Permission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionController extends Controller
 {
@@ -30,6 +31,7 @@ class PermissionController extends Controller
         $this->authorize('create', Permission::class);
 
         $permission = Permission::create($request->validated() + ['guard_name' => 'web']);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return response()->json([
             'message' => __('auth.permission_created'),
@@ -45,6 +47,7 @@ class PermissionController extends Controller
         $this->authorize('update', $permission);
 
         $permission->update($request->validated());
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return [
             'message' => __('auth.permission_updated'),
@@ -60,6 +63,7 @@ class PermissionController extends Controller
         $this->authorize('delete', $permission);
 
         $permission->delete();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return response()->json(['message' => __('auth.permission_deleted')]);
     }

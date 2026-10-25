@@ -19,7 +19,19 @@ class MemberController extends Controller
 
     public function index()
     {
-        return $this->indexCrud(Member::class, MemberResource::class, ['schoolClass'], true);
+        $this->authorize('viewAny', Member::class);
+
+        $query = Member::with('schoolClass')->latest();
+        $search = trim((string) request()->query('search', ''));
+        if ($search !== '') {
+            $query->where(function ($members) use ($search) {
+                $members->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('christian_name', 'like', "%{$search}%")
+                    ->orWhere('phone_number', 'like', "%{$search}%");
+            });
+        }
+
+        return MemberResource::collection($query->paginate(min(max(request()->integer('per_page', 20), 1), 100)));
     }
 
     public function store(Request $r)

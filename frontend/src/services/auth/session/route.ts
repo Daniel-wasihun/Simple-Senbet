@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { serverApiService } from "@/services/serverApi.service";
 
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
-    const backendRes = await fetch(`${BACKEND_URL}/api/profile`, {
+    const backendRes = await serverApiService.requestRaw(`${BACKEND_URL}/api/profile`, {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!backendRes.ok) {
+    if (backendRes.status < 200 || backendRes.status >= 300) {
       const response = NextResponse.json({ user: null }, { status: 401 });
       response.cookies.set({
         name: "senbet_token",
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    const data = await backendRes.json();
+    const data = JSON.parse(backendRes.data);
     return NextResponse.json({ user: data.user });
   } catch {
     return NextResponse.json(

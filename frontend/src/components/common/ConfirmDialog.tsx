@@ -82,10 +82,8 @@ export function ConfirmDialog({
                 onConfirm();
               }}
               disabled={isLoading}
-              variant={
-                variant === "destructive" ? "red-gradient" : "primary-gradient"
-              }
-              className="font-bold px-6 min-w-[100px]"
+              variant={variant === "destructive" ? "destructive" : "default"}
+              className="font-semibold px-5 min-w-[100px]"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

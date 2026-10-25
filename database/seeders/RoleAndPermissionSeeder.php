@@ -14,6 +14,12 @@ class RoleAndPermissionSeeder extends Seeder
      */
     public function run(): void
     {
+        if (! app()->environment(['local', 'development', 'testing'])) {
+            $this->command?->warn('Role and permission seeding is disabled outside local, development, and testing environments.');
+
+            return;
+        }
+
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
@@ -46,11 +52,13 @@ class RoleAndPermissionSeeder extends Seeder
         ];
 
         $roles = [];
+        $newRoles = [];
         foreach ($rolesData as $roleName => $meta) {
             $roles[$roleName] = Role::firstOrCreate(
                 ['name' => $roleName, 'guard_name' => 'web'],
                 ['label' => $meta['label']]
             );
+            $newRoles[$roleName] = $roles[$roleName]->wasRecentlyCreated;
         }
 
         // 2. Define permission matrix by domain module
@@ -180,14 +188,20 @@ class RoleAndPermissionSeeder extends Seeder
 
         // Helper to extract Permission instances by array of names
         $filterPerms = fn (array $names) => collect($names)->map(fn ($name) => $permissions[$name] ?? null)->filter()->values();
+        // Existing role grants may be customized. Initialize the canonical matrix only for new roles.
+        $assignDefaultPermissions = function (string $roleName, $rolePermissions) use ($roles, $newRoles): void {
+            if ($newRoles[$roleName]) {
+                $roles[$roleName]->syncPermissions(collect($rolePermissions)->all());
+            }
+        };
 
         // 3. Assign Permissions to Roles
 
         // (a) Superadmin gets everything
-        $roles['superadmin']->syncPermissions(array_values($permissions));
+        $assignDefaultPermissions('superadmin', array_values($permissions));
 
         // (b) Academic Director: Academic curriculum, classes, teachers, assessments, promotions, view finance/reports
-        $roles['academic_director']->syncPermissions($filterPerms([
+        $assignDefaultPermissions('academic_director', $filterPerms([
             'academic-years.view', 'academic-years.create', 'academic-years.update',
             'school-classes.view', 'school-classes.create', 'school-classes.update', 'school-classes.delete',
             'courses.view', 'courses.create', 'courses.update', 'courses.delete',
@@ -203,7 +217,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]));
 
         // (c) Academic Administrator: Operations, enrollment, class rosters, attendance, results
-        $roles['academic_administrator']->syncPermissions($filterPerms([
+        $assignDefaultPermissions('academic_administrator', $filterPerms([
             'academic-years.view',
             'school-classes.view', 'school-classes.create', 'school-classes.update',
             'courses.view', 'courses.create', 'courses.update',
@@ -218,7 +232,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]));
 
         // (d) Finance Officer: Payment transactions, voids, monthly rules, receipts, financial exports
-        $roles['finance_officer']->syncPermissions($filterPerms([
+        $assignDefaultPermissions('finance_officer', $filterPerms([
             'payments.view', 'payments.view.all', 'payments.record', 'payments.record.all', 'payments.void', 'payments.export', 'payments.export.all', 'payments.rules',
             'members.view',
             'school-classes.view',
@@ -226,7 +240,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]));
 
         // (e) Member Coordinator / Registrar: Member directory, enrollments, transfers, class assignments
-        $roles['member_coordinator']->syncPermissions($filterPerms([
+        $assignDefaultPermissions('member_coordinator', $filterPerms([
             'members.view', 'members.create', 'members.update', 'members.delete',
             'student-enrollments.view', 'student-enrollments.create', 'student-enrollments.update', 'student-enrollments.delete',
             'school-classes.view',
@@ -235,7 +249,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]));
 
         // (f) Attendance Officer: Daily sessions, attendance marks, absentees, session closures
-        $roles['attendance_officer']->syncPermissions($filterPerms([
+        $assignDefaultPermissions('attendance_officer', $filterPerms([
             'attendance.view', 'attendance.create', 'attendance.submit', 'attendance.correct', 'attendance.close', 'attendance.delete',
             'school-classes.view',
             'courses.view',
@@ -246,7 +260,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]));
 
         // (g) Teacher: Assigned classes, courses, attendance, grading assessments, student results
-        $roles['teacher']->syncPermissions($filterPerms([
+        $assignDefaultPermissions('teacher', $filterPerms([
             'school-classes.view',
             'courses.view',
             'teaching-assignments.view',
@@ -260,7 +274,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]));
 
         // (h) Student / Member: Read-only access to their courses, assessments, and reports
-        $roles['student']->syncPermissions($filterPerms([
+        $assignDefaultPermissions('student', $filterPerms([
             'school-classes.view',
             'courses.view',
             'assessments.view',
@@ -269,8 +283,10 @@ class RoleAndPermissionSeeder extends Seeder
 
         // Every account can access and maintain its own profile. UserPolicy
         // still requires users.view/users.update to access another account.
-        foreach ($roles as $role) {
-            $role->givePermissionTo($permissions['profile.view'], $permissions['profile.update']);
+        foreach ($roles as $roleName => $role) {
+            if ($newRoles[$roleName]) {
+                $role->givePermissionTo($permissions['profile.view'], $permissions['profile.update']);
+            }
         }
 
         // Clear cached permissions once more

@@ -4,6 +4,8 @@ import React, { useEffect, useState, useCallback, useMemo, Suspense } from "reac
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { AdminModal } from "@/components/admin/AdminModal";
+import { attendanceService } from "@/services/attendance.service";
 import {
   AttendanceMark,
   AttendanceDetailSession,
@@ -86,7 +88,7 @@ function AttendanceTakingContent() {
 
     try {
       // 1. Fetch Session Details
-      const sessionRes = await fetch(`/api/backend/attendance/sessions/${sessionId}`, {
+      const sessionRes = await attendanceService.request(`/api/backend/attendance/sessions/${sessionId}`, {
         headers: { Accept: "application/json" },
       });
 
@@ -132,7 +134,7 @@ function AttendanceTakingContent() {
         ? `/api/backend/attendance/sessions/${sessionId}/roster?section=${encodeURIComponent(resolvedSec)}`
         : `/api/backend/attendance/sessions/${sessionId}/roster`;
 
-      const rosterRes = await fetch(rosterUrl, {
+      const rosterRes = await attendanceService.request(rosterUrl, {
         headers: { Accept: "application/json" },
       });
 
@@ -315,7 +317,7 @@ function AttendanceTakingContent() {
         ? [{ teacher_id: user.id, mark: "present", remarks: "Attendance recorded by teacher" }]
         : [];
 
-      const res = await fetch(`/api/backend/attendance/sessions/${session.id}/submit`, {
+      const res = await attendanceService.request(`/api/backend/attendance/sessions/${session.id}/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -373,7 +375,7 @@ function AttendanceTakingContent() {
     }
 
     try {
-      const res = await fetch(`/api/backend/attendance/sessions/${session.id}/marks`, {
+      const res = await attendanceService.request(`/api/backend/attendance/sessions/${session.id}/marks`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -409,7 +411,7 @@ function AttendanceTakingContent() {
     setCloseError(null);
 
     try {
-      const res = await fetch(`/api/backend/attendance/sessions/${session.id}/close`, {
+      const res = await attendanceService.request(`/api/backend/attendance/sessions/${session.id}/close`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -895,7 +897,7 @@ function AttendanceTakingContent() {
 
       {/* Confirmation Modal for Full Submission */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <AdminModal open={showConfirmModal} onOpenChange={(open) => { if (!open && !submitting) setShowConfirmModal(false); }} title="Confirm Attendance Submission" description={`Review attendance for ${counts.total} students before submitting.`} size="md" showHeader={false}>
           <div className="max-w-md w-full bg-white rounded-3xl p-6 shadow-xl border border-slate-200 text-center animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
               <Send className="w-6 h-6" />
@@ -949,12 +951,12 @@ function AttendanceTakingContent() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModal>
       )}
 
       {/* Confirmation Modal for Administrative Session Closure */}
       {showCloseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+        <AdminModal open={showCloseModal} onOpenChange={(open) => { if (!open && !closing) { setShowCloseModal(false); setCloseError(null); } }} title="Close Attendance Session" description="Review the permanent closure details before confirming." size="md" showHeader={false}>
           <div className="max-w-md w-full bg-white rounded-3xl p-6 shadow-xl border border-slate-200 text-center animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center mx-auto mb-3">
               <Lock className="w-6 h-6" />
@@ -1002,7 +1004,7 @@ function AttendanceTakingContent() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModal>
       )}
     </div>
   );

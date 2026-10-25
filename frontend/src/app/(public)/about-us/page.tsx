@@ -1,174 +1,31 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, BookOpenCheck, HeartHandshake, UsersRound } from "lucide-react";
 import { EthiopianOrthodoxCross } from "@/components/public/PublicSiteLayout";
+import { useTranslation } from "@/hooks/useTranslation";
 
-const commitments = [
-  {
-    number: "፩",
-    icon: BookOpenCheck,
-    title: "Faith & Sacred Tradition",
-    amharicTitle: "እምነትና ትውፊት",
-    copy: "Nurturing deep knowledge of the Holy Scriptures, Orthodox theology, and the timeless hymns of Saint Yared for children and youth.",
-  },
-  {
-    number: "፪",
-    icon: UsersRound,
-    title: "Care for Every Learner",
-    amharicTitle: "የተማሪዎች እንክብካቤ",
-    copy: "Equipping teachers and parish priests with accurate attendance records, spiritual milestones, and developmental insights for every student.",
-  },
-  {
-    number: "፫",
-    icon: HeartHandshake,
-    title: "Service in Community",
-    amharicTitle: "ማኅበራዊ አገልግሎት",
-    copy: "Encouraging selfless diaconal service, unity among Sunday School alumni, and strong integration with the local parish council.",
-  },
-];
+const valueIcons = [BookOpenCheck, UsersRound, HeartHandshake];
 
 export default function AboutPage() {
-  return (
-    <main className="bg-[#fcfaf5] dark:bg-[#0a0e1a] text-[#132438] dark:text-[#f1f5f9]">
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-[#0a192e] dark:bg-[#070b14] text-[#fbf6ec] py-20 px-5 lg:px-8 border-b border-[#c5a866]/40 dark:border-slate-800">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.14]"
-          style={{
-            backgroundImage:
-              "radial-gradient(#d4af37 1px, transparent 1px), radial-gradient(#d4af37 1px, #0a192e 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-        <div className="relative mx-auto max-w-5xl text-center space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#c5a866]/60 dark:border-[#fba81c]/30 bg-[#c5a866]/15 dark:bg-[#fba81c]/10 px-4 py-1.5 text-xs font-semibold text-[#f5e6c2] dark:text-[#fba81c]">
-            <span>✝</span>
-            <span>የሰንበት ትምህርት ቤት አገልግሎትና ራእይ | Our Mission & Ministry</span>
-          </div>
+  const { t } = useTranslation();
+  const about = (key: string) => t(`public.about.${key}`);
+  const values = [
+    { title: about("value1Title"), copy: about("value1Copy") },
+    { title: about("value2Title"), copy: about("value2Copy") },
+    { title: about("value3Title"), copy: about("value3Copy") },
+  ];
+  const steps = [
+    { title: about("organize"), copy: about("organizeCopy") },
+    { title: about("coordinate"), copy: about("coordinateCopy") },
+    { title: about("grow"), copy: about("growCopy") },
+  ];
 
-          <h1 className="font-serif text-4xl sm:text-6xl font-medium tracking-tight text-[#fdfbf6] leading-tight">
-            Technology in Sacred Service of Sunday School.
-          </h1>
-
-          <p className="max-w-2xl mx-auto text-base sm:text-lg leading-8 text-[#d2dbe5] dark:text-slate-300">
-            Simple Senbet was conceived to assist the Ethiopian Orthodox Tewahedo Church in nurturing,
-            organizing, and safeguarding the spiritual education of children and young adults.
-          </p>
-        </div>
-      </section>
-
-      {/* Purpose Story */}
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:py-24 lg:px-8">
-        <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr]">
-          <div className="space-y-5 text-left">
-            <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#8c7140] dark:text-[#fba81c]">
-              የመድረኩ ዓላማ (Why Simple Senbet)
-            </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#0f243e] dark:text-slate-100 leading-snug">
-              Preserving Spiritual Heritage with Order and Dedication.
-            </h2>
-            <div className="space-y-4 text-sm sm:text-base leading-7 text-[#5e7081] dark:text-slate-400">
-              <p>
-                In the Ethiopian Orthodox Tewahedo Church, the Sunday School (ሰንበት ት/ቤት) is the vital
-                heartbeat of spiritual growth. It is where young generations learn the mysteries of faith,
-                sing the praises of God according to St. Yared, and grow into virtuous servants of the Church.
-              </p>
-              <p>
-                Behind each vibrant classroom is essential administrative stewardship: enrolling students,
-                coordinating volunteer teachers, tracking attendance at weekly Divine Liturgy, recording grades,
-                and transparently reporting parish dues.
-              </p>
-              <p>
-                Simple Senbet provides a dedicated, role-protected workspace tailored precisely to these sacred
-                responsibilities, freeing teachers and clergy to focus on spiritual guidance.
-              </p>
-            </div>
-          </div>
-
-          <div className="relative rounded-2xl border border-[#d8ccb4] dark:border-slate-800 bg-[#fbf9f4] dark:bg-[#141a29] p-8 shadow-xs">
-            <div className="flex items-center gap-3 border-b border-[#ebd8b7] dark:border-slate-800 pb-4 mb-6">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#0f243e] dark:bg-[#1c2438] text-[#dfc896] dark:text-[#fba81c]">
-                <EthiopianOrthodoxCross className="h-6 w-6" />
-              </span>
-              <div>
-                <p className="font-serif text-lg font-bold text-[#0f243e] dark:text-slate-100">የሰንበት ትምህርት ቤት ቃል ኪዳን</p>
-                <p className="text-xs text-[#8c7140] dark:text-[#fba81c]">Faithful Stewardship & Community Service</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-xs sm:text-sm text-[#4d5e70] dark:text-slate-300 leading-relaxed">
-              <div className="flex items-start gap-3">
-                <span className="text-[#8c7140] dark:text-[#fba81c] font-bold text-base">✓</span>
-                <span><strong>Ecclesiastical Alignment:</strong> Built around the departments and structural guidelines of EOTC Sunday Schools.</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-[#8c7140] dark:text-[#fba81c] font-bold text-base">✓</span>
-                <span><strong>Role-Governed Integrity:</strong> Clean boundaries between Academic Directors, Treasurers, Teachers, and Registrars.</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-[#8c7140] dark:text-[#fba81c] font-bold text-base">✓</span>
-                <span><strong>Bilingual Accessibility:</strong> Designed for seamless parish workflows in Amharic and English.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Commitments Grid */}
-      <section className="bg-[#f5efe3] dark:bg-[#0e1424] py-20 px-5 lg:px-8 border-y border-[#e5dcc8] dark:border-slate-800">
-        <div className="mx-auto max-w-7xl">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-bold uppercase tracking-[0.16em] text-[#8c7140] dark:text-[#fba81c]">
-              መሠረታዊ እሴቶቻችን
-            </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#0f243e] dark:text-slate-100 mt-2">
-              Values that Guide Simple Senbet
-            </h2>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            {commitments.map((c) => {
-              const Icon = c.icon;
-              return (
-                <article
-                  key={c.number}
-                  className="rounded-2xl border border-[#d8ccb4] dark:border-slate-800 bg-white dark:bg-[#141a29] p-7 shadow-xs transition hover:border-[#b89b60] dark:hover:border-[#fba81c]"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#f7f2e6] dark:bg-[#1c2438] text-[#8c7140] dark:text-[#fba81c]">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <span className="font-serif text-xl font-bold text-[#c5a866] dark:text-[#fba81c]">{c.number}</span>
-                  </div>
-                  <p className="text-xs font-bold text-[#8c7140] dark:text-[#fba81c] mb-1">{c.amharicTitle}</p>
-                  <h3 className="font-serif text-xl font-bold text-[#0f243e] dark:text-slate-100 mb-2">{c.title}</h3>
-                  <p className="text-xs sm:text-sm leading-6 text-[#5b6e80] dark:text-slate-400">{c.copy}</p>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Parish CTA */}
-      <section className="bg-[#0a192e] dark:bg-[#070b14] py-16 px-5 lg:px-8 text-white">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#dfc896] dark:text-[#fba81c]">
-              የደብራችሁ ሰንበት ትምህርት ቤት አባል ኖት?
-            </p>
-            <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white mt-1">
-              Connect your Sunday School with Simple Senbet.
-            </h3>
-          </div>
-          <Link
-            href="/contact-us"
-            className="inline-flex items-center gap-2 rounded-xl bg-[#c5a866] dark:bg-[#fba81c] px-6 py-3.5 text-sm font-bold text-[#0a192e] dark:text-slate-950 transition hover:bg-[#d6bc7e] dark:hover:bg-[#f59e0b]"
-          >
-            <span>Contact Support</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-    </main>
-  );
+  return <main className="bg-white text-[#132438] dark:bg-[#0a0e1a] dark:text-slate-100">
+    <section className="relative overflow-hidden border-b border-[#2563EB]/40 bg-white px-5 py-16 text-slate-900 dark:text-white dark:bg-slate-950 sm:py-20 lg:px-8"><div className="pointer-events-none absolute inset-0 opacity-[.12]" style={{backgroundImage:"radial-gradient(#2563EB 1px, transparent 1px)",backgroundSize:"28px 28px"}}/><div className="relative mx-auto max-w-5xl space-y-5 text-center"><span className="inline-flex items-center gap-2 rounded-full border border-[#2563EB]/60 bg-[#2563EB]/15 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[.16em] text-blue-700 dark:text-blue-300"><EthiopianOrthodoxCross className="h-4 w-4"/>{about("eyebrow")}</span><h1 className="mx-auto max-w-4xl font-serif text-4xl font-medium leading-tight tracking-tight sm:text-6xl">{about("title")}</h1><p className="mx-auto max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300 sm:text-base">{about("intro")}</p></div></section>
+    <section className="mx-auto grid max-w-7xl items-start gap-10 px-5 py-16 sm:py-20 lg:grid-cols-[.8fr_1.2fr] lg:gap-20 lg:px-8"><div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#2563EB] dark:text-[#93c5fd]">{about("why")}</p><h2 className="mt-3 font-serif text-3xl font-bold leading-tight text-[#1D4ED8] dark:text-slate-100 sm:text-4xl">{about("missionTitle")}</h2></div><div className="space-y-4 text-sm leading-7 text-[#5e7081] dark:text-slate-400 sm:text-base"><p>{about("p1")}</p><p>{about("p2")}</p><p>{about("p3")}</p></div></section>
+    <section className="border-y border-[#e5e7eb] bg-white px-5 py-16 dark:border-slate-800 dark:bg-[#0e1424] lg:px-8"><div className="mx-auto max-w-7xl"><div className="mx-auto max-w-2xl text-center"><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#2563EB] dark:text-[#93c5fd]">{about("guide")}</p><h2 className="mt-3 font-serif text-3xl font-bold text-[#1D4ED8] dark:text-slate-100 sm:text-4xl">{about("valuesTitle")}</h2><p className="mt-3 text-sm leading-6 text-[#71808a] dark:text-slate-400">{about("valuesIntro")}</p></div><div className="mt-9 grid gap-4 md:grid-cols-3">{values.map((value,index)=>{const Icon=valueIcons[index];return <article key={value.title} className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-[#141a29]"><span className="grid h-10 w-10 place-items-center rounded-lg bg-[#eff6ff] text-[#2563EB] dark:bg-[#1c2438] dark:text-[#93c5fd]"><Icon className="h-5 w-5"/></span><h3 className="mt-4 font-serif text-lg font-bold text-[#1D4ED8] dark:text-slate-100">{value.title}</h3><p className="mt-2 text-xs leading-6 text-[#5b6e80] dark:text-slate-400">{value.copy}</p></article>;})}</div></div></section>
+    <section className="mx-auto grid max-w-7xl gap-8 px-5 py-16 lg:grid-cols-[.75fr_1.25fr] lg:px-8"><div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#2563EB] dark:text-[#93c5fd]">{about("approach")}</p><h2 className="mt-3 font-serif text-3xl font-bold text-[#1D4ED8] dark:text-slate-100">{about("approachTitle")}</h2></div><div className="grid gap-5 sm:grid-cols-3">{steps.map((step,index)=><article key={step.title} className="border-t border-[#2563EB] pt-4"><p className="text-[10px] font-bold tracking-[.15em] text-[#2563EB] dark:text-[#93c5fd]">0{index+1}</p><h3 className="mt-2 text-sm font-bold text-[#2d465e] dark:text-slate-200">{step.title}</h3><p className="mt-2 text-xs leading-6 text-[#71808a] dark:text-slate-400">{step.copy}</p></article>)}</div></section>
+    <section className="bg-white px-5 py-11 text-white dark:bg-slate-950 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#dbeafe] dark:text-[#93c5fd]">{about("ctaLabel")}</p><h2 className="mt-2 font-serif text-2xl font-bold sm:text-3xl">{about("ctaTitle")}</h2></div><Link href="/contact-us" className="inline-flex items-center gap-2 self-start rounded-lg bg-[#2563EB] px-5 py-3 text-sm font-bold text-[#0a192e] transition hover:bg-blue-800 sm:self-auto">{t("church.navigation.contact")}<ArrowRight className="h-4 w-4"/></Link></div></section>
+  </main>;
 }

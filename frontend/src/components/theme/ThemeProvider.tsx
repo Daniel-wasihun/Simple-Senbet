@@ -15,14 +15,10 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
-  const [mounted, setMounted] = useState<boolean>(false);
-
   useEffect(() => {
-    setMounted(true);
     try {
       const stored = localStorage.getItem("theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initialTheme: Theme = stored === "dark" || (!stored && prefersDark) ? "dark" : "light";
+      const initialTheme: Theme = stored === "dark" ? "dark" : "light";
       setThemeState(initialTheme);
       if (initialTheme === "dark") {
         document.documentElement.classList.add("dark");
@@ -30,7 +26,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         document.documentElement.classList.remove("dark");
       }
     } catch {
-      // Ignore localStorage access errors
+      // Keep the default light theme when storage is unavailable.
     }
   }, []);
 
@@ -47,7 +43,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       }
       try {
         localStorage.setItem("theme", newTheme);
-      } catch {}
+      } catch {
+        // The visual theme still updates when storage is unavailable.
+      }
       setThemeState(newTheme);
     };
 

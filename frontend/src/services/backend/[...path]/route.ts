@@ -4,6 +4,8 @@ import {
   validateProxyPathAndMethod,
   getTrustedOrigins,
 } from "@/lib/bffSecurity";
+import { serverApiService } from "@/services/serverApi.service";
+import type { Method } from "axios";
 
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -74,17 +76,16 @@ async function proxyRequest(request: NextRequest, params: Promise<{ path: string
   }
 
   try {
-    const backendRes = await fetch(targetUrl.toString(), {
-      method: request.method,
+    const backendRes = await serverApiService.requestRaw(targetUrl.toString(), {
+      method: request.method as Method,
       headers,
-      body,
+      data: body,
     });
 
-    const responseData = await backendRes.text();
-    return new NextResponse(responseData, {
+    return new NextResponse(backendRes.data, {
       status: backendRes.status,
       headers: {
-        "Content-Type": backendRes.headers.get("Content-Type") || "application/json",
+        "Content-Type": backendRes.contentType || "application/json",
       },
     });
   } catch {

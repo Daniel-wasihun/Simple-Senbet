@@ -12,6 +12,7 @@ use App\Models\TeachingAssignment;
 use App\Models\User;
 use App\Services\StudentEnrollmentService;
 use Illuminate\Database\Seeder;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -23,8 +24,16 @@ use Illuminate\Support\Facades\Hash;
  */
 class AttendanceTestSeeder extends Seeder
 {
+    use WithoutModelEvents;
+
     public function run(): void
     {
+        if (! app()->environment(['local', 'development', 'testing'])) {
+            $this->command?->warn('Attendance test fixtures are disabled outside local, development, and testing environments.');
+
+            return;
+        }
+
         // 1. Ensure Base Roles and Superadmin are seeded
         $this->call(DatabaseSeeder::class);
 
@@ -32,39 +41,38 @@ class AttendanceTestSeeder extends Seeder
 
         // 2. Provision Assigned Teacher
         $assignedTeacher = User::firstOrCreate(
-            ['email' => 'teacher@example.com'],
+            ['email' => 'attendance.assigned.teacher@example.test'],
             [
                 'name' => 'Test Teacher',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('SenbetDev!2026'),
                 'role_id' => $teacherRole->id,
             ]
         );
-        $assignedTeacher->update(['role_id' => $teacherRole->id]);
-        $assignedTeacher->syncRoles(['teacher']);
+        if ($assignedTeacher->wasRecentlyCreated) {
+            $assignedTeacher->syncRoles(['teacher']);
+        }
 
         // 3. Provision Unassigned Teacher (for negative 403 test cases)
         $unassignedTeacher = User::firstOrCreate(
-            ['email' => 'unassigned_teacher@example.com'],
+            ['email' => 'attendance.unassigned.teacher@example.test'],
             [
                 'name' => 'Unassigned Teacher',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('SenbetDev!2026'),
                 'role_id' => $teacherRole->id,
             ]
         );
-        $unassignedTeacher->update(['role_id' => $teacherRole->id]);
-        $unassignedTeacher->syncRoles(['teacher']);
+        if ($unassignedTeacher->wasRecentlyCreated) {
+            $unassignedTeacher->syncRoles(['teacher']);
+        }
 
         // 4. Provision Academic Year
-        $academicYear = AcademicYear::firstOrCreate(
-            [
+        $academicYear = AcademicYear::whereDate('start_date', '2025-09-01')->whereDate('end_date', '2026-06-30')->first();
+        $academicYear ??= AcademicYear::create([
+                'name' => '2025-2026 Academic Year',
                 'start_date' => '2025-09-01',
                 'end_date' => '2026-06-30',
-            ],
-            [
-                'name' => '2025-2026 Academic Year',
-                'is_current' => true,
-            ]
-        );
+                'is_current' => false,
+            ]);
 
         // 5. Provision School Class
         $classA = SchoolClass::firstOrCreate(
@@ -88,9 +96,9 @@ class AttendanceTestSeeder extends Seeder
 
         // 7. Provision Student Members
         $student1 = Member::firstOrCreate(
-            ['phone_number' => '+251911000001'],
+            ['phone_number' => '+1-202-555-0181'],
             [
-                'full_name' => ['en' => 'Dawit Haile'],
+                'full_name' => ['en' => 'Sample Student Alpha'],
                 'date_of_birth' => '2010-05-10',
                 'gender' => 'male',
                 'class_id' => $classA->id,
@@ -99,9 +107,9 @@ class AttendanceTestSeeder extends Seeder
         );
 
         $student2 = Member::firstOrCreate(
-            ['phone_number' => '+251911000002'],
+            ['phone_number' => '+1-202-555-0182'],
             [
-                'full_name' => ['en' => 'Sara Tesfaye'],
+                'full_name' => ['en' => 'Sample Student Beta'],
                 'date_of_birth' => '2010-08-20',
                 'gender' => 'female',
                 'class_id' => $classA->id,
@@ -135,20 +143,21 @@ class AttendanceTestSeeder extends Seeder
         }
 
         // 9. Provision Teaching Assignment for Assigned Teacher
-        TeachingAssignment::firstOrCreate(
-            [
+        $assignmentAttributes = [
                 'teacher_id' => $assignedTeacher->id,
                 'academic_year_id' => $academicYear->id,
                 'class_id' => $classA->id,
                 'course_id' => $courseA->id,
                 'section' => 'A',
-            ],
-            [
-                'semester' => Semester::Semester2,
+                'semester' => Semester::Semester2->value,
+            ];
+        $assignment = TeachingAssignment::where($assignmentAttributes)
+            ->whereDate('start_date', '2025-09-01')
+            ->first();
+        $assignment ??= TeachingAssignment::create($assignmentAttributes + [
                 'start_date' => '2025-09-01',
                 'end_date' => '2026-06-30',
                 'is_primary' => true,
-            ]
-        );
+            ]);
     }
 }

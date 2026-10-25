@@ -17,110 +17,128 @@ export const ROLE_DASHBOARDS: Record<string, RoleDashboardMeta> = {
     role: "superadmin",
     label: "Super Administrator",
     amharicLabel: "ዋና አስተዳዳሪ",
-    route: "/super-admin/dashboard",
+    route: "/dashboard",
     description: "Full institutional oversight, system policies, user credentials, and audits.",
   },
   academic_director: {
     role: "academic_director",
     label: "Academic Director",
     amharicLabel: "የትምህርት ክፍል ኃላፊ",
-    route: "/acadamic/super-admin/dashboard",
+    route: "/academics/dashboard",
     description: "Curriculum oversight, course syllabi, teacher assignments, and grading terms.",
   },
   finance_officer: {
     role: "finance_officer",
     label: "Finance Officer",
     amharicLabel: "የፋይናንስና ሂሳብ ኃላፊ",
-    route: "/finance/super-admin/dashboard",
+    route: "/finance/dashboard",
     description: "Parish contributions, student tuition, event dues, and financial reports.",
   },
   attendance_officer: {
     role: "attendance_officer",
     label: "Attendance Officer",
     amharicLabel: "የቁጥጥርና ክትትል ኃላፊ",
-    route: "/attendance/super-admin/dashboard",
+    route: "/attendance/dashboard",
     description: "Weekly liturgy & Sunday School attendance verification and session records.",
   },
   teacher: {
     role: "teacher",
     label: "Sunday School Teacher",
     amharicLabel: "የሰንበት ት/ቤት መምህር",
-    route: "/attendance/super-admin/dashboard",
+    route: "/attendance/dashboard",
     description: "Class rosters, weekly attendance recording, and student academic evaluations.",
   },
   member_coordinator: {
     role: "member_coordinator",
     label: "Member Coordinator / Registrar",
     amharicLabel: "የአባላትና ምዝገባ አስተባባሪ",
-    route: "/member/super-admin/dashboard",
+    route: "/members/dashboard",
     description: "Sunday school roster, spiritual records, family information, and baptism records.",
   },
   student: {
     role: "student",
     label: "Sunday School Student / Member",
     amharicLabel: "የሰንበት ት/ቤት ተማሪ",
-    route: "/member/super-admin/dashboard",
+    route: "/members/dashboard",
     description: "Student profile, course enrollments, grade cards, and attendance record.",
   },
 };
 
-export function getDashboardRouteForRole(role?: string | null): string {
-  if (!role) return "/super-admin/dashboard";
+export function getDashboardRouteForRole(role?: string | null, permissions?: string[]): string {
+  const normalized = role?.toLowerCase().trim();
+  if (permissions?.length) {
+    if (permissions.includes("payments.view") && !permissions.includes("attendance.view") && !permissions.some((permission) => ["academic-years.view", "school-classes.create", "courses.create", "assessments.create"].includes(permission))) {
+      return "/finance/dashboard";
+    }
+    if (permissions.includes("attendance.view") && !permissions.includes("school-classes.create") && !permissions.includes("courses.create")) {
+      return "/attendance/dashboard";
+    }
+    if (permissions.includes("members.view") && !permissions.includes("school-classes.create") && !permissions.includes("attendance.view")) {
+      return "/members/dashboard";
+    }
+    if (normalized === "student" && permissions.includes("courses.view")) {
+      return "/academics/dashboard";
+    }
+    if (permissions.some((permission) => ["academic-years.view", "school-classes.create", "courses.create", "assessments.create"].includes(permission))) {
+      return "/academics/dashboard";
+    }
+  }
+  if (!role) return "/dashboard";
 
-  const normalized = role.toLowerCase().trim();
+  const resolvedRole = normalized ?? "";
 
   // Superadmin / Admin
   if (
-    normalized === "superadmin" ||
-    normalized === "super_admin" ||
-    normalized === "admin" ||
-    normalized === "super admin"
+    resolvedRole === "superadmin" ||
+    resolvedRole === "super_admin" ||
+    resolvedRole === "admin" ||
+    resolvedRole === "super admin"
   ) {
-    return "/super-admin/dashboard";
+    return "/dashboard";
   }
 
   // Academic Director / Academic Admin
   if (
-    normalized === "academic_director" ||
-    normalized === "academic_administrator" ||
-    normalized.includes("academic")
+    resolvedRole === "academic_director" ||
+    resolvedRole === "academic_administrator" ||
+    resolvedRole.includes("academic")
   ) {
-    return "/acadamic/super-admin/dashboard";
+    return "/academics/dashboard";
   }
 
   // Finance Officer / Admin
   if (
-    normalized === "finance_officer" ||
-    normalized === "finance_administrator" ||
-    normalized.includes("finance")
+    resolvedRole === "finance_officer" ||
+    resolvedRole === "finance_administrator" ||
+    resolvedRole.includes("finance")
   ) {
-    return "/finance/super-admin/dashboard";
+    return "/finance/dashboard";
   }
 
   // Attendance Officer / Teacher
   if (
-    normalized === "attendance_officer" ||
-    normalized === "teacher" ||
-    normalized.includes("attendance") ||
-    normalized.includes("teacher")
+    resolvedRole === "attendance_officer" ||
+    resolvedRole === "teacher" ||
+    resolvedRole.includes("attendance") ||
+    resolvedRole.includes("teacher")
   ) {
-    return "/attendance/super-admin/dashboard";
+    return "/attendance/dashboard";
   }
 
   // Member Coordinator / Registrar
   if (
-    normalized === "member_coordinator" ||
-    normalized === "registrar" ||
-    normalized.includes("member") ||
-    normalized.includes("registra")
+    resolvedRole === "member_coordinator" ||
+    resolvedRole === "registrar" ||
+    resolvedRole.includes("member") ||
+    resolvedRole.includes("registra")
   ) {
-    return "/member/super-admin/dashboard";
+    return "/members/dashboard";
   }
 
   // Student / General Member
-  if (normalized === "student") {
-    return "/member/super-admin/dashboard";
+  if (resolvedRole === "student") {
+    return "/academics/dashboard";
   }
 
-  return "/super-admin/dashboard";
+  return "/dashboard";
 }

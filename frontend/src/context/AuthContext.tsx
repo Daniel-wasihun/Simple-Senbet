@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User } from "@/types/auth";
 import { useRouter } from "next/navigation";
+import { authService } from "@/services/auth.service";
+import { apiCache } from "@/services/apiCache";
 
 interface AuthContextType {
   user: User | null;
@@ -14,52 +16,42 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_STORAGE_KEY = "senbet_cached_user";
-
-function getCachedUser(): User | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const item = localStorage.getItem(USER_STORAGE_KEY);
-    return item ? JSON.parse(item) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
 
   const refreshUser = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/session", { credentials: "same-origin" });
+      const res = await authService.session();
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-        if (typeof window !== "undefined" && data.user) {
-          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-        }
       } else {
         setUser(null);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem(USER_STORAGE_KEY);
-        }
       }
     } catch {
-      // Retain cached user in transient offline/network hiccups
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    const cached = getCachedUser();
-    if (cached) {
-      setUser(cached);
-      setIsLoading(false);
-    }
     refreshUser();
+  }, [refreshUser]);
+
+  useEffect(() => {
+    const refreshOnFocus = () => {
+      if (document.visibilityState === "visible") void refreshUser();
+    };
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+    return () => {
+      window.removeEventListener("focus", refreshOnFocus);
+      document.removeEventListener("visibilitychange", refreshOnFocus);
+    };
   }, [refreshUser]);
 
   const login = async (
@@ -67,11 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string
   ): Promise<{ success: boolean; message?: string; user?: User }> => {
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const res = await authService.login(email, password);
 
       const data = await res.json().catch(() => null);
 
@@ -84,9 +72,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const authenticatedUser = data.user;
       setUser(authenticatedUser);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authenticatedUser));
-      }
       return { success: true, user: authenticatedUser };
     } catch {
       return {
@@ -97,22 +82,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    // 1. Immediately clear local session and storage for instant UI response
+    // Clear local state immediately, then wait for the server to revoke the token
+    // and expire the httpOnly cookie before completing sign-out.
     setUser(null);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(USER_STORAGE_KEY);
-    }
-    // 2. Instant client navigation to login without delay
-    router.replace("/login");
-
-    // 3. Dispatch backend logout and cookie clearing in the background
+    apiCache.clear();
     try {
-      fetch("/api/auth/logout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }).catch(() => {});
+      await authService.logout();
     } catch {
-      // Ignored
+      // The server may be unavailable; the client still leaves the protected UI.
+    } finally {
+      router.replace("/login");
     }
   };
 

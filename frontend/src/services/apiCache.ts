@@ -10,8 +10,12 @@ class APICache {
   private cache: Map<string, { data: any; timestamp: number; ttl: number }> =
     new Map();
   private pendingRequests: Map<string, Promise<any>> = new Map();
+  private versions: Map<string, number> = new Map();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes default
   private readonly STALE_WHILE_REVALIDATE_TTL = 30 * 60 * 1000; // 30 minutes for stale data
+
+  private version(key: string): number { return this.versions.get(key) ?? 0; }
+  private bumpVersion(key: string): void { this.versions.set(key, this.version(key) + 1); }
 
   private constructor() {}
 
@@ -48,7 +52,7 @@ class APICache {
       const staleData = cached.data;
 
       // Revalidate in background
-      this.revalidateInBackground(key, fetcher, ttl);
+      this.revalidateInBackground(key, fetcher, ttl, this.version(key));
 
       return staleData;
     }
@@ -59,54 +63,72 @@ class APICache {
     }
 
     // Make new request
+    let pending: Promise<T> | undefined;
     try {
-      const promise = fetcher();
-      this.pendingRequests.set(key, promise);
+      const version = this.version(key);
+      pending = fetcher();
+      this.pendingRequests.set(key, pending);
 
-      const data = await promise;
+      const data = await pending;
 
       // Cache the result
-      this.cache.set(key, {
-        data,
-        timestamp: now,
-        ttl,
-      });
+      if (this.version(key) === version && this.pendingRequests.get(key) === pending) {
+        this.cache.set(key, { data, timestamp: Date.now(), ttl });
+      }
 
       return data;
     } finally {
-      this.pendingRequests.delete(key);
+      if (pending && this.pendingRequests.get(key) === pending) this.pendingRequests.delete(key);
     }
   }
 
   private async revalidateInBackground<T>(
     key: string,
     fetcher: () => Promise<T>,
-    ttl: number
+    ttl: number,
+    version: number
   ): Promise<void> {
+    if (this.pendingRequests.has(key)) return;
+    const pending = fetcher();
+    this.pendingRequests.set(key, pending);
     try {
-      const data = await fetcher();
-      this.cache.set(key, {
-        data,
-        timestamp: Date.now(),
-        ttl,
-      });
+      const data = await pending;
+      if (this.version(key) === version && this.pendingRequests.get(key) === pending) {
+        this.cache.set(key, { data, timestamp: Date.now(), ttl });
+      }
     } catch (error) {
       console.warn(`Background revalidation failed for key: ${key}`, error);
+    } finally {
+      if (this.pendingRequests.get(key) === pending) this.pendingRequests.delete(key);
     }
   }
 
   clear(key?: string): void {
     if (key) {
+      this.bumpVersion(key);
       this.cache.delete(key);
       this.pendingRequests.delete(key);
     } else {
+      for (const key of new Set([...this.cache.keys(), ...this.pendingRequests.keys()])) this.bumpVersion(key);
       this.cache.clear();
       this.pendingRequests.clear();
     }
   }
 
   invalidate(key: string): void {
+    this.bumpVersion(key);
     this.cache.delete(key);
+    this.pendingRequests.delete(key);
+  }
+
+  invalidatePrefix(prefix: string): void {
+    for (const key of new Set([...this.cache.keys(), ...this.pendingRequests.keys()])) {
+      if (key.startsWith(prefix)) {
+        this.bumpVersion(key);
+        this.cache.delete(key);
+        this.pendingRequests.delete(key);
+      }
+    }
   }
 }
 

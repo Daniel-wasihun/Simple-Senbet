@@ -1,0 +1,212 @@
+{
+  "navigation": {
+    "curriculum": "Curriculum",
+    "parishLife": "Parish life",
+    "ministry": "Our ministry",
+    "contact": "Contact",
+    "portal": "School portal",
+    "dashboard": "Open dashboard",
+    "signIn": "Sign in to your role"
+  },
+  "layout": {
+    "banner": "Ethiopian Orthodox Tewahedo Church · Sunday School community",
+    "tagline": "Orthodox Sunday School",
+    "footerDescription": "Supporting Orthodox faith formation, sacred tradition, and the service of young people in the Ethiopian Orthodox Tewahedo Church.",
+    "curriculum": "Sunday School curriculum",
+    "scripture": "Holy Scripture",
+    "zema": "Zema and liturgy",
+    "dogma": "Orthodox teaching",
+    "history": "Church history",
+    "departments": "School departments",
+    "academics": "Academics",
+    "finance": "Finance and contributions",
+    "attendance": "Attendance",
+    "members": "Members and families",
+    "quickLinks": "Quick links",
+    "schoolOffice": "Contact the school office",
+    "about": "About Simple Senbet",
+    "resetPassword": "Reset password",
+    "copyright": "Ethiopian Orthodox Tewahedo Sunday School community.",
+    "photoCredits": "Images: Debre Libanos by MarcD (CC BY-SA 3.0); Lalibela priest by Lucy Shaw (CC BY-SA 4.0); processional crosses by A. Davey (CC BY 2.0). Additional photographs: Biete Ghiorgis by Sailko (CC BY 3.0); Addis Ababa church by VBzi (CC BY 2.0); service at St Michael Church by Gyrofrog (CC BY-SA 3.0)."
+  },
+  "home": {
+    "heroEyebrow": "Ethiopian Orthodox Tewahedo Church Sunday School",
+    "heroTitle1": "Rooted in the Faith.",
+    "heroTitle2": "Equipped for Generations.",
+    "heroCopy": "Simple Senbet is a school management system for Ethiopian Orthodox Tewahedo Sunday Schools. Organize faith curriculum, liturgical attendance, student records, and parish contributions in one dependable place.",
+    "scripture": "Train up a child in the way he should go; and when he is old, he will not depart from it.",
+    "scriptureReference": "Proverbs 22:6",
+    "portal": "Enter School Portal",
+    "dashboard": "Go to Dashboard",
+    "roleSignIn": "Sign in to your role",
+    "openDashboard": "Open your dashboard",
+    "explore": "Explore Curriculum",
+    "secureAccess": "Role-governed access",
+    "records": "Parish school records",
+    "languages": "Amharic, Afaan Oromo, and English",
+    "pillarsEyebrow": "Sunday School curriculum",
+    "pillarsTitle": "Four Pillars of Faith Formation",
+    "pillarsIntro": "A structured path for learning the faith and traditions of the Ethiopian Orthodox Tewahedo Church, from childhood through youth service.",
+    "pillars": [
+      {
+        "title": "Scripture and Orthodox Teaching",
+        "description": "Study the Old and New Testaments, the Orthodox Creed, the mysteries of faith, and the teachings of the Church Fathers.",
+        "highlight": "Scripture · Creed · Church Fathers"
+      },
+      {
+        "title": "The Hymns of Saint Yared",
+        "description": "Learn the sacred Ethiopian chant tradition of Saint Yared, its notation, liturgical hymns, and ceremonial practice.",
+        "highlight": "Zema · Mahlet · Aquaqwam"
+      },
+      {
+        "title": "Liturgy and Church History",
+        "description": "Explore the Holy Mysteries, Divine Liturgy, the Church calendar, fasting seasons, and Ethiopian Church history.",
+        "highlight": "Sacraments · Liturgy · History"
+      },
+      {
+        "title": "Christian Life and Service",
+        "description": "Grow in charity, humility, fellowship, and practical service to the sick, elders, and parish community.",
+        "highlight": "Fellowship · Charity · Service"
+      }
+    ],
+    "departmentsEyebrow": "School departments and capabilities",
+    "departmentsTitle": "A workspace for every Sunday School role.",
+    "departmentsIntro": "Give each parish department a clear place to carry out its responsibilities: academic planning, attendance, finance, and member coordination.",
+    "departments": [
+      {
+        "title": "Academics",
+        "description": "Manage academic years, curriculum, course plans, term schedules, and teaching assignments."
+      },
+      {
+        "title": "Attendance",
+        "description": "Record participation in Divine Liturgy and Sunday School classes, and follow student attendance."
+      },
+      {
+        "title": "Finance",
+        "description": "Record contributions, feast-day dues, book sales, receipts, and financial summaries."
+      },
+      {
+        "title": "Members and families",
+        "description": "Maintain student and family records, parish contacts, and member groups with role-based access."
+      }
+    ],
+    "quote": "Remember your leaders, who spoke the word of God to you. Consider the outcome of their way of life and imitate their faith.",
+    "quoteReference": "Hebrews 13:7",
+    "commitmentTitle": "Faithful Stewardship and Community Service",
+    "commitments": [
+      "Designed around the departments and responsibilities of EOTC Sunday Schools.",
+      "Role permissions keep academic, finance, teaching, and member records appropriately separated.",
+      "The interface supports English, Amharic, and Afaan Oromo."
+    ],
+    "valuesEyebrow": "Our commitments",
+    "valuesTitle": "Values that guide Simple Senbet",
+    "values": [
+      {
+        "title": "Faith and sacred tradition",
+        "description": "Nurture knowledge of Scripture, Orthodox teaching, and the hymns of Saint Yared."
+      },
+      {
+        "title": "Care for every learner",
+        "description": "Help teachers and parish leaders support each student through reliable school records."
+      },
+      {
+        "title": "Service in community",
+        "description": "Encourage fellowship, charity, and service within the parish community."
+      }
+    ],
+    "ctaEyebrow": "Serving parish Sunday Schools?",
+    "ctaTitle": "Bring your Sunday School community together.",
+    "contactSupport": "Contact support",
+    "preview": {
+      "schoolLabel": "Sunday School",
+      "schoolYear": "Academic year 2026/2027",
+      "departments": "School departments",
+      "overview": "Overview",
+      "students": "Students",
+      "courses": "Courses",
+      "attendance": "Attendance",
+      "grades": "Gradebook",
+      "system": "System",
+      "settings": "Settings",
+      "dashboard": "Parish dashboard preview",
+      "welcome": "Welcome to your school",
+      "term": "Term I · 2026",
+      "activeStudents": "Active students",
+      "enrolled": "+28 enrolled",
+      "liturgy": "Today’s liturgy",
+      "present": "319 present",
+      "classes": "Classes",
+      "divisions": "4 divisions",
+      "todaysClasses": "Today’s Sunday classes",
+      "day15": "Sunday 15",
+      "yaredChant": "Saint Yared chant",
+      "orthodoxCreed": "Orthodox Creed",
+      "hall": "09:00 - 10:15 | Main hall",
+      "room3": "10:30 - 11:45 | Room 3",
+      "synced": "Parish records protected and synced"
+    },
+    "heroImageAlt": "The Debre Libanos Monastery in Ethiopia",
+    "photoCaption": "Debre Libanos Monastery · Ethiopia",
+    "priestImageAlt": "An Ethiopian Orthodox priest at the rock-hewn churches of Lalibela",
+    "priestPhotoCaption": "Priest in Lalibela · Photo by Lucy Shaw (CC BY-SA 4.0)",
+    "previousImage": "Previous image",
+    "nextImage": "Next image",
+    "pauseImages": "Pause image carousel",
+    "playImages": "Play image carousel",
+    "ceremonyImageAlt": "A clergy member displaying traditional processional crosses beneath a ceremonial umbrella in Lalibela",
+    "ceremonyPhotoCaption": "Processional crosses at Bet Abba Libanos · Photo by A. Davey (CC BY 2.0)",
+    "galleryEyebrow": "Sacred places",
+    "galleryTitle": "Churches shaped by faith and time",
+    "galleryIntro": "A small selection of Ethiopian Orthodox sites, with their names and image credits kept alongside each photograph.",
+    "gallery": {
+      "debreTitle": "Debre Libanos Monastery",
+      "debreDescription": "A historic Ethiopian Orthodox monastery in the highlands of Shewa.",
+      "debreAlt": "Debre Libanos Monastery in Ethiopia",
+      "georgeTitle": "Biete Ghiorgis, Lalibela",
+      "georgeDescription": "The rock-hewn Church of Saint George, part of Lalibela’s UNESCO-listed church complex.",
+      "georgeAlt": "Exterior of Biete Ghiorgis, the Church of Saint George in Lalibela",
+      "addisTitle": "Ethiopian Orthodox church in Addis Ababa",
+      "addisDescription": "An Ethiopian Orthodox church in the capital, photographed in 2007.",
+      "addisAlt": "Ethiopian Orthodox church building in Addis Ababa"
+    },
+    "educationEyebrow": "Sunday School learning",
+    "educationTitle": "Learning, attendance, and care",
+    "educationIntro": "Explore the school work supported by Simple Senbet, from curriculum and class records to participation and assessment.",
+    "educationPhotoNote": "This overview uses illustrations of platform capabilities; no student photographs are used.",
+    "educationItems": [
+      {
+        "title": "Faith curriculum",
+        "description": "Organize academic years, courses, and teaching assignments for Sunday School learning."
+      },
+      {
+        "title": "Class attendance",
+        "description": "Record Sunday School and liturgical participation for assigned classes."
+      },
+      {
+        "title": "Assessment records",
+        "description": "Review assessment results and report cards through the school’s academic workflows."
+      },
+      {
+        "title": "Member records",
+        "description": "Coordinate student and family records through role-governed access."
+      }
+    ],
+    "servicesEyebrow": "Worship and service",
+    "servicesTitle": "Gathering in prayer and service",
+    "servicesIntro": "Images of Ethiopian Orthodox clergy and church practice, presented with the source and license information.",
+    "services": {
+      "liturgyTitle": "The Divine Liturgy",
+      "liturgyDescription": "Clergy and deacons serving at St. Michael Ethiopian Orthodox Tewahedo Church in Washington, D.C.",
+      "liturgyAlt": "Ethiopian Orthodox priests and deacons conducting a church service",
+      "crossesTitle": "Processional crosses at Lalibela",
+      "crossesDescription": "A clergy member holding traditional processional crosses beneath a ceremonial umbrella at Bet Abba Libanos.",
+      "crossesAlt": "Clergy member displaying processional crosses under an umbrella at Bet Abba Libanos"
+    },
+    "goToSlide": "Go to slide",
+    "carouselPagination": "Carousel pagination",
+    "fallbackChurchAlt": "An Ethiopian Orthodox church building",
+    "fallbackClergyAlt": "An Ethiopian Orthodox priest at Lalibela",
+    "fallbackChurchCaption": "An Ethiopian Orthodox church in Addis Ababa · Photo by VBzi (CC BY 2.0)",
+    "viewSource": "View image source"
+  }
+}

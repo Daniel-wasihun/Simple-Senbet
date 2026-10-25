@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateOriginHeader, getTrustedOrigins } from "@/lib/bffSecurity";
+import { serverApiService } from "@/services/serverApi.service";
 
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -32,22 +33,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const backendRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
+    const backendRes = await serverApiService.requestRaw(`${BACKEND_URL}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
+      data: JSON.stringify({
         email,
         password,
         device_name: "nextjs-browser-session",
       }),
     });
 
-    const data = await backendRes.json().catch(() => null);
+    const data = (() => { try { return JSON.parse(backendRes.data); } catch { return null; } })();
 
-    if (!backendRes.ok) {
+    if (backendRes.status < 200 || backendRes.status >= 300) {
       return NextResponse.json(
         { message: data?.message || "Invalid credentials provided." },
         { status: backendRes.status }
