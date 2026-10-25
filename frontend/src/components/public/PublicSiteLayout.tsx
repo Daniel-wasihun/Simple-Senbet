@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { LanguageSwitcher } from "@/components/layout/navbar/languageSwicher";
+import { useAuth } from "@/context/AuthContext";
+import { getDashboardRouteForRole } from "@/utils/roleNavigation";
 
 export function EthiopianOrthodoxCross({ className = "" }: { className?: string }) {
   return (
@@ -51,6 +56,11 @@ export function PublicSiteLayout({
   hideFooter?: boolean;
   hideHeader?: boolean;
 }) {
+  const { user } = useAuth();
+  const portalHref = user ? getDashboardRouteForRole(user.role) : "/login";
+  const portalLabel = user ? "Dashboard / ዋና ገጽ" : "School Portal";
+  const mobilePortalLabel = user ? "Dashboard" : "Sign In";
+
   return (
     <div className="min-h-screen bg-[#fcfaf5] dark:bg-[#0a0e1a] text-[#132438] dark:text-[#f1f5f9] flex flex-col font-sans transition-colors duration-0">
       {!hideHeader && (
@@ -80,7 +90,7 @@ export function PublicSiteLayout({
               </Link>
 
               {/* Desktop Nav */}
-              <nav className="hidden items-center gap-6 text-[13px] font-medium text-[#4c5e70] dark:text-slate-300 md:flex" aria-label="Main navigation">
+              <nav className="hidden items-center gap-5 text-[13px] font-medium text-[#4c5e70] dark:text-slate-300 md:flex" aria-label="Main navigation">
                 {links.map(({ href, label }) => (
                   <Link
                     key={label}
@@ -91,26 +101,32 @@ export function PublicSiteLayout({
                   </Link>
                 ))}
 
+                {/* Language Switcher */}
+                <LanguageSwitcher />
+
                 {/* Instant Theme Toggle (Light / Dark mode from Senbet System) */}
                 <ThemeToggle />
 
                 <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#0f243e] dark:bg-[#fba81c] px-4 py-2.5 text-xs font-semibold text-white dark:text-slate-950 shadow-xs shadow-[#0f243e]/20 hover:bg-[#1a385f] dark:hover:bg-[#f59e0b] hover:shadow-md transition-all"
+                  href={portalHref}
+                  prefetch={true}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#0f243e] dark:bg-[#fba81c] px-4 py-2.5 text-xs font-semibold text-white dark:text-slate-950 shadow-xs shadow-[#0f243e]/20 hover:bg-[#1a385f] dark:hover:bg-[#f59e0b] hover:shadow-md transition-all cursor-pointer"
                 >
-                  <span>School Portal</span>
+                  <span>{portalLabel}</span>
                   <ArrowUpRight className="h-3.5 w-3.5 text-[#dfc896] dark:text-slate-900" />
                 </Link>
               </nav>
 
-              {/* Mobile Portal CTA & Theme Toggle */}
+              {/* Mobile Portal CTA & Toggles */}
               <div className="flex items-center gap-2 md:hidden">
+                <LanguageSwitcher />
                 <ThemeToggle />
                 <Link
-                  href="/login"
-                  className="rounded-lg bg-[#0f243e] dark:bg-[#fba81c] px-3.5 py-2 text-xs font-semibold text-white dark:text-slate-950 shadow-xs flex items-center gap-1.5"
+                  href={portalHref}
+                  prefetch={true}
+                  className="rounded-lg bg-[#0f243e] dark:bg-[#fba81c] px-3.5 py-2 text-xs font-semibold text-white dark:text-slate-950 shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>Sign In</span>
+                  <span>{mobilePortalLabel}</span>
                   <ArrowUpRight className="h-3 w-3 text-[#dfc896] dark:text-slate-900" />
                 </Link>
               </div>
@@ -175,10 +191,10 @@ export function PublicSiteLayout({
                   የአገልግሎት ክፍሎች
                 </p>
                 <ul className="mt-3 space-y-2 text-xs text-[#526475] dark:text-slate-400">
-                  <li><Link href="/login" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የትምህርት ክፍል (Academics)</Link></li>
-                  <li><Link href="/login" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የፋይናንስ ክፍል (Finance & Contributions)</Link></li>
-                  <li><Link href="/login" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የቁጥጥርና ክትትል (Attendance)</Link></li>
-                  <li><Link href="/login" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የአባላትና ምዝገባ (Member Coordination)</Link></li>
+                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የትምህርት ክፍል (Academics)</Link></li>
+                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የፋይናንስ ክፍል (Finance & Contributions)</Link></li>
+                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የቁጥጥርና ክትትል (Attendance)</Link></li>
+                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">የአባላትና ምዝገባ (Member Coordination)</Link></li>
                 </ul>
               </div>
 
@@ -191,7 +207,7 @@ export function PublicSiteLayout({
                   <li><Link href="/contact-us" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">Contact School Office</Link></li>
                   <li><Link href="/about-us" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">About the Platform</Link></li>
                   <li><Link href="/forgot-password" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition">Password Reset</Link></li>
-                  <li><Link href="/login" className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition font-semibold text-[#0f243e] dark:text-[#fba81c]">Sign In to Portal</Link></li>
+                  <li><Link href={portalHref} className="hover:text-[#8c7140] dark:hover:text-[#fba81c] transition font-semibold text-[#0f243e] dark:text-[#fba81c]">{user ? "Open Dashboard" : "Sign In to Portal"}</Link></li>
                 </ul>
               </div>
             </div>

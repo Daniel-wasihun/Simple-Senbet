@@ -8,7 +8,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const isLoginPage = pathname === "/login";
 
   return (
-    <PublicSiteLayout hideFooter={isLoginPage}>
+    <PublicSiteLayout hideFooter={isLoginPage} hideHeader={isLoginPage}>
       {children}
     </PublicSiteLayout>
   );

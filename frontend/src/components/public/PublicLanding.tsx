@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -14,6 +16,8 @@ import {
   UsersRound,
 } from "lucide-react";
 import { PublicSiteLayout } from "@/components/public/PublicSiteLayout";
+import { useAuth } from "@/context/AuthContext";
+import { getDashboardRouteForRole } from "@/utils/roleNavigation";
 
 const PILLARS = [
   {
@@ -237,6 +241,11 @@ function InteractivePortalPreview() {
 }
 
 export function PublicLanding() {
+  const { user } = useAuth();
+  const portalHref = user ? getDashboardRouteForRole(user.role) : "/login";
+  const portalLabel = user ? "Go to Dashboard (ዋና ገጽ)" : "Enter School Portal";
+  const roleSignInLabel = user ? "Open your dashboard" : "Sign in to your role";
+  const accessPortalLabel = user ? "Open Dashboard" : "Access Portal";
   return (
     <PublicSiteLayout>
       <main>
@@ -288,10 +297,11 @@ export function PublicLanding() {
                 {/* Call To Actions */}
                 <div className="pt-2 flex flex-wrap items-center gap-4">
                   <Link
-                    href="/login"
-                    className="inline-flex items-center gap-2.5 rounded-xl bg-[#c5a866] dark:bg-[#fba81c] px-6 py-3.5 text-sm font-bold text-[#0a192e] dark:text-slate-950 shadow-lg shadow-[#c5a866]/20 transition-all hover:bg-[#d6bc7e] dark:hover:bg-[#f59e0b] hover:scale-[1.02] active:scale-[0.99]"
+                    href={portalHref}
+                    prefetch={true}
+                    className="inline-flex items-center gap-2.5 rounded-xl bg-[#c5a866] dark:bg-[#fba81c] px-6 py-3.5 text-sm font-bold text-[#0a192e] dark:text-slate-950 shadow-lg shadow-[#c5a866]/20 transition-all hover:bg-[#d6bc7e] dark:hover:bg-[#f59e0b] hover:scale-[1.02] active:scale-[0.99] cursor-pointer"
                   >
-                    <span>Enter School Portal</span>
+                    <span>{portalLabel}</span>
                     <ArrowRight className="h-4 w-4" />
                   </Link>
 
@@ -399,10 +409,11 @@ export function PublicLanding() {
                 </p>
                 <div className="pt-2">
                   <Link
-                    href="/login"
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#0f243e] dark:bg-[#fba81c] px-6 py-3 text-sm font-semibold text-white dark:text-slate-950 shadow-xs hover:bg-[#1a385f] dark:hover:bg-[#f59e0b] transition-all"
+                    href={portalHref}
+                    prefetch={true}
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#0f243e] dark:bg-[#fba81c] px-6 py-3 text-sm font-semibold text-white dark:text-slate-950 shadow-xs hover:bg-[#1a385f] dark:hover:bg-[#f59e0b] transition-all cursor-pointer"
                   >
-                    <span>Sign in to your role</span>
+                    <span>{roleSignInLabel}</span>
                     <ArrowRight className="h-4 w-4 text-[#dfc896] dark:text-slate-950" />
                   </Link>
                 </div>
@@ -500,10 +511,11 @@ export function PublicLanding() {
 
             <div className="flex flex-wrap items-center gap-3">
               <Link
-                href="/login"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#c5a866] dark:bg-[#fba81c] px-6 py-3.5 text-sm font-bold text-[#0a192e] dark:text-slate-950 shadow-md transition hover:bg-[#d8bf84] dark:hover:bg-[#f59e0b]"
+                href={portalHref}
+                prefetch={true}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#c5a866] dark:bg-[#fba81c] px-6 py-3.5 text-sm font-bold text-[#0a192e] dark:text-slate-950 shadow-md transition hover:bg-[#d8bf84] dark:hover:bg-[#f59e0b] cursor-pointer"
               >
-                <span>Access Portal</span>
+                <span>{accessPortalLabel}</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
