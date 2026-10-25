@@ -64,7 +64,7 @@ class DatabaseSeeder extends Seeder
                 continue;
             }
 
-            $user = User::firstOrCreate(
+            $user = User::updateOrCreate(
                 ['email' => $userData['email']],
                 [
                     'name' => $userData['name'],
@@ -73,7 +73,11 @@ class DatabaseSeeder extends Seeder
                 ]
             );
 
-            $user->update(['role_id' => $role->id]);
+            $user->update([
+                'name' => $userData['name'],
+                'password' => $userData['password'],
+                'role_id' => $role->id,
+            ]);
             $user->syncRoles([$roleName]);
         }
     }
