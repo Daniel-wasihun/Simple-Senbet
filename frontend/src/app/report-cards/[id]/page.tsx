@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState, use } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -78,9 +80,23 @@ export default function StudentReportCardPage({
 
   if (authLoading || (loading && !reportCard)) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <RefreshCw className="h-8 w-8 text-amber-600 animate-spin mb-4" />
-        <p className="text-slate-600 font-medium">Loading authoritative report card...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e1a] p-4 sm:p-6 lg:p-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="p-8 rounded-3xl bg-white dark:bg-[#111624] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 text-center flex flex-col items-center">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <Skeleton className="h-6 w-64" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </div>
+          <div className="p-8 rounded-3xl bg-white dark:bg-[#111624] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-16 rounded-xl" />
+            </div>
+            <TableShimmerSkeleton rows={6} columns={5} />
+          </div>
+        </div>
       </div>
     );
   }

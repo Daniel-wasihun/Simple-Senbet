@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import { EthiopianOrthodoxCross } from "@/components/public/PublicSiteLayout";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { SidebarItem } from "@/components/layout/SidebarItem";
+import { DashboardAppShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { formatText } from "@/lib/utils";
 
 interface NavItem {
   label: string;
@@ -123,16 +125,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   if (isLoading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#fbf9f4] dark:bg-[#0a0e1a]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-[#0f243e] dark:border-slate-700 border-t-[#c5a866] dark:border-t-[#fba81c] rounded-full animate-spin" />
-          <p className="text-sm font-medium text-[#5f7081] dark:text-slate-400">
-            Loading Sunday School Portal...
-          </p>
-        </div>
-      </div>
-    );
+    return <DashboardAppShimmerSkeleton />;
   }
 
   return (
@@ -258,7 +251,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {user && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1c2438] border border-slate-200/80 dark:border-slate-700/60 text-xs">
                 <span className="font-semibold text-slate-800 dark:text-slate-200 hidden sm:inline">
-                  {user.name}
+                  {formatText(user.name)}
                 </span>
                 <span className="px-2 py-0.5 rounded-md font-bold text-[10px] uppercase tracking-wider bg-white dark:bg-[#141a29] text-[#0f243e] dark:text-[#fba81c] border border-slate-200 dark:border-slate-700 shadow-2xs">
                   {user.role?.replace("_", " ")}

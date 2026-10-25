@@ -325,10 +325,19 @@ export default function DashboardPage() {
     }
   };
 
-  const formatText = (text: string | { en?: string; am?: string } | undefined | null) => {
-    if (!text) return "—";
+  const formatText = (text: any, fallback: string = "—"): string => {
+    if (text === null || text === undefined || text === "") return fallback;
     if (typeof text === "string") return text;
-    return text.en || text.am || "—";
+    if (typeof text === "number") return String(text);
+    if (typeof text === "object") {
+      if (text.am && text.en) return text.am || text.en;
+      if (text.am) return text.am;
+      if (text.en) return text.en;
+      const values = Object.values(text).filter((v) => typeof v === "string" || typeof v === "number");
+      if (values.length > 0) return String(values[0]);
+      return fallback;
+    }
+    return String(text);
   };
 
   const loadGradebook = useCallback(
@@ -468,7 +477,7 @@ export default function DashboardPage() {
 
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/60 text-xs">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-semibold text-slate-700 hidden sm:inline">{user.name}</span>
+                <span className="font-semibold text-slate-700 hidden sm:inline">{formatText(user.name)}</span>
                 <span className="px-2 py-0.5 rounded-md font-bold text-[10px] uppercase tracking-wider bg-white text-indigo-700 border border-slate-200 shadow-2xs">
                   {user.role}
                 </span>
@@ -499,7 +508,7 @@ export default function DashboardPage() {
                 <span>Simple Senbet Attendance MVP</span>
               </div>
               <h1 id="welcome-heading" className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                እንኳን ደህና መጡ፣ {user.name}
+                እንኳን ደህና መጡ፣ {formatText(user.name)}
               </h1>
               <p className="mt-2 text-indigo-200 text-sm max-w-2xl">
                 {isTeacher
@@ -833,11 +842,11 @@ export default function DashboardPage() {
                           <tr key={session.id} className="hover:bg-slate-50/80 transition">
                             <td className="py-3 px-4 font-mono font-medium text-slate-900">{session.date}</td>
                             <td className="py-3 px-4 capitalize">{session.time_slot}</td>
-                            <td className="py-3 px-4 font-semibold text-slate-900">
-                              {session.school_class?.name || `Class #${session.class_id}`}
+                            <td className="py-3 px-4 font-semibold text-slate-900 dark:text-slate-100">
+                              {formatText(session.school_class?.name) || `Class #${session.class_id}`}
                             </td>
                             <td className="py-3 px-4">
-                              {session.course?.name || <span className="text-slate-400">Homeroom</span>}
+                              {session.course?.name ? formatText(session.course.name) : <span className="text-slate-400">Homeroom</span>}
                             </td>
                             <td className="py-3 px-4">{getStatusBadge(session)}</td>
                             <td className="py-3 px-4 text-right">
@@ -982,7 +991,7 @@ export default function DashboardPage() {
                     <option value="">All School Classes</option>
                     {adminClasses.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name}
+                        {formatText(c.name)}
                       </option>
                     ))}
                   </select>
@@ -1125,7 +1134,7 @@ export default function DashboardPage() {
                     <option value="">All Classes</option>
                     {adminClasses.map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name}
+                        {formatText(c.name)}
                       </option>
                     ))}
                   </select>
@@ -1213,11 +1222,11 @@ export default function DashboardPage() {
                             <td className="py-3 px-4 font-mono text-slate-400">#{session.id}</td>
                             <td className="py-3 px-4 font-mono font-medium text-slate-900">{session.date}</td>
                             <td className="py-3 px-4 capitalize">{session.time_slot}</td>
-                            <td className="py-3 px-4 font-semibold text-slate-900">
-                              {session.school_class?.name || `Class #${session.class_id}`}
+                            <td className="py-3 px-4 font-semibold text-slate-900 dark:text-slate-100">
+                              {formatText(session.school_class?.name) || `Class #${session.class_id}`}
                             </td>
                             <td className="py-3 px-4">
-                              {session.course?.name || <span className="text-slate-400">Homeroom</span>}
+                              {session.course?.name ? formatText(session.course.name) : <span className="text-slate-400">Homeroom</span>}
                             </td>
                             <td className="py-3 px-4">{getStatusBadge(session)}</td>
                             <td className="py-3 px-4 text-right">
@@ -1564,7 +1573,7 @@ export default function DashboardPage() {
             <h3 className="text-lg font-bold text-slate-900">Close Attendance Session</h3>
             <p className="text-xs text-slate-600 mt-2">
               You are about to close and archive Session <strong>#{sessionToClose.id}</strong> for{" "}
-              <strong>{sessionToClose.school_class?.name || `Class #${sessionToClose.class_id}`}</strong> (
+              <strong>{formatText(sessionToClose.school_class?.name) || `Class #${sessionToClose.class_id}`}</strong> (
               {sessionToClose.date}, {sessionToClose.time_slot}).
             </p>
 
