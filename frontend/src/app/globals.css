@@ -253,7 +253,7 @@
 }
 
 /* Instant Theme Switch — suppresses ALL transitions/animations on toggle.
-   Colors update immediately, zero delay, no glitch or staggered transitions. */
+   Colors update immediately, zero delay, no glitch or staggered transitions (from Senbet System). */
 :root.theme-transitioning,
 :root.theme-transitioning *,
 :root.theme-transitioning *::before,
@@ -262,6 +262,73 @@
   transition-delay: 0ms !important;
   animation-duration: 0ms !important;
   animation-delay: 0ms !important;
+}
+
+/* Chrome / View Transitions API instant switch override from Senbet System */
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0ms !important;
+}
+
+/* Comprehensive Dark Mode Theme Alignments across Dashboard Content */
+.dark .dashboard-content .bg-white {
+  background-color: #141a29 !important;
+  border-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .dashboard-content .bg-slate-50,
+.dark .dashboard-content .bg-slate-100 {
+  background-color: #1c2438 !important;
+  border-color: #1e293b !important;
+}
+
+.dark .dashboard-content .border-slate-200,
+.dark .dashboard-content .border-slate-100,
+.dark .dashboard-content .border-slate-200\/80,
+.dark .dashboard-content .border-slate-200\/60,
+.dark .dashboard-content .border-slate-300 {
+  border-color: #1e293b !important;
+}
+
+.dark .dashboard-content .text-slate-900,
+.dark .dashboard-content .text-slate-800,
+.dark .dashboard-content .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+
+.dark .dashboard-content .text-slate-600,
+.dark .dashboard-content .text-slate-500,
+.dark .dashboard-content .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+.dark .dashboard-content input,
+.dark .dashboard-content select,
+.dark .dashboard-content textarea {
+  background-color: #1c2438 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .dashboard-content table {
+  border-color: #1e293b !important;
+}
+
+.dark .dashboard-content th {
+  background-color: #111624 !important;
+  color: #94a3b8 !important;
+  border-color: #1e293b !important;
+}
+
+.dark .dashboard-content td {
+  border-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .dashboard-content tr:hover td {
+  background-color: #1c2438 !important;
 }
 
 /* Custom scrollbar for sidebar */

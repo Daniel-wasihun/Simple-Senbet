@@ -42,29 +42,29 @@ function ResetForm() {
   }
 
   const inputClass =
-    "w-full rounded-xl border border-[#d2d8dc] bg-[#fdfbf7] px-4 py-2.5 text-sm outline-none transition focus:border-[#0f243e] focus:ring-4 focus:ring-[#0f243e]/10";
+    "w-full rounded-xl border border-[#d2d8dc] dark:border-slate-700 bg-[#fdfbf7] dark:bg-[#1c2438] text-[#132438] dark:text-slate-100 px-4 py-2.5 text-sm outline-none transition focus:border-[#0f243e] dark:focus:border-[#fba81c] focus:ring-4 focus:ring-[#0f243e]/10 dark:focus:ring-[#fba81c]/10 placeholder:text-slate-400 dark:placeholder:text-slate-500";
 
   return (
-    <section className="w-full max-w-md rounded-2xl border border-[#d8ccb4] bg-white p-7 sm:p-9 shadow-sm">
-      <div className="flex items-center justify-between border-b border-[#f0ebd9] pb-4 mb-6">
+    <section className="w-full max-w-md rounded-2xl border border-[#d8ccb4] dark:border-slate-800 bg-white dark:bg-[#141a29] p-7 sm:p-9 shadow-xs">
+      <div className="flex items-center justify-between border-b border-[#f0ebd9] dark:border-slate-800 pb-4 mb-6">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#0f243e] text-[#dfc896]">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#0f243e] dark:bg-[#1c2438] text-[#dfc896] dark:text-[#fba81c]">
             <KeyRound className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8c7140]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#8c7140] dark:text-[#fba81c]">
               አዲስ የይለፍ ቃል ማዘጋጀት
             </p>
-            <h1 className="font-serif text-2xl font-bold text-[#0f243e]">New Password</h1>
+            <h1 className="font-serif text-2xl font-bold text-[#0f243e] dark:text-slate-100">New Password</h1>
           </div>
         </div>
-        <span className="text-xl text-[#8c7140]">✝</span>
+        <span className="text-xl text-[#8c7140] dark:text-[#fba81c]">✝</span>
       </div>
 
       {!token && !done && (
         <div
           role="alert"
-          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-900 leading-relaxed"
+          className="mb-4 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3.5 text-xs text-amber-900 dark:text-amber-300 leading-relaxed"
         >
           This password reset link is missing a verification token. Please request a fresh reset link.
         </div>
@@ -73,7 +73,7 @@ function ResetForm() {
       {error && (
         <div
           role="alert"
-          className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 leading-relaxed"
+          className="mb-4 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 p-3.5 text-xs text-rose-800 dark:text-rose-300 leading-relaxed"
         >
           {error}
         </div>
@@ -82,19 +82,19 @@ function ResetForm() {
       {done ? (
         <div
           role="status"
-          className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-5 text-center space-y-3"
+          className="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/80 dark:bg-emerald-950/40 p-5 text-center space-y-3"
         >
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
             <CheckCircle2 className="h-5 w-5" />
           </div>
-          <h3 className="font-serif text-base font-bold text-emerald-950">Password Successfully Updated</h3>
-          <p className="text-xs leading-5 text-emerald-800">
+          <h3 className="font-serif text-base font-bold text-emerald-950 dark:text-emerald-200">Password Successfully Updated</h3>
+          <p className="text-xs leading-5 text-emerald-800 dark:text-emerald-300">
             Your account password has been changed. You can now sign in with your new credentials.
           </p>
           <div className="pt-2">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center rounded-xl bg-[#0f243e] px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#1a385f]"
+              className="inline-flex items-center justify-center rounded-xl bg-[#0f243e] dark:bg-[#fba81c] hover:bg-[#1a385f] dark:hover:bg-[#f59e0b] px-5 py-2.5 text-xs font-semibold text-white dark:text-slate-950 shadow-xs"
             >
               Continue to Sign In
             </Link>
@@ -103,7 +103,7 @@ function ResetForm() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-[#2c3e50]">
+            <label htmlFor="email" className="mb-1.5 block text-xs font-semibold text-[#2c3e50] dark:text-slate-300">
               Email Address / ኢሜይል
             </label>
             <input
@@ -118,7 +118,7 @@ function ResetForm() {
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1.5 block text-xs font-semibold text-[#2c3e50]">
+            <label htmlFor="password" className="mb-1.5 block text-xs font-semibold text-[#2c3e50] dark:text-slate-300">
               New Password / አዲስ የይለፍ ቃል
             </label>
             <input
@@ -135,7 +135,7 @@ function ResetForm() {
           </div>
 
           <div>
-            <label htmlFor="confirmation" className="mb-1.5 block text-xs font-semibold text-[#2c3e50]">
+            <label htmlFor="confirmation" className="mb-1.5 block text-xs font-semibold text-[#2c3e50] dark:text-slate-300">
               Confirm New Password / አረጋግጥ
             </label>
             <input
@@ -154,11 +154,11 @@ function ResetForm() {
           <button
             type="submit"
             disabled={busy || !token}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f243e] px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#1a385f] disabled:opacity-50 transition"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f243e] dark:bg-[#fba81c] hover:bg-[#1a385f] dark:hover:bg-[#f59e0b] px-5 py-3 text-sm font-semibold text-white dark:text-slate-950 shadow-xs disabled:opacity-50 transition cursor-pointer"
           >
             {busy ? (
               <>
-                <LoaderCircle className="h-4 w-4 animate-spin text-[#dfc896]" />
+                <LoaderCircle className="h-4 w-4 animate-spin text-[#dfc896] dark:text-slate-900" />
                 <span>Updating password...</span>
               </>
             ) : (
@@ -168,10 +168,10 @@ function ResetForm() {
         </form>
       )}
 
-      <div className="mt-6 pt-4 border-t border-[#f0ebd9] text-center">
+      <div className="mt-6 pt-4 border-t border-[#f0ebd9] dark:border-slate-800 text-center">
         <Link
           href="/forgot-password"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#657686] hover:text-[#0f243e]"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#657686] dark:text-slate-400 hover:text-[#0f243e] dark:hover:text-[#fba81c]"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Request a New Link
         </Link>
@@ -182,8 +182,8 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <main className="min-h-[calc(100vh-12rem)] bg-[#fcfaf5] py-16 px-4 flex items-center justify-center">
-      <Suspense fallback={<div className="text-xs text-[#687586]">Loading verification token...</div>}>
+    <main className="min-h-[calc(100vh-12rem)] bg-[#fcfaf5] dark:bg-[#0a0e1a] text-[#132438] dark:text-[#f1f5f9] py-16 px-4 flex items-center justify-center">
+      <Suspense fallback={<div className="text-xs text-[#687586] dark:text-slate-400">Loading verification token...</div>}>
         <ResetForm />
       </Suspense>
     </main>

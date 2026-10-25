@@ -14,9 +14,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const USER_STORAGE_KEY = "senbet_cached_user";
+
+function getCachedUser(): User | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const item = localStorage.getItem(USER_STORAGE_KEY);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Synchronously initialize with cached user if available for INSTANT dashboard display
+  const [user, setUser] = useState<User | null>(() => getCachedUser());
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    // If cached user exists, do not block initial render with a loading spinner
+    return typeof window === "undefined" ? true : !getCachedUser();
+  });
   const router = useRouter();
 
   const refreshUser = useCallback(async () => {
@@ -25,11 +41,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
+        if (typeof window !== "undefined" && data.user) {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+        }
       } else {
         setUser(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(USER_STORAGE_KEY);
+        }
       }
     } catch {
-      setUser(null);
+      // Retain cached user in transient offline/network hiccups
     } finally {
       setIsLoading(false);
     }
@@ -39,7 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; message?: string; user?: User }> => {
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; message?: string; user?: User }> => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -56,8 +81,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      setUser(data.user);
-      return { success: true, user: data.user };
+      const authenticatedUser = data.user;
+      setUser(authenticatedUser);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authenticatedUser));
+      }
+      return { success: true, user: authenticatedUser };
     } catch {
       return {
         success: false,
@@ -67,14 +96,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    // 1. Immediately clear local session and storage for instant UI response
+    setUser(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
+    // 2. Instant client navigation to login without delay
+    router.replace("/login");
+
+    // 3. Dispatch backend logout and cookie clearing in the background
     try {
-      await fetch("/api/auth/logout", {
+      fetch("/api/auth/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-      });
-    } finally {
-      setUser(null);
-      router.push("/login");
+      }).catch(() => {});
+    } catch {
+      // Ignored
     }
   };
 

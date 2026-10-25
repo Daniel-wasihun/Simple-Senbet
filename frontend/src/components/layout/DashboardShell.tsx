@@ -85,16 +85,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Handle logout with instant feedback
+  // Handle logout with instant zero-delay feedback
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    toast.info("Signing out from Simple Senbet portal...");
+    toast.success("Signed out successfully.");
     try {
       await logout();
-      toast.success("Signed out successfully.");
     } catch {
-      toast.error("Sign out encountered an error, redirecting...");
-      router.push("/login");
+      router.replace("/login");
     } finally {
       setIsLoggingOut(false);
     }
