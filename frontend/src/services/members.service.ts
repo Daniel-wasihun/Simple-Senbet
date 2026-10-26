@@ -6,8 +6,9 @@ export const membersService = {
   request<T = Record<string, unknown>>(path: string, options: RequestInit | string = {}, body?: unknown, userId?: number): Promise<BackendResponse<T>> {
     const init: RequestInit = typeof options === "string" ? { method: options, ...(body === undefined ? {} : { body: JSON.stringify(body) }) } : options;
     const method = (init.method ?? "GET").toUpperCase();
-    const cacheKey = method === "GET" && userId !== undefined ? `${userId}:members:${path}` : undefined;
-    return backendApiService.request<T>(`/api/backend/${path}`, init, cacheKey ?? (userId === undefined ? undefined : `${userId}:members:mutation`));
+    const cleanPath = path.replace(/^https?:\/\/[^/]+/i, "").replace(/^(\/?(api\/backend|api|backend)(\/|[?]|$))+/i, "$3").replace(/^\/+/, "");
+    const cacheKey = method === "GET" && userId !== undefined ? `${userId}:members:${cleanPath}` : undefined;
+    return backendApiService.request<T>(cleanPath, init, cacheKey ?? (userId === undefined ? undefined : `${userId}:members:mutation`));
   },
   list<T = Record<string, unknown>>(query = "", userId?: number) { return this.request<T>(`members${query}`, "GET", undefined, userId); },
   detail<T = Record<string, unknown>>(id: number | string, userId?: number) { return this.request<T>(`members/${id}`, "GET", undefined, userId); },

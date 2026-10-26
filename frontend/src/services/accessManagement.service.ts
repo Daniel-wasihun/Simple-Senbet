@@ -6,8 +6,9 @@ export const accessManagementService = {
   request<T = Record<string, unknown>>(path: string, options: RequestInit | string = {}, body?: unknown, userId?: number): Promise<BackendResponse<T>> {
     const init: RequestInit = typeof options === "string" ? { method: options, ...(body === undefined ? {} : { body: JSON.stringify(body) }) } : options;
     const method = (init.method ?? "GET").toUpperCase();
-    const cacheKey = userId === undefined ? undefined : `${userId}:access-management:${path}`;
-    return backendApiService.request<T>(`/api/backend/${path}`, init, method === "GET" ? cacheKey : userId === undefined ? undefined : `${userId}:access-management:mutation`);
+    const cleanPath = path.replace(/^https?:\/\/[^/]+/i, "").replace(/^(\/?(api\/backend|api|backend)(\/|[?]|$))+/i, "$3").replace(/^\/+/, "");
+    const cacheKey = userId === undefined ? undefined : `${userId}:access-management:${cleanPath}`;
+    return backendApiService.request<T>(cleanPath, init, method === "GET" ? cacheKey : userId === undefined ? undefined : `${userId}:access-management:mutation`);
   },
   list<T = Record<string, unknown>>(resource: AccessResource, query = "", userId?: number) { return this.request<T>(`${resource}${query}`, "GET", undefined, userId); },
   detail<T = Record<string, unknown>>(resource: "users" | "roles", id: number | string, userId?: number) { return this.request<T>(`${resource}/${id}`, "GET", undefined, userId); },

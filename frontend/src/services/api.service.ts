@@ -1,4 +1,5 @@
 import api, { setupCsrf } from "@/lib/clientAxios";
+import { normalizeBffPath } from "@/services/backendApi.service";
 import type { Method } from "axios";
 
 // Helper function to get cookie by name
@@ -32,7 +33,7 @@ export const apiService = {
   }),
 
   request: async <T>(url: string, method: Method = "GET", data?: unknown) => {
-    const path = url.startsWith("/api/backend/") ? url : `/api/backend/${url.replace(/^\/?api\//, "").replace(/^\/+/, "")}`;
+    const path = normalizeBffPath(url);
     const target = withClientOrigin(path);
     try {
       let result: T;
@@ -61,7 +62,7 @@ export const apiService = {
 
     // Ensure auth headers are set for GET requests
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("auth_token");
+      const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -112,7 +113,7 @@ export const apiService = {
 
       // Ensure auth headers are set even for FormData requests
       if (typeof window !== "undefined") {
-        const token = localStorage.getItem("auth_token");
+        const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -167,7 +168,7 @@ export const apiService = {
 
       // Ensure auth headers are set even for FormData requests
       if (typeof window !== "undefined") {
-        const token = localStorage.getItem("auth_token");
+        const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -222,7 +223,7 @@ export const apiService = {
       
       // Ensure auth headers are set
       if (typeof window !== "undefined") {
-        const token = localStorage.getItem("auth_token");
+        const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -264,7 +265,7 @@ export const apiService = {
 
     // Ensure auth headers are set for DELETE requests
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("auth_token");
+      const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }

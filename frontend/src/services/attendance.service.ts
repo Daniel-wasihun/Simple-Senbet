@@ -6,7 +6,8 @@ export interface AttendanceFilters { page?: number; per_page?: number; date?: st
 export const attendanceService = {
   request<T = Record<string, unknown>>(path: string, options: RequestInit = {}): Promise<BackendResponse<T>> {
     const method = (options.method ?? "GET").toUpperCase();
-    return backendApiService.request<T>(path, options, method === "GET" ? undefined : "attendance:mutation");
+    const cleanPath = path.replace(/^https?:\/\/[^/]+/i, "").replace(/^(\/?(api\/backend|api|backend)(\/|[?]|$))+/i, "$3").replace(/^\/+/, "");
+    return backendApiService.request<T>(cleanPath, options, method === "GET" ? undefined : "attendance:mutation");
   },
   list(filters: AttendanceFilters = {}) {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== undefined && value !== "").map(([key, value]) => [key, String(value)]));

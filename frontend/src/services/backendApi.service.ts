@@ -5,7 +5,7 @@ import { apiService } from "@/services/api.service";
 export interface BackendResponse<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
-  json: () => Promise<any>;
+  json: () => Promise<T>;
 }
 
 type RequestOptions = RequestInit & { cacheTtl?: number };
@@ -14,12 +14,21 @@ function toResponse<T>(result: { data: T; status: number; ok: boolean }): Backen
   return { ok: result.ok, status: result.status, json: async () => result.data };
 }
 
+export function normalizeBffPath(input: string): string {
+  let p = input.replace(/^https?:\/\/[^/]+/i, "");
+  while (/^\/?(api\/backend|api|backend)(\/|[?]|$)/i.test(p)) {
+    p = p.replace(/^\/?(api\/backend|api|backend)(\/|[?]|$)/i, "$2");
+  }
+  p = p.replace(/^\/+/, "");
+  return p ? `/api/backend/${p}` : "/api/backend";
+}
+
 /** Shared adapter for the existing client API service; UI code must use module services. */
 export const backendApiService = {
   async request<T = Record<string, unknown>>(path: string, options: RequestOptions = {}, cacheKey?: string): Promise<BackendResponse<T>> {
     const { cacheTtl, ...init } = options;
     const method = (init.method ?? "GET").toUpperCase() as Method;
-    const target = path.startsWith("/api/") ? path : `/api/${path.replace(/^\/+/, "")}`;
+    const target = normalizeBffPath(path);
     const body = typeof init.body === "string" ? JSON.parse(init.body) : init.body;
 
     try {
