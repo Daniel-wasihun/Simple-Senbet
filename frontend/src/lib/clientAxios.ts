@@ -25,20 +25,16 @@ const clientAxiosInstance = axios.create({
 
 clientAxiosInstance.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    // Add auth token to Authorization header
-    const token = localStorage.getItem("auth_token");
+    // Add auth token to Authorization header if present in localStorage
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      console.warn('No auth token found in localStorage or headers object missing');
     }
 
-    // Add XSRF-TOKEN from cookies to header
+    // Add XSRF-TOKEN from cookies to header if present
     const xsrfToken = getCookie('XSRF-TOKEN');
     if (xsrfToken && config.headers) {
       config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
-    } else {
-      console.warn('No XSRF-TOKEN found in cookies or headers object missing');
     }
   }
   return config;
