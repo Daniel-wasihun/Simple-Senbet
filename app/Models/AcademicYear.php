@@ -39,7 +39,6 @@ class AcademicYear extends Model
     protected function casts(): array
     {
         return [
-            'name' => 'string',
             'start_date' => 'date',
             'end_date' => 'date',
             'is_current' => 'boolean',
@@ -47,24 +46,39 @@ class AcademicYear extends Model
     }
 
     /**
-     * Mutator to ensure name is always stored as a string, handling array or string inputs.
+     * Mutator to ensure name is stored as valid JSON.
      */
     public function setNameAttribute(mixed $value): void
     {
         if (is_array($value)) {
-            $this->attributes['name'] = $value['en'] ?? $value['am'] ?? (string) reset($value);
+            $this->attributes['name'] = json_encode($value);
+        } elseif (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                $this->attributes['name'] = $value;
+            } else {
+                $this->attributes['name'] = json_encode($value);
+            }
         } else {
-            $this->attributes['name'] = (string) $value;
+            $this->attributes['name'] = json_encode($value);
         }
     }
 
-    public function getTranslation(string $attribute, ?string $locale = null, bool $useFallback = true): ?string
+    /**
+     * Accessor to return JSON data as array or string scalar.
+     */
+    public function getNameAttribute(mixed $value): mixed
     {
-        if ($attribute === 'name') {
-            return $this->attributes['name'] ?? null;
+        if (is_null($value)) {
+            return null;
         }
 
-        return parent::getTranslation($attribute, $locale, $useFallback);
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return $decoded !== null ? $decoded : $value;
+        }
+
+        return $value;
     }
 
     /**

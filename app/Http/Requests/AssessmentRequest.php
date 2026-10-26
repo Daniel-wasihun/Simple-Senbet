@@ -24,11 +24,27 @@ class AssessmentRequest extends FormRequest
             'teaching_assignment_id' => ['required', 'exists:teaching_assignments,id'],
             'name' => [
                 'required',
-                'string',
-                'max:255',
-                Rule::unique('assessments')->where(function ($query) {
-                    return $query->where('teaching_assignment_id', $this->input('teaching_assignment_id'));
-                })->ignore($assessmentId),
+                function ($attribute, $value, $fail) use ($assessmentId) {
+                    $extracted = is_array($value) ? ($value['en'] ?? $value['am'] ?? reset($value)) : $value;
+                    if (!is_string($extracted) || trim($extracted) === '') {
+                        $fail('The name field is required.');
+                        return;
+                    }
+                    $trimmed = trim($extracted);
+                    $assignmentId = $this->input('teaching_assignment_id');
+                    $exists = Assessment::where('teaching_assignment_id', $assignmentId)
+                        ->where(function ($q) use ($trimmed) {
+                            $q->where('name->en', $trimmed)
+                              ->orWhere('name->am', $trimmed)
+                              ->orWhereRaw("name#>>'{}' = ?", [$trimmed]);
+                        })
+                        ->when($assessmentId, fn ($q) => $q->where('id', '!=', $assessmentId))
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('The name has already been taken.');
+                    }
+                },
             ],
             'total_score' => ['required', 'numeric', 'gt:0', 'max:999.99'],
             'weight_percentage' => ['required', 'numeric', 'between:0,100'],

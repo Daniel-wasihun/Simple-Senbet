@@ -23,9 +23,23 @@ class AcademicYearController extends Controller
         return [
             'name' => [
                 'required',
-                'string',
-                'max:100',
-                Rule::unique('academic_years')->ignore($year?->id),
+                function ($attribute, $value, $fail) use ($year) {
+                    $extracted = is_array($value) ? ($value['en'] ?? $value['am'] ?? reset($value)) : $value;
+                    if (!is_string($extracted) || trim($extracted) === '') {
+                        $fail('The name field is required.');
+                        return;
+                    }
+                    $trimmed = trim($extracted);
+                    $exists = AcademicYear::where(function ($q) use ($trimmed) {
+                        $q->where('name->en', $trimmed)
+                          ->orWhere('name->am', $trimmed)
+                          ->orWhereRaw("name#>>'{}' = ?", [$trimmed]);
+                    })->when($year?->id, fn ($q) => $q->where('id', '!=', $year->id))->exists();
+
+                    if ($exists) {
+                        $fail('The name has already been taken.');
+                    }
+                },
             ],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after:start_date'],

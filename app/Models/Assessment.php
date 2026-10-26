@@ -40,11 +40,46 @@ class Assessment extends Model
     protected function casts(): array
     {
         return [
-            'name' => 'array',
             'teaching_assignment_id' => 'integer',
             'total_score' => 'decimal:2',
             'weight_percentage' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Mutator to ensure name is stored as valid JSON.
+     */
+    public function setNameAttribute(mixed $value): void
+    {
+        if (is_array($value)) {
+            $this->attributes['name'] = json_encode($value);
+        } elseif (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                $this->attributes['name'] = $value;
+            } else {
+                $this->attributes['name'] = json_encode($value);
+            }
+        } else {
+            $this->attributes['name'] = json_encode($value);
+        }
+    }
+
+    /**
+     * Accessor to return JSON data as array or string scalar.
+     */
+    public function getNameAttribute(mixed $value): mixed
+    {
+        if (is_null($value)) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            return $decoded !== null ? $decoded : $value;
+        }
+
+        return $value;
     }
 
     /**

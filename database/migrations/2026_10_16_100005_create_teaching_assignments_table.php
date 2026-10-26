@@ -37,10 +37,8 @@ return new class extends Migration
             $table->index(['teacher_id', 'academic_year_id']);
         });
 
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement("ALTER TABLE teaching_assignments ADD CONSTRAINT teaching_assignments_semester_check CHECK (semester IN ('semester_1', 'semester_2'));");
-            DB::statement('ALTER TABLE teaching_assignments ADD CONSTRAINT chk_assignment_dates CHECK (end_date IS NULL OR end_date > start_date);');
-        }
+        DB::statement("ALTER TABLE teaching_assignments ADD CONSTRAINT teaching_assignments_semester_check CHECK (semester IN ('semester_1', 'semester_2'));");
+        DB::statement('ALTER TABLE teaching_assignments ADD CONSTRAINT chk_assignment_dates CHECK (end_date IS NULL OR end_date > start_date);');
     }
 
     /**

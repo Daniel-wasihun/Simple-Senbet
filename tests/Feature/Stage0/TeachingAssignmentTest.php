@@ -301,6 +301,8 @@ class TeachingAssignmentTest extends TestCase
 
     public function test_canonical_migration_rollback_drops_table(): void
     {
+        \Illuminate\Support\Facades\DB::statement('DROP TABLE IF EXISTS assessment_results CASCADE;');
+        \Illuminate\Support\Facades\DB::statement('DROP TABLE IF EXISTS assessments CASCADE;');
         $migration = require database_path('migrations/2026_10_16_100005_create_teaching_assignments_table.php');
         $this->assertTrue(Schema::hasTable('teaching_assignments'));
         $migration->down();
