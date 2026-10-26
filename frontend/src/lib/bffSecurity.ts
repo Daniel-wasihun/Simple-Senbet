@@ -332,7 +332,16 @@ export function validateProxyPathAndMethod(
     }
   }
 
-  const normalizedPath = pathSegments.join("/");
+  // Normalize away any accidental nested proxy path prefixes (e.g., api/backend)
+  let cleanSegments = [...pathSegments];
+  while (cleanSegments.length >= 2 && cleanSegments[0] === "api" && cleanSegments[1] === "backend") {
+    cleanSegments = cleanSegments.slice(2);
+  }
+  if (cleanSegments.length >= 1 && (cleanSegments[0] === "api" || cleanSegments[0] === "backend")) {
+    cleanSegments = cleanSegments.slice(1);
+  }
+
+  const normalizedPath = cleanSegments.join("/");
 
   // Match against route allowlist
   for (const rule of ALLOWED_PROXY_ROUTES) {
