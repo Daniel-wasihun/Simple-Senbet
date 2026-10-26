@@ -58,7 +58,7 @@ export function MemberRegistry() {
   const [viewing, setViewing] = useState<Member | null>(null);
 
   const request = useCallback(async (url: string, method = "GET", body?: unknown) => {
-    const response = await membersService.request(`/api/backend/${url}`, method, body, user?.id);
+    const response = await membersService.request(url, method, body, user?.id);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "The request could not be completed.");
     return data;
@@ -73,7 +73,7 @@ export function MemberRegistry() {
       const result = rows<Member>(await request(`members?${params}`));
       setMembers(result.items); setPages(result.pagination.last_page); setTotal(result.pagination.total);
       if (can("school-classes.view")) {
-        const classResponse = await schoolManagementService.request("/api/backend/school-classes", {}, undefined, user?.id);
+        const classResponse = await schoolManagementService.request("school-classes", {}, undefined, user?.id);
         const classPayload = await classResponse.json();
         if (!classResponse.ok) throw new Error((classPayload as { message?: string }).message || "Unable to load classes.");
         setClasses(Array.isArray(classPayload.data) ? classPayload.data : []);

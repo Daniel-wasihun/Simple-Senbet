@@ -133,7 +133,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
         if (classId) params.set("class_id", classId);
         if (status && status !== "all") params.set("status", status);
 
-        const res = await attendanceService.request(`/api/backend/attendance/sessions?${params.toString()}`, {
+        const res = await attendanceService.request(`attendance/sessions?${params.toString()}`, {
           headers: { Accept: "application/json" },
         });
 
@@ -168,7 +168,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
         if (date) params.set("date", date);
         if (classId) params.set("class_id", classId);
 
-        const res = await attendanceService.request(`/api/backend/attendance/summary?${params.toString()}`, {
+        const res = await attendanceService.request(`attendance/summary?${params.toString()}`, {
           headers: { Accept: "application/json" },
         });
 
@@ -191,8 +191,8 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
     try {
       const [classesRes, coursesRes] = await Promise.all([
-        hasPermission("school-classes.view") ? schoolManagementService.request("/api/backend/school-classes", {}, undefined, user.id).catch(() => null) : null,
-        hasPermission("courses.view") ? schoolManagementService.request("/api/backend/courses", {}, undefined, user.id).catch(() => null) : null,
+        hasPermission("school-classes.view") ? schoolManagementService.request("school-classes", {}, undefined, user.id).catch(() => null) : null,
+        hasPermission("courses.view") ? schoolManagementService.request("courses", {}, undefined, user.id).catch(() => null) : null,
       ]);
 
       if (classesRes && classesRes.ok) {
@@ -269,7 +269,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
     setCloseError(null);
 
     try {
-      const res = await attendanceService.request(`/api/backend/attendance/sessions/${sessionToClose.id}/close`, {
+      const res = await attendanceService.request(`attendance/sessions/${sessionToClose.id}/close`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -303,7 +303,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
     if (!canDeleteAttendance || !sessionToDelete || sessionToDelete.status === "closed" || deleteSubmitting) return;
     setDeleteSubmitting(true);
     try {
-      const response = await attendanceService.request(`/api/backend/attendance/sessions/${sessionToDelete.id}`, { method: "DELETE", headers: { Accept: "application/json" } });
+      const response = await attendanceService.request(`attendance/sessions/${sessionToDelete.id}`, { method: "DELETE", headers: { Accept: "application/json" } });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || "Unable to delete attendance session.");
       setActionSuccessMsg(`Attendance session #${sessionToDelete.id} deleted.`);
@@ -321,7 +321,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
     setCreateError(null);
 
     try {
-      const res = await attendanceService.request("/api/backend/attendance/sessions", {
+      const res = await attendanceService.request("attendance/sessions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -91,7 +91,7 @@ function AttendanceTakingContent() {
 
     try {
       // 1. Fetch Session Details
-      const sessionRes = await attendanceService.request(`/api/backend/attendance/sessions/${sessionId}`, {
+      const sessionRes = await attendanceService.request(`attendance/sessions/${sessionId}`, {
         headers: { Accept: "application/json" },
       });
 
@@ -134,8 +134,8 @@ function AttendanceTakingContent() {
 
       // 2. Fetch Roster with determined section
       const rosterUrl = resolvedSec
-        ? `/api/backend/attendance/sessions/${sessionId}/roster?section=${encodeURIComponent(resolvedSec)}`
-        : `/api/backend/attendance/sessions/${sessionId}/roster`;
+        ? `attendance/sessions/${sessionId}/roster?section=${encodeURIComponent(resolvedSec)}`
+        : `attendance/sessions/${sessionId}/roster`;
 
       const rosterRes = await attendanceService.request(rosterUrl, {
         headers: { Accept: "application/json" },
@@ -320,7 +320,7 @@ function AttendanceTakingContent() {
         ? [{ teacher_id: user.id, mark: "present", remarks: "Attendance recorded by teacher" }]
         : [];
 
-      const res = await attendanceService.request(`/api/backend/attendance/sessions/${session.id}/submit`, {
+      const res = await attendanceService.request(`attendance/sessions/${session.id}/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -378,7 +378,7 @@ function AttendanceTakingContent() {
     }
 
     try {
-      const res = await attendanceService.request(`/api/backend/attendance/sessions/${session.id}/marks`, {
+      const res = await attendanceService.request(`attendance/sessions/${session.id}/marks`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -414,7 +414,7 @@ function AttendanceTakingContent() {
     setCloseError(null);
 
     try {
-      const res = await attendanceService.request(`/api/backend/attendance/sessions/${session.id}/close`, {
+      const res = await attendanceService.request(`attendance/sessions/${session.id}/close`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

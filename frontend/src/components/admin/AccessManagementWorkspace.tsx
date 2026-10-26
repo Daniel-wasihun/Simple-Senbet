@@ -74,7 +74,7 @@ export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTa
   const [pendingConfirmation, setPendingConfirmation] = useState<{ title: string; description: string; action: () => void } | null>(null);
 
   const request = useCallback(async (path: string, method = "GET", body?: unknown) => {
-    const response = await accessManagementService.request(`/api/backend/${path}`, method, body, user?.id);
+    const response = await accessManagementService.request(path, method, body, user?.id);
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.message || t("administration.requestFailed"));
     return payload as Record<string, unknown>;

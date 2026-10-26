@@ -124,7 +124,7 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
   useEffect(() => {
     async function fetchClasses() {
       try {
-        const res = await schoolManagementService.request("/api/backend/school-classes", {
+        const res = await schoolManagementService.request("school-classes", {
           headers: { Accept: "application/json" },
         }, undefined, user?.id);
         if (res.ok) {

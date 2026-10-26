@@ -76,7 +76,7 @@ export function SchoolManagementWorkspace({ module }: { module: SchoolModule }) 
 
   const can = useCallback((key: string) => permissions.has(key), [permissions]);
   const request = useCallback(async (path: string, method = "GET", body?: unknown) => {
-    const response = await schoolManagementService.request(`/api/backend/${path}`, method, body, user?.id);
+    const response = await schoolManagementService.request(path, method, body, user?.id);
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
       const validation = result.errors && typeof result.errors === "object" ? Object.values(result.errors as Record<string, unknown>).flat().map(String).join(" ") : "";

@@ -40,7 +40,7 @@ export function PromotionWorkspace() {
   const [confirmCommit, setConfirmCommit] = useState(false);
 
   async function request(path: string, body?: unknown) {
-    const response = await promotionService.request(`/api/backend/${path}`, body ? "POST" : "GET", body, user?.id);
+    const response = await promotionService.request(path, body ? "POST" : "GET", body, user?.id);
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error((result as { message?: string }).message ?? t("management.requestFailed"));
     return result as Record<string, unknown>;
