@@ -5,7 +5,7 @@ import { apiService } from "@/services/api.service";
 export interface BackendResponse<T = Record<string, unknown>> {
   ok: boolean;
   status: number;
-  json: () => Promise<T>;
+  json: () => Promise<any>;
 }
 
 type RequestOptions = RequestInit & { cacheTtl?: number };
