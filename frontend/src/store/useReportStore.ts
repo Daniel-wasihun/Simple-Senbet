@@ -7,6 +7,7 @@ import {
 import {
   isFresh,
   LONG_STORE_TTL,
+  extractErrorMessage,
   type CacheOptions,
 } from "@/store/cacheUtils";
 
@@ -62,8 +63,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || "Unable to load class gradebook.";
+        const message = extractErrorMessage(json, "Unable to load class gradebook.");
         set((state) => ({
           loading: { ...state.loading, [key]: false },
           error: { ...state.error, [key]: message },
@@ -116,8 +116,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || "Unable to load student report card.";
+        const message = extractErrorMessage(json, "Unable to load student report card.");
         set((state) => ({
           loading: { ...state.loading, [key]: false },
           error: { ...state.error, [key]: message },

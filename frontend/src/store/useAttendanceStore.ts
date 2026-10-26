@@ -14,12 +14,15 @@ import type {
 import {
   isFresh,
   DEFAULT_STORE_TTL,
+  extractDataAndPagination,
+  extractErrorMessage,
   type CacheOptions,
+  type PaginationMeta,
 } from "@/store/cacheUtils";
 
 interface AttendanceState {
   sessions: AttendanceSessionRecord[];
-  pagination: any | null;
+  pagination: PaginationMeta | null;
   summary: AttendanceSummaryData | null;
   currentSession: AttendanceDetailSession | null;
   roster: RosterStudent[];
@@ -36,7 +39,7 @@ interface AttendanceState {
   fetchSessions: (
     filters?: AttendanceFilters,
     options?: CacheOptions
-  ) => Promise<{ data: AttendanceSessionRecord[]; pagination?: any }>;
+  ) => Promise<{ data: AttendanceSessionRecord[]; pagination: PaginationMeta }>;
   fetchSummary: (
     date?: string,
     classId?: number | string,
@@ -85,12 +88,12 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     const { sessions, pagination, lastSessionFilter, sessionsTimestamp, sessionsLoading } = get();
     const ttl = options.ttl ?? DEFAULT_STORE_TTL;
 
-    if (!options.force && lastSessionFilter === query && isFresh(sessionsTimestamp, ttl) && sessions.length > 0) {
+    if (!options.force && lastSessionFilter === query && isFresh(sessionsTimestamp, ttl) && sessions.length > 0 && pagination) {
       return { data: sessions, pagination };
     }
 
     if (sessionsLoading && lastSessionFilter === query) {
-      return { data: sessions, pagination };
+      return { data: sessions, pagination: pagination ?? { total: sessions.length, last_page: 1, current_page: 1, per_page: 15 } };
     }
 
     set({ sessionsLoading: true, error: null });
@@ -100,22 +103,15 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || "Unable to load attendance sessions.";
+        const message = extractErrorMessage(json, "Unable to load attendance sessions.");
         set({ sessionsLoading: false, error: message });
         throw new Error(message);
       }
 
-      const raw = (json as any)?.data ?? json;
-      const dataList: AttendanceSessionRecord[] = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.data)
-        ? raw.data
-        : [];
-      const pg = (json as any)?.pagination ?? (raw as any)?.pagination ?? null;
+      const { data, pagination: pg } = extractDataAndPagination<AttendanceSessionRecord>(json);
 
       set({
-        sessions: dataList,
+        sessions: data,
         pagination: pg,
         lastSessionFilter: query,
         sessionsTimestamp: Date.now(),
@@ -123,7 +119,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         error: null,
       });
 
-      return { data: dataList, pagination: pg };
+      return { data, pagination: pg };
     } catch (err) {
       set({
         sessionsLoading: false,
@@ -186,8 +182,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || `Failed to load attendance session #${id}.`;
+        const message = extractErrorMessage(json, `Failed to load attendance session #${id}.`);
         set({ detailLoading: false, error: message });
         throw new Error(message);
       }
@@ -226,8 +221,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       const res = await attendanceService.create(payload);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const message = (json as { message?: string }).message || "Unable to create attendance session.";
-        throw new Error(message);
+        throw new Error(extractErrorMessage(json, "Unable to create attendance session."));
       }
       get().invalidate("all");
       return json;
@@ -242,8 +236,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       const res = await attendanceService.submit(id, payload);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const message = (json as { message?: string }).message || "Failed to submit attendance.";
-        throw new Error(message);
+        throw new Error(extractErrorMessage(json, "Failed to submit attendance."));
       }
       get().invalidate("all");
       return json;
@@ -258,8 +251,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       const res = await attendanceService.correct(id, payload);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const message = (json as { message?: string }).message || "Failed to save mark corrections.";
-        throw new Error(message);
+        throw new Error(extractErrorMessage(json, "Failed to save mark corrections."));
       }
       get().invalidate("all");
       return json;
@@ -274,8 +266,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       const res = await attendanceService.close(id);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const message = (json as { message?: string }).message || "Failed to close attendance session.";
-        throw new Error(message);
+        throw new Error(extractErrorMessage(json, "Failed to close attendance session."));
       }
       get().invalidate("all");
       return json;
@@ -290,8 +281,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       const res = await attendanceService.remove(id);
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        const message = (json as { message?: string }).message || `Failed to delete attendance session #${id}.`;
-        throw new Error(message);
+        throw new Error(extractErrorMessage(json, `Failed to delete attendance session #${id}.`));
       }
       set((state) => ({
         sessions: state.sessions.filter((s) => s.id !== Number(id)),

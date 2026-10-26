@@ -9,14 +9,11 @@ import {
   isFresh,
   DEFAULT_STORE_TTL,
   LONG_STORE_TTL,
+  extractDataAndPagination,
+  extractErrorMessage,
   type CacheOptions,
+  type PaginationMeta,
 } from "@/store/cacheUtils";
-
-interface PaginationMeta {
-  total: number;
-  pages: number;
-  page: number;
-}
 
 interface SchoolState {
   items: Record<string, any[]>;
@@ -71,23 +68,6 @@ interface SchoolState {
   clearError: (key?: string) => void;
 }
 
-function extractRowsAndMeta(payload: any): { data: any[]; pagination: PaginationMeta } {
-  const container = payload?.data ?? payload;
-  const rawList = Array.isArray(container)
-    ? container
-    : Array.isArray(container?.data)
-    ? container.data
-    : [];
-
-  const meta: PaginationMeta = {
-    total: typeof container?.total === "number" ? container.total : rawList.length,
-    pages: typeof container?.last_page === "number" ? container.last_page : 1,
-    page: typeof container?.current_page === "number" ? container.current_page : 1,
-  };
-
-  return { data: rawList, pagination: meta };
-}
-
 export const useSchoolStore = create<SchoolState>((set, get) => ({
   items: {},
   pagination: {},
@@ -123,8 +103,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || `Failed to fetch ${resource}.`;
+        const message = extractErrorMessage(json, `Failed to fetch ${resource}.`);
         set((state) => ({
           loading: { ...state.loading, [key]: false },
           error: { ...state.error, [key]: message },
@@ -132,7 +111,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
         throw new Error(message);
       }
 
-      const { data, pagination } = extractRowsAndMeta(json);
+      const { data, pagination } = extractDataAndPagination(json);
 
       set((state) => ({
         items: { ...state.items, [key]: data },
@@ -180,7 +159,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
           );
           if (res.ok) {
             const json = await res.json().catch(() => ({}));
-            const { data } = extractRowsAndMeta(json);
+            const { data } = extractDataAndPagination(json);
             nextLookups[source] = data;
             nextTimestamps[`lookup:${source}`] = Date.now();
           }
@@ -190,11 +169,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
       })
     );
 
-    set({
-      lookups: nextLookups,
-      timestamps: nextTimestamps,
-    });
-
+    set({ lookups: nextLookups, timestamps: nextTimestamps });
     return nextLookups;
   },
 
@@ -202,8 +177,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     const res = await schoolManagementService.create(resource, data, userId);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const message = (json as { message?: string }).message || `Failed to create ${resource}.`;
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, `Failed to create ${resource}.`));
     }
     get().invalidate(resource);
     return json;
@@ -213,8 +187,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     const res = await schoolManagementService.update(resource, id, data, userId);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const message = (json as { message?: string }).message || `Failed to update ${resource}.`;
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, `Failed to update ${resource}.`));
     }
     get().invalidate(resource);
     return json;
@@ -224,8 +197,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     const res = await schoolManagementService.delete(resource, id, userId);
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      const message = (json as { message?: string }).message || `Failed to delete ${resource}.`;
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, `Failed to delete ${resource}.`));
     }
     get().invalidate(resource);
   },
@@ -234,8 +206,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     const res = await schoolManagementService.endTeachingAssignment(id, endDate, userId);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const message = (json as { message?: string }).message || "Failed to end teaching assignment.";
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, "Failed to end teaching assignment."));
     }
     get().invalidate("teaching-assignments");
     return json;
@@ -245,8 +216,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     const res = await schoolManagementService.transferStudent(memberId, payload, userId);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const message = (json as { message?: string }).message || "Failed to transfer student.";
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, "Failed to transfer student."));
     }
     get().invalidate("enrollments");
     return json;
@@ -256,8 +226,7 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
     const res = await schoolManagementService.withdrawStudent(memberId, payload, userId);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const message = (json as { message?: string }).message || "Failed to withdraw student.";
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, "Failed to withdraw student."));
     }
     get().invalidate("enrollments");
     return json;

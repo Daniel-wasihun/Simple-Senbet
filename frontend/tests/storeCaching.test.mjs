@@ -30,6 +30,88 @@ describe("Store Cache Utility (isFresh)", () => {
   });
 });
 
+describe("Store Helper Utilities (extractDataAndPagination & extractErrorMessage)", () => {
+  function extractDataAndPagination(payload, defaultPerPage = 15) {
+    const container = payload?.data ?? payload;
+    const rawList = Array.isArray(container)
+      ? container
+      : Array.isArray(container?.data)
+      ? container.data
+      : [];
+
+    const metaSource =
+      payload?.pagination ??
+      (container && typeof container === "object" && !Array.isArray(container) ? container : payload);
+
+    const total = typeof metaSource?.total === "number" ? metaSource.total : rawList.length;
+    const last_page = typeof metaSource?.last_page === "number"
+      ? metaSource.last_page
+      : typeof metaSource?.pages === "number"
+      ? metaSource.pages
+      : 1;
+    const current_page = typeof metaSource?.current_page === "number"
+      ? metaSource.current_page
+      : typeof metaSource?.page === "number"
+      ? metaSource.page
+      : 1;
+    const per_page = typeof metaSource?.per_page === "number" ? metaSource.per_page : defaultPerPage;
+
+    return {
+      data: rawList,
+      pagination: { total, last_page, current_page, per_page },
+    };
+  }
+
+  function extractErrorMessage(json, fallback = "The request failed.") {
+    if (!json || typeof json !== "object") return fallback;
+    if (json.errors && typeof json.errors === "object") {
+      const errorList = Object.values(json.errors).flat().map(String).filter(Boolean);
+      if (errorList.length > 0) return errorList.join(" ");
+    }
+    return json.message || fallback;
+  }
+
+  it("extracts data and pagination from paginated Laravel response", () => {
+    const payload = {
+      data: [{ id: 1, name: "Section A" }, { id: 2, name: "Section B" }],
+      total: 50,
+      last_page: 5,
+      current_page: 1,
+      per_page: 10,
+    };
+    const { data, pagination } = extractDataAndPagination(payload);
+    assert.equal(data.length, 2);
+    assert.equal(pagination.total, 50);
+    assert.equal(pagination.last_page, 5);
+    assert.equal(pagination.current_page, 1);
+  });
+
+  it("extracts data and pagination from raw arrays safely", () => {
+    const payload = [{ id: 10 }, { id: 20 }];
+    const { data, pagination } = extractDataAndPagination(payload);
+    assert.equal(data.length, 2);
+    assert.equal(pagination.total, 2);
+    assert.equal(pagination.last_page, 1);
+  });
+
+  it("extracts validation errors into readable message", () => {
+    const json = {
+      message: "The given data was invalid.",
+      errors: {
+        email: ["The email field is required."],
+        name: ["The name is too short.", "Name must be string."],
+      },
+    };
+    const msg = extractErrorMessage(json);
+    assert.equal(msg, "The email field is required. The name is too short. Name must be string.");
+  });
+
+  it("falls back to message or default when errors are absent", () => {
+    assert.equal(extractErrorMessage({ message: "Custom error" }), "Custom error");
+    assert.equal(extractErrorMessage(null, "Fallback"), "Fallback");
+  });
+});
+
 describe("School Store Cache Lifecycle", () => {
   it("serves cached items when within TTL and not forced", async () => {
     let networkCallCount = 0;

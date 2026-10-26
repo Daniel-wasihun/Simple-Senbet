@@ -8,6 +8,8 @@ import {
 import {
   isFresh,
   LONG_STORE_TTL,
+  extractDataAndPagination,
+  extractErrorMessage,
   type CacheOptions,
 } from "@/store/cacheUtils";
 
@@ -94,8 +96,7 @@ export const useAccessStore = create<AccessState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || `Unable to load ${resource}.`;
+        const message = extractErrorMessage(json, `Unable to load ${resource}.`);
         set((state) => ({
           loading: { ...state.loading, [key]: false },
           error: { ...state.error, [key]: message },
@@ -103,21 +104,16 @@ export const useAccessStore = create<AccessState>((set, get) => ({
         throw new Error(message);
       }
 
-      const container = (json as any)?.data ?? json;
-      const rawList: any[] = Array.isArray(container)
-        ? container
-        : Array.isArray(container?.data)
-        ? container.data
-        : [];
+      const { data } = extractDataAndPagination(json);
 
       set((state) => ({
-        [resource]: rawList,
+        [resource]: data,
         timestamps: { ...state.timestamps, [key]: Date.now() },
         loading: { ...state.loading, [key]: false },
         error: { ...state.error, [key]: null },
       }));
 
-      return rawList;
+      return data;
     } catch (err) {
       set((state) => ({
         loading: { ...state.loading, [key]: false },
@@ -146,7 +142,7 @@ export const useAccessStore = create<AccessState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        const perms = Array.isArray((json as any)?.data) ? (json as any).data : Array.isArray(json) ? json : [];
+        const perms = extractDataAndPagination(json).data;
         set((state) => ({
           rolePermissions: { ...state.rolePermissions, [roleId]: perms },
           timestamps: { ...state.timestamps, [key]: Date.now() },
@@ -166,8 +162,7 @@ export const useAccessStore = create<AccessState>((set, get) => ({
     const response = await accessManagementService.create(resource, data, userId);
     const json = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = (json as { message?: string }).message || `Failed to create ${resource}.`;
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, `Failed to create ${resource}.`));
     }
     get().invalidate(resource);
     return json;
@@ -177,8 +172,7 @@ export const useAccessStore = create<AccessState>((set, get) => ({
     const response = await accessManagementService.update(resource, id, data, userId);
     const json = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = (json as { message?: string }).message || `Failed to update ${resource}.`;
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, `Failed to update ${resource}.`));
     }
     get().invalidate(resource);
     return json;
@@ -188,8 +182,7 @@ export const useAccessStore = create<AccessState>((set, get) => ({
     const response = await accessManagementService.delete(resource, id, userId);
     if (!response.ok) {
       const json = await response.json().catch(() => ({}));
-      const message = (json as { message?: string }).message || `Failed to delete ${resource}.`;
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, `Failed to delete ${resource}.`));
     }
     get().invalidate(resource);
   },
@@ -198,8 +191,7 @@ export const useAccessStore = create<AccessState>((set, get) => ({
     const response = await accessManagementService.assignUserRoles(userId, roleIds, actorId);
     const json = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = (json as { message?: string }).message || "Failed to assign roles.";
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, "Failed to assign roles."));
     }
     get().invalidate("users");
     return json;
@@ -209,8 +201,7 @@ export const useAccessStore = create<AccessState>((set, get) => ({
     const response = await accessManagementService.syncRolePermissions(roleId, permissionIds, actorId);
     const json = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = (json as { message?: string }).message || "Failed to save permissions.";
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, "Failed to save permissions."));
     }
     get().invalidate("roles");
     set((state) => {

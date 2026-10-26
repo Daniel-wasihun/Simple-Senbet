@@ -8,19 +8,15 @@ import {
 import {
   isFresh,
   DEFAULT_STORE_TTL,
+  extractDataAndPagination,
+  extractErrorMessage,
   type CacheOptions,
+  type PaginationMeta,
 } from "@/store/cacheUtils";
-
-interface MemberPagination {
-  total: number;
-  last_page: number;
-  current_page: number;
-  per_page: number;
-}
 
 interface MemberState {
   items: MemberRecord[];
-  pagination: MemberPagination | null;
+  pagination: PaginationMeta | null;
   activeMember: MemberRecord | null;
   loading: boolean;
   error: string | null;
@@ -31,7 +27,7 @@ interface MemberState {
   fetchMembers: (
     params?: Record<string, string | number>,
     options?: CacheOptions & { userId?: number }
-  ) => Promise<{ items: MemberRecord[]; pagination: MemberPagination }>;
+  ) => Promise<{ items: MemberRecord[]; pagination: PaginationMeta }>;
   fetchMemberDetail: (
     id: number | string,
     options?: CacheOptions & { userId?: number }
@@ -86,28 +82,15 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || "Unable to load members.";
+        const message = extractErrorMessage(json, "Unable to load members.");
         set({ loading: false, error: message });
         throw new Error(message);
       }
 
-      const container = (json as any)?.data ?? json;
-      const rawList: MemberRecord[] = Array.isArray(container)
-        ? container
-        : Array.isArray(container?.data)
-        ? container.data
-        : [];
-
-      const parsedPagination: MemberPagination = {
-        total: typeof container?.total === "number" ? container.total : rawList.length,
-        last_page: typeof container?.last_page === "number" ? container.last_page : 1,
-        current_page: typeof container?.current_page === "number" ? container.current_page : 1,
-        per_page: typeof container?.per_page === "number" ? container.per_page : 15,
-      };
+      const { data, pagination: parsedPagination } = extractDataAndPagination<MemberRecord>(json);
 
       set({
-        items: rawList,
+        items: data,
         pagination: parsedPagination,
         currentQuery: query,
         timestamp: Date.now(),
@@ -115,7 +98,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
         error: null,
       });
 
-      return { items: rawList, pagination: parsedPagination };
+      return { items: data, pagination: parsedPagination };
     } catch (err) {
       set({
         loading: false,
@@ -140,8 +123,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || `Unable to load member #${id}.`;
+        const message = extractErrorMessage(json, `Unable to load member #${id}.`);
         set({ loading: false, error: message });
         throw new Error(message);
       }
@@ -162,8 +144,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     const response = await membersService.create(data, userId);
     const json = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = (json as { message?: string }).message || "Unable to create member.";
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, "Unable to create member."));
     }
     get().invalidate();
     return ((json as any)?.data ?? json) as MemberRecord;
@@ -173,14 +154,13 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     const response = await membersService.update(id, data, userId);
     const json = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message = (json as { message?: string }).message || `Unable to update member #${id}.`;
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, `Unable to update member #${id}.`));
     }
     const updated = ((json as any)?.data ?? json) as MemberRecord;
     set((state) => ({
       items: state.items.map((m) => (m.id === Number(id) ? { ...m, ...updated } : m)),
       activeMember: state.activeMember?.id === Number(id) ? { ...state.activeMember, ...updated } : state.activeMember,
-      timestamp: 0, // Invalidate list cache timestamp
+      timestamp: 0,
     }));
     return updated;
   },
@@ -189,8 +169,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
     const response = await membersService.delete(id, userId);
     if (!response.ok) {
       const json = await response.json().catch(() => ({}));
-      const message = (json as { message?: string }).message || `Unable to delete member #${id}.`;
-      throw new Error(message);
+      throw new Error(extractErrorMessage(json, `Unable to delete member #${id}.`));
     }
     set((state) => ({
       items: state.items.filter((m) => m.id !== Number(id)),

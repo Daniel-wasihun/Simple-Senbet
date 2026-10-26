@@ -8,14 +8,17 @@ import {
   isFresh,
   DEFAULT_STORE_TTL,
   LONG_STORE_TTL,
+  extractDataAndPagination,
+  extractErrorMessage,
   type CacheOptions,
+  type PaginationMeta,
 } from "@/store/cacheUtils";
 
 interface PaymentState {
   dashboard: any | null;
   rules: any | null;
   ledger: any[];
-  ledgerPagination: any | null;
+  ledgerPagination: PaginationMeta | null;
   memberHistory: Record<string, any>;
   dashboardLoading: boolean;
   ledgerLoading: boolean;
@@ -40,7 +43,7 @@ interface PaymentState {
   fetchLedger: (
     params?: Record<string, string | number>,
     options?: CacheOptions & { userId?: number }
-  ) => Promise<{ data: any[]; pagination: any }>;
+  ) => Promise<{ data: any[]; pagination: PaginationMeta }>;
   fetchMemberHistory: (
     id: number | string,
     month?: string,
@@ -91,8 +94,7 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || "Unable to load payments dashboard.";
+        const message = extractErrorMessage(json, "Unable to load payments dashboard.");
         set({ dashboardLoading: false, error: message });
         throw new Error(message);
       }
@@ -166,12 +168,12 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
     const { ledger, ledgerPagination, timestamps, ledgerLoading } = get();
     const ttl = options.ttl ?? DEFAULT_STORE_TTL;
 
-    if (!options.force && isFresh(timestamps.ledger[queryKey], ttl) && ledger.length > 0) {
+    if (!options.force && isFresh(timestamps.ledger[queryKey], ttl) && ledger.length > 0 && ledgerPagination) {
       return { data: ledger, pagination: ledgerPagination };
     }
 
     if (ledgerLoading) {
-      return { data: ledger, pagination: ledgerPagination };
+      return { data: ledger, pagination: ledgerPagination ?? { total: ledger.length, last_page: 1, current_page: 1, per_page: 15 } };
     }
 
     set({ ledgerLoading: true, error: null });
@@ -181,22 +183,15 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       const json = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const message =
-          (json as { message?: string }).message || "Unable to load payments ledger.";
+        const message = extractErrorMessage(json, "Unable to load payments ledger.");
         set({ ledgerLoading: false, error: message });
         throw new Error(message);
       }
 
-      const container = (json as any)?.data ?? json;
-      const rawList = Array.isArray(container)
-        ? container
-        : Array.isArray(container?.data)
-        ? container.data
-        : [];
-      const pg = (json as any)?.pagination ?? (container as any)?.pagination ?? null;
+      const { data, pagination: pg } = extractDataAndPagination(json);
 
       set((state) => ({
-        ledger: rawList,
+        ledger: data,
         ledgerPagination: pg,
         timestamps: {
           ...state.timestamps,
@@ -206,7 +201,7 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
         error: null,
       }));
 
-      return { data: rawList, pagination: pg };
+      return { data, pagination: pg };
     } catch (err) {
       set({
         ledgerLoading: false,
@@ -248,8 +243,7 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       const res = await paymentsService.record(payload, userId);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const message = (json as { message?: string }).message || "Unable to record payment.";
-        throw new Error(message);
+        throw new Error(extractErrorMessage(json, "Unable to record payment."));
       }
       get().invalidate();
       return json;
@@ -264,8 +258,7 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       const res = await paymentsService.void(id, payload, userId);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const message = (json as { message?: string }).message || "Unable to void payment.";
-        throw new Error(message);
+        throw new Error(extractErrorMessage(json, "Unable to void payment."));
       }
       get().invalidate();
       return json;
@@ -280,8 +273,7 @@ export const usePaymentStore = create<PaymentState>((set, get) => ({
       const res = await paymentsService.saveRules(payload, userId);
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const message = (json as { message?: string }).message || "Unable to save payment rules.";
-        throw new Error(message);
+        throw new Error(extractErrorMessage(json, "Unable to save payment rules."));
       }
       set((state) => ({
         timestamps: { ...state.timestamps, rules: 0 },
