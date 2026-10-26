@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { TableShimmerSkeleton, FinancePaymentsShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 import { AppSelect } from "@/components/ui/AppSelect";
+import { LocalizedFieldInput, SupportedLocale } from "@/components/admin/LocalizedFieldInput";
 import { useRouter } from "next/navigation";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { paymentsService } from "@/services/payments.service";
@@ -101,8 +102,12 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
 
   // Rules Configuration Modal (Admin)
   const [showRuleModal, setShowRuleModal] = useState<boolean>(false);
-  const [ruleNameEn, setRuleNameEn] = useState<string>("Standard Monthly Contribution");
-  const [ruleNameAm, setRuleNameAm] = useState<string>("ወርሃዊ የአባላት መዋጮ");
+  const [ruleName, setRuleName] = useState<Record<string, string>>({
+    en: "Standard Monthly Contribution",
+    am: "ወርሃዊ የአባላት መዋጮ",
+    om: "Buusii Ji’aa Idilee",
+  });
+  const [ruleEntryLanguage, setRuleEntryLanguage] = useState<SupportedLocale>("en");
   const [ruleAmount, setRuleAmount] = useState<string>("50.00");
   const [ruleMinAge, setRuleMinAge] = useState<string>("18");
   const [ruleMinClassId, setRuleMinClassId] = useState<string>("");
@@ -372,6 +377,11 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
     e.preventDefault();
     if (!canManageRules || submittingRule) return;
 
+    if (!ruleName.en?.trim()) {
+      setRuleError("English rule name is mandatory.");
+      return;
+    }
+
     const amt = parseFloat(ruleAmount);
     if (isNaN(amt) || amt < 0) {
       setRuleError("Please enter a valid contribution amount.");
@@ -382,6 +392,10 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
     setRuleError(null);
 
     try {
+      const cleanName: Record<string, string> = { en: ruleName.en.trim() };
+      if (ruleName.am?.trim()) cleanName.am = ruleName.am.trim();
+      if (ruleName.om?.trim()) cleanName.om = ruleName.om.trim();
+
       const res = await paymentRequest("/api/backend/payments/rules", {
         method: "POST",
         headers: {
@@ -389,10 +403,7 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
           Accept: "application/json",
         },
         body: JSON.stringify({
-          name: {
-            en: ruleNameEn.trim(),
-            am: ruleNameAm.trim() || ruleNameEn.trim(),
-          },
+          name: cleanName,
           amount: amt,
           minimum_age: ruleMinAge ? parseInt(ruleMinAge, 10) : null,
           minimum_class_id: ruleMinClassId ? parseInt(ruleMinClassId, 10) : null,
@@ -1395,18 +1406,30 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
 
       {/* Configure Payment Rules Modal (Admin) */}
       {showRuleModal && canManageRules && (
-        <AdminModal open={Boolean(showRuleModal && canManageRules)} onOpenChange={(open) => { if (!open && !submittingRule) setShowRuleModal(false); }} title="Configure Monthly Payment Rule" description="Define contribution rates, age limits, and class criteria" size="md" showHeader={false}>
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Configure Monthly Payment Rule</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Define contribution rates, age limits, and class criteria</p>
-              </div>
-              <button onClick={() => setShowRuleModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
+        <AdminModal
+          open={Boolean(showRuleModal && canManageRules)}
+          onOpenChange={(open) => { if (!open && !submittingRule) setShowRuleModal(false); }}
+          title="Configure Monthly Payment Rule"
+          description="Define contribution rates, age limits, and class criteria"
+          size="lg"
+          showHeader={true}
+          headerAction={
+            <div className="w-36 sm:w-44">
+              <AppSelect
+                value={ruleEntryLanguage}
+                onChange={(val) => setRuleEntryLanguage(val as SupportedLocale)}
+                options={[
+                  { value: "en", label: "English (en)" },
+                  { value: "am", label: "አማርኛ (am)" },
+                  { value: "om", label: "Afaan Oromoo (om)" },
+                ]}
+                size="sm"
+                ariaLabel="Payment rule language"
+              />
             </div>
-
+          }
+        >
+          <div className="space-y-4">
             {ruleError && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800">
                 {ruleError}
@@ -1414,31 +1437,14 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
             )}
 
             <form onSubmit={handleSaveRule} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Rule Name (English) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={ruleNameEn}
-                    onChange={(e) => setRuleNameEn(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Rule Name (Amharic)
-                  </label>
-                  <input
-                    type="text"
-                    value={ruleNameAm}
-                    onChange={(e) => setRuleNameAm(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
-                  />
-                </div>
-              </div>
+              <LocalizedFieldInput
+                label="Rule Name"
+                value={ruleName}
+                onChange={setRuleName}
+                activeLocale={ruleEntryLanguage}
+                onLocaleChange={setRuleEntryLanguage}
+                required={true}
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
