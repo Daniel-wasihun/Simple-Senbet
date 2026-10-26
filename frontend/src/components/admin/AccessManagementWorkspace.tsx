@@ -7,6 +7,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { accessManagementService } from "@/services/accessManagement.service";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 
 type AccessTab = "users" | "roles" | "permissions";
 type RoleRecord = { id: number; name: string; label?: Record<string, string> | string; permissions?: PermissionRecord[] | { data?: PermissionRecord[] }; users_count?: number };
@@ -193,7 +194,7 @@ export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTa
       {availableTabs.map((item) => <button key={item} role="tab" aria-selected={tab === item} onClick={() => setTab(item)} className={`rounded-md px-3 py-2 text-sm font-medium transition ${tab === item ? "bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}>{t(`administration.tabs.${item}`)}</button>)}
     </div>
 
-    {loading ? <div className="flex min-h-56 items-center justify-center text-sm text-slate-500"><LoaderCircle className="mr-2 h-5 w-5 animate-spin" />{t("administration.loading")}</div> : <>
+    {loading ? <div className="pt-6"><TableShimmerSkeleton rows={6} columns={4} /></div> : <>
       {tab === "users" && canViewUsers && <section className="pt-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("administration.usersTitle")}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("administration.usersDescription")}</p></div>{canCreateUser && <button onClick={() => setCreateUserOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-blue-700 px-3.5 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"><Plus className="h-4 w-4" />{t("administration.addUser")}</button>}</div>
         {createUserOpen && canCreateUser && <AdminModal open={createUserOpen} onOpenChange={(open) => { if (!open && !saving) setCreateUserOpen(false); }} title={t("administration.addUser")} description={t("administration.modalDescription", { defaultValue: "Enter the account details and initial role." })} size="lg"><form onSubmit={(event) => void submitNewUser(event)} className="mb-5 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3 dark:border-slate-800 dark:bg-slate-900">

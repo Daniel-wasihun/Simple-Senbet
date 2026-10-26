@@ -8,7 +8,7 @@ import { AdminModal } from "@/components/admin/AdminModal";
 import { attendanceService } from "@/services/attendance.service";
 import { formatText } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { TableShimmerSkeleton, DashboardAppShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 import {
   AttendanceMark,
   AttendanceDetailSession,
@@ -1024,16 +1024,7 @@ function AttendanceTakingContent() {
 
 export default function AttendanceTakingPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-medium text-slate-600">Loading Attendance Portal...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<DashboardAppShimmerSkeleton />}>
       <AttendanceTakingContent />
     </Suspense>
   );

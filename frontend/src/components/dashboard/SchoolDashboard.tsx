@@ -42,6 +42,10 @@ import {
   PaginationMeta,
   ClassGradebookData,
 } from "@/types/auth";
+import {
+  DashboardContentShimmerSkeleton,
+  TableShimmerSkeleton,
+} from "@/components/ui/DashboardShimmerSkeleton";
 
 export type SchoolDashboardArea = "overview" | "academic" | "attendance";
 
@@ -433,11 +437,8 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-slate-600">Loading Simple Senbet Dashboard...</p>
-        </div>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <DashboardContentShimmerSkeleton />
       </div>
     );
   }
@@ -833,11 +834,8 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
               </div>
 
               {dataLoading ? (
-                <div className="p-8 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center">
-                  <div className="flex items-center gap-3 text-slate-500 text-sm">
-                    <RefreshCw className="w-5 h-5 animate-spin text-indigo-600" />
-                    <span>Loading authorized attendance sessions...</span>
-                  </div>
+                <div className="p-6 rounded-2xl bg-white border border-slate-200/80">
+                  <TableShimmerSkeleton rows={4} columns={5} />
                 </div>
               ) : sessions.length === 0 ? (
                 <div className="p-8 rounded-2xl bg-white border border-slate-200/80 text-center">
@@ -1213,11 +1211,8 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
               {/* Sessions Table */}
               {dataLoading ? (
-                <div className="p-8 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center">
-                  <div className="flex items-center gap-3 text-slate-500 text-sm">
-                    <RefreshCw className="w-5 h-5 animate-spin text-indigo-600" />
-                    <span>Loading attendance sessions...</span>
-                  </div>
+                <div className="p-6 rounded-2xl bg-white border border-slate-200/80">
+                  <TableShimmerSkeleton rows={5} columns={6} />
                 </div>
               ) : sessions.length === 0 ? (
                 <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center">
@@ -1407,9 +1402,8 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
               {/* Gradebook Content Table */}
               <div className="pt-4">
                 {gradebookLoading ? (
-                  <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
-                    <RefreshCw className="w-6 h-6 animate-spin text-amber-600" />
-                    <p className="text-xs font-medium">Loading authoritative class gradebook...</p>
+                  <div className="p-4 rounded-xl bg-white border border-slate-200/80">
+                    <TableShimmerSkeleton rows={5} columns={6} />
                   </div>
                 ) : gradebookError ? (
                   <div className="py-8 text-center bg-rose-50 border border-rose-100 rounded-2xl p-4">
