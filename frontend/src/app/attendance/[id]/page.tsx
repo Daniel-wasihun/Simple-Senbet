@@ -4,14 +4,11 @@ import React, { useEffect, useState, useCallback, useMemo, Suspense } from "reac
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-<<<<<<< HEAD
 import { AdminModal } from "@/components/admin/AdminModal";
 import { attendanceService } from "@/services/attendance.service";
-=======
 import { formatText } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
->>>>>>> a378e74b7d0c0655c530b3caf73fb1fc9f00426b
 import {
   AttendanceMark,
   AttendanceDetailSession,

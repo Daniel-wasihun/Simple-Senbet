@@ -35,10 +35,12 @@ class MemberPaymentTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+
         // Roles
-        $adminRole = Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'web']);
-        $teacherRole = Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
-        $studentRole = Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+        $adminRole = Role::findByName('superadmin', 'web');
+        $teacherRole = Role::findByName('teacher', 'web');
+        $studentRole = Role::findByName('student', 'web');
 
         $this->admin = User::factory()->create(['role_id' => $adminRole->id]);
         $this->admin->syncRoles(['superadmin']);

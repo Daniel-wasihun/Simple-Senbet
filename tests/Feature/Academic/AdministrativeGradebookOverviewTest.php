@@ -43,9 +43,11 @@ class AdministrativeGradebookOverviewTest extends TestCase
     {
         parent::setUp();
 
-        $superRole = Role::create(['name' => 'superadmin', 'guard_name' => 'web']);
-        $directorRole = Role::create(['name' => 'academic_director', 'guard_name' => 'web']);
-        $teacherRole = Role::create(['name' => 'teacher', 'guard_name' => 'web']);
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+
+        $superRole = Role::findByName('superadmin', 'web');
+        $directorRole = Role::findByName('academic_director', 'web');
+        $teacherRole = Role::findByName('teacher', 'web');
 
         $this->superadmin = User::factory()->create(['role_id' => $superRole->id]);
         $this->superadmin->syncRoles(['superadmin']);

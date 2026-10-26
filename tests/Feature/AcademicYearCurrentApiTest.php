@@ -14,9 +14,11 @@ class AcademicYearCurrentApiTest extends TestCase
 
     public function test_authenticated_user_can_retrieve_current_academic_year(): void
     {
-        $teacherRole = Role::create(['name' => 'teacher', 'guard_name' => 'web']);
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+        $teacherRole = Role::findByName('teacher', 'web');
         $teacher = User::factory()->create(['role_id' => $teacherRole->id]);
         $teacher->syncRoles(['teacher']);
+        $teacherRole->givePermissionTo('academic-years.view');
 
         AcademicYear::create([
             'name' => '2024-2025 Academic Year',

@@ -140,36 +140,82 @@ test("BFF Security - Route Allowlist Validation", async (t) => {
     assert.equal(validateProxyPathAndMethod("GET", ["report-cards", "class", "5", "export", "print"]).allowed, true);
   });
 
-  await t.test("Rejects unpermitted methods on read-only routes with 405", () => {
-    const postClass = validateProxyPathAndMethod("POST", ["school-classes"]);
-    assert.equal(postClass.allowed, false);
-    assert.equal(postClass.status, 405);
-
-    const deleteCourse = validateProxyPathAndMethod("DELETE", ["courses", "1"]);
-    assert.equal(deleteCourse.allowed, false);
-    assert.equal(deleteCourse.status, 405);
-
-    const deleteSession = validateProxyPathAndMethod("DELETE", ["attendance", "sessions", "1"]);
-    assert.equal(deleteSession.allowed, false);
-    assert.equal(deleteSession.status, 405);
+  await t.test("Permitted administrative and school management CRUD", () => {
+    assert.equal(validateProxyPathAndMethod("GET", ["users"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("POST", ["users"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["users", "1"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("PUT", ["users", "1", "roles"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["roles"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("POST", ["roles"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["roles", "2", "permissions"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("PUT", ["roles", "2", "permissions"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["permissions"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["academic-years"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("POST", ["academic-years"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["academic-years", "current"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["teaching-assignments"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("POST", ["teaching-assignments"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["teaching-assignments", "expected"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("POST", ["teaching-assignments", "1", "end"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("GET", ["enrollments"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("POST", ["enrollments", "members", "10", "transfer"]).allowed, true);
+    assert.equal(validateProxyPathAndMethod("POST", ["promotion", "dry-run"]).allowed, true);
   });
 
-  await t.test("Rejects administrative and unlisted endpoints with 403", () => {
-    const users = validateProxyPathAndMethod("GET", ["users"]);
-    assert.equal(users.allowed, false);
-    assert.equal(users.status, 403);
+  await t.test("Rejects unpermitted methods on restricted routes with 405", () => {
+    const postCurrentYear = validateProxyPathAndMethod("POST", ["academic-years", "current"]);
+    assert.equal(postCurrentYear.allowed, false);
+    assert.equal(postCurrentYear.status, 405);
 
-    const academicYears = validateProxyPathAndMethod("GET", ["academic-years"]);
-    assert.equal(academicYears.allowed, false);
-    assert.equal(academicYears.status, 403);
+    const postSummary = validateProxyPathAndMethod("POST", ["attendance", "summary"]);
+    assert.equal(postSummary.allowed, false);
+    assert.equal(postSummary.status, 405);
 
-    const permissions = validateProxyPathAndMethod("GET", ["permissions"]);
-    assert.equal(permissions.allowed, false);
-    assert.equal(permissions.status, 403);
+    const postExpected = validateProxyPathAndMethod("POST", ["teaching-assignments", "expected"]);
+    assert.equal(postExpected.allowed, false);
+    assert.equal(postExpected.status, 405);
 
-    const arbitrary = validateProxyPathAndMethod("GET", ["status"]);
-    assert.equal(arbitrary.allowed, false);
-    assert.equal(arbitrary.status, 403);
+    const postDashboard = validateProxyPathAndMethod("POST", ["payments", "dashboard"]);
+    assert.equal(postDashboard.allowed, false);
+    assert.equal(postDashboard.status, 405);
+
+    const getSubmit = validateProxyPathAndMethod("GET", ["attendance", "sessions", "42", "submit"]);
+    assert.equal(getSubmit.allowed, false);
+    assert.equal(getSubmit.status, 405);
+
+    const postMarks = validateProxyPathAndMethod("POST", ["attendance", "sessions", "42", "marks"]);
+    assert.equal(postMarks.allowed, false);
+    assert.equal(postMarks.status, 405);
+  });
+
+  await t.test("Rejects unlisted, sensitive, and diagnostic endpoints with 403", () => {
+    const telescope = validateProxyPathAndMethod("GET", ["telescope"]);
+    assert.equal(telescope.allowed, false);
+    assert.equal(telescope.status, 403);
+
+    const horizon = validateProxyPathAndMethod("GET", ["horizon"]);
+    assert.equal(horizon.allowed, false);
+    assert.equal(horizon.status, 403);
+
+    const debugbar = validateProxyPathAndMethod("GET", ["_debugbar"]);
+    assert.equal(debugbar.allowed, false);
+    assert.equal(debugbar.status, 403);
+
+    const authLogin = validateProxyPathAndMethod("POST", ["auth", "login"]);
+    assert.equal(authLogin.allowed, false);
+    assert.equal(authLogin.status, 403);
+
+    const status = validateProxyPathAndMethod("GET", ["status"]);
+    assert.equal(status.allowed, false);
+    assert.equal(status.status, 403);
+
+    const env = validateProxyPathAndMethod("GET", ["env"]);
+    assert.equal(env.allowed, false);
+    assert.equal(env.status, 403);
+
+    const admin = validateProxyPathAndMethod("GET", ["admin"]);
+    assert.equal(admin.allowed, false);
+    assert.equal(admin.status, 403);
   });
 
   await t.test("Rejects path traversal attempts with 400", () => {

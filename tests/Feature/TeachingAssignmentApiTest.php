@@ -32,8 +32,10 @@ class TeachingAssignmentApiTest extends TestCase
     {
         parent::setUp();
 
-        $superadminRole = Role::create(['name' => 'superadmin', 'guard_name' => 'web']);
-        $teacherRole = Role::create(['name' => 'teacher', 'guard_name' => 'web']);
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+
+        $superadminRole = Role::findByName('superadmin', 'web');
+        $teacherRole = Role::findByName('teacher', 'web');
 
         $this->superadmin = User::factory()->create(['role_id' => $superadminRole->id]);
         $this->superadmin->syncRoles(['superadmin']);

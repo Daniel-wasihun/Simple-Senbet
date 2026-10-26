@@ -86,17 +86,18 @@ class AttendanceConcurrencyTest extends TestCase
             'credit_hour' => 3,
         ]);
 
-        // Roles and Users
-        Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
+        // Canonical Roles and Users
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+        $teacherRole = Role::findByName('teacher', 'web');
+        $superadminRole = Role::findByName('superadmin', 'web');
 
-        $this->teacher = User::factory()->create(['name' => 'Primary Teacher']);
+        $this->teacher = User::factory()->create(['name' => 'Primary Teacher', 'role_id' => $teacherRole->id]);
         $this->teacher->assignRole('teacher');
 
-        $this->teacher2 = User::factory()->create(['name' => 'Assistant Teacher']);
+        $this->teacher2 = User::factory()->create(['name' => 'Assistant Teacher', 'role_id' => $teacherRole->id]);
         $this->teacher2->assignRole('teacher');
 
-        $this->superadmin = User::factory()->create(['name' => 'Super Administrator']);
+        $this->superadmin = User::factory()->create(['name' => 'Super Administrator', 'role_id' => $superadminRole->id]);
         $this->superadmin->assignRole('superadmin');
 
         // Students in Class A, Section A

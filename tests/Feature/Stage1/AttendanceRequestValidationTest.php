@@ -43,14 +43,15 @@ class AttendanceRequestValidationTest extends TestCase
     {
         parent::setUp();
 
-        Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
 
-        $this->superadmin = User::factory()->create();
+        $superRole = Role::findByName('superadmin', 'web');
+        $teacherRole = Role::findByName('teacher', 'web');
+
+        $this->superadmin = User::factory()->create(['role_id' => $superRole->id]);
         $this->superadmin->assignRole('superadmin');
 
-        $this->teacher = User::factory()->create();
+        $this->teacher = User::factory()->create(['role_id' => $teacherRole->id]);
         $this->teacher->assignRole('teacher');
 
         $this->academicYear = AcademicYear::create([

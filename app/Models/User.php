@@ -20,6 +20,8 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable;
 
+    protected string $guard_name = 'web';
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
@@ -73,6 +75,10 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permission): bool
     {
+        if ($this->hasRole('superadmin') || $this->primaryRole?->name === 'superadmin') {
+            return true;
+        }
+
         return $this->roles()
             ->whereHas('permissions', fn ($query) => $query->where('permissions.name', $permission))
             ->exists();

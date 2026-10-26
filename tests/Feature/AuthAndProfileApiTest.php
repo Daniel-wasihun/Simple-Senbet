@@ -25,8 +25,10 @@ class AuthAndProfileApiTest extends TestCase
     {
         parent::setUp();
 
-        $this->teacherRole = Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
-        $this->adminRole = Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'web']);
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+
+        $this->teacherRole = Role::findByName('teacher', 'web');
+        $this->adminRole = Role::findByName('superadmin', 'web');
     }
 
     public function test_teacher_can_login_with_valid_credentials_and_receive_assignments(): void

@@ -39,11 +39,32 @@ class AcademicYear extends Model
     protected function casts(): array
     {
         return [
-            'name' => 'array',
+            'name' => 'string',
             'start_date' => 'date',
             'end_date' => 'date',
             'is_current' => 'boolean',
         ];
+    }
+
+    /**
+     * Mutator to ensure name is always stored as a string, handling array or string inputs.
+     */
+    public function setNameAttribute(mixed $value): void
+    {
+        if (is_array($value)) {
+            $this->attributes['name'] = $value['en'] ?? $value['am'] ?? (string) reset($value);
+        } else {
+            $this->attributes['name'] = (string) $value;
+        }
+    }
+
+    public function getTranslation(string $attribute, ?string $locale = null, bool $useFallback = true): ?string
+    {
+        if ($attribute === 'name') {
+            return $this->attributes['name'] ?? null;
+        }
+
+        return parent::getTranslation($attribute, $locale, $useFallback);
     }
 
     /**

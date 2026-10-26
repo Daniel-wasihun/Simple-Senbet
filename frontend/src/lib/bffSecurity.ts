@@ -76,30 +76,6 @@ export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
     allowedMethods: ["GET"],
     description: "Daily attendance summary and absentee list",
   },
-  // 8. School Classes: GET (list classes for teacher/admin dashboard)
-  {
-    pattern: /^school-classes$/,
-    allowedMethods: ["GET"],
-    description: "List school classes",
-  },
-  // 7. School Class Details: GET
-  {
-    pattern: /^school-classes\/\d+$/,
-    allowedMethods: ["GET"],
-    description: "View school class details",
-  },
-  // 8. Courses: GET (list courses for teacher/admin dashboard)
-  {
-    pattern: /^courses$/,
-    allowedMethods: ["GET"],
-    description: "List courses",
-  },
-  // 9. Course Details: GET
-  {
-    pattern: /^courses\/\d+$/,
-    allowedMethods: ["GET"],
-    description: "View course details",
-  },
   // 10. Members: GET (student roster loading for roll-call in Milestone C)
   {
     pattern: /^members$/,

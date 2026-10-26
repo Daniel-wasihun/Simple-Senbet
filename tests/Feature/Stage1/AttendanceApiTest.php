@@ -58,21 +58,23 @@ class AttendanceApiTest extends TestCase
 
         $this->enrollmentService = app(StudentEnrollmentService::class);
 
-        Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
-        Role::firstOrCreate(['name' => 'academic_director', 'guard_name' => 'web']);
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
 
-        $this->superadmin = User::factory()->create();
+        $superRole = Role::findByName('superadmin', 'web');
+        $teacherRole = Role::findByName('teacher', 'web');
+        $studentRole = Role::findByName('student', 'web');
+        $directorRole = Role::findByName('academic_director', 'web');
+
+        $this->superadmin = User::factory()->create(['role_id' => $superRole->id]);
         $this->superadmin->assignRole('superadmin');
 
-        $this->assignedTeacher = User::factory()->create();
+        $this->assignedTeacher = User::factory()->create(['role_id' => $teacherRole->id]);
         $this->assignedTeacher->assignRole('teacher');
 
-        $this->unassignedTeacher = User::factory()->create();
+        $this->unassignedTeacher = User::factory()->create(['role_id' => $teacherRole->id]);
         $this->unassignedTeacher->assignRole('teacher');
 
-        $this->studentUser = User::factory()->create();
+        $this->studentUser = User::factory()->create(['role_id' => $studentRole->id]);
         $this->studentUser->assignRole('student');
 
         $this->academicYear = AcademicYear::create([

@@ -66,7 +66,9 @@ class AuthApiTest extends TestCase
     {
         $staffRole = Role::create(['name' => 'staff', 'guard_name' => 'web']);
         $permission = Permission::create(['name' => 'users.register', 'guard_name' => 'web']);
-        $staffRole->givePermissionTo($permission);
+        $assignPerm = Permission::firstOrCreate(['name' => 'roles.assign', 'guard_name' => 'web']);
+        $managePerm = Permission::firstOrCreate(['name' => 'roles.manage', 'guard_name' => 'web']);
+        $staffRole->givePermissionTo([$permission, $assignPerm, $managePerm]);
 
         $staff = User::factory()->create(['role_id' => $staffRole->id]);
         $staff->syncRoles(['staff']);
@@ -91,6 +93,6 @@ class AuthApiTest extends TestCase
         $this->actingAs($teacher, 'sanctum')
             ->getJson('/api/users')
             ->assertForbidden()
-            ->assertJsonPath('message', 'You are not authorized to perform this action.');
+            ->assertJsonPath('message', 'This action is unauthorized.');
     }
 }

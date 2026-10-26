@@ -65,26 +65,12 @@ class MultiRoleAcademicAcceptanceTest extends TestCase
     {
         parent::setUp();
 
-        // 1. Roles & Permissions setup
-        $this->superRole = Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'web']);
-        $this->teacherRole = Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'web']);
-        $this->studentRole = Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+        // 1. Canonical Roles & Permissions setup
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
 
-        $resources = ['users', 'school-classes', 'courses', 'members', 'assessments', 'assessment-results'];
-        $actions = ['view', 'create', 'update', 'delete'];
-
-        foreach ($resources as $res) {
-            foreach ($actions as $act) {
-                $p = Permission::firstOrCreate(['name' => "{$res}.{$act}", 'guard_name' => 'web']);
-                $this->superRole->givePermissionTo($p);
-                if ($act === 'view' || in_array($res, ['assessments', 'assessment-results'])) {
-                    $this->teacherRole->givePermissionTo($p);
-                }
-                if ($act === 'view' && in_array($res, ['school-classes', 'courses'])) {
-                    $this->studentRole->givePermissionTo($p);
-                }
-            }
-        }
+        $this->superRole = Role::findByName('superadmin', 'web');
+        $this->teacherRole = Role::findByName('teacher', 'web');
+        $this->studentRole = Role::findByName('student', 'web');
 
         // 2. Users
         $this->superadmin = User::factory()->create([

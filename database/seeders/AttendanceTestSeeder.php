@@ -68,7 +68,7 @@ class AttendanceTestSeeder extends Seeder
         // 4. Provision Academic Year
         $academicYear = AcademicYear::whereDate('start_date', '2025-09-01')->whereDate('end_date', '2026-06-30')->first();
         $academicYear ??= AcademicYear::create([
-                'name' => '2025-2026 Academic Year',
+                'name' => ['en' => '2025-2026 Academic Year', 'am' => '2025-2026 የትምህርት ዘመን'],
                 'start_date' => '2025-09-01',
                 'end_date' => '2026-06-30',
                 'is_current' => false,

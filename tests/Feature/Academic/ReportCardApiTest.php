@@ -38,8 +38,10 @@ class ReportCardApiTest extends TestCase
     {
         parent::setUp();
 
-        $superRole = Role::create(['name' => 'superadmin', 'guard_name' => 'web']);
-        $teacherRole = Role::create(['name' => 'teacher', 'guard_name' => 'web']);
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+
+        $superRole = Role::findByName('superadmin', 'web');
+        $teacherRole = Role::findByName('teacher', 'web');
 
         $this->superadmin = User::factory()->create(['role_id' => $superRole->id]);
         $this->superadmin->syncRoles(['superadmin']);

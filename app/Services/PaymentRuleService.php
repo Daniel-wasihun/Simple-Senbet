@@ -17,27 +17,49 @@ class PaymentRuleService
      *
      * @param  string  $paymentMonth  Format: YYYY-MM
      */
-    public function evaluateMemberEligibility(Member $member, string $paymentMonth): array
+    public function evaluateMemberEligibility(Member $member, string $paymentMonth, ?array $context = null): array
     {
         $monthDate = Carbon::parse($paymentMonth.'-01')->startOfDay();
 
         // 1. Resolve member's class as of the payment month
-        $classId = $this->resolveMemberClassForMonth($member->id, $monthDate) ?? $member->class_id;
+        if ($context && isset($context['enrollments'])) {
+            $memberEnrollments = $context['enrollments']->get($member->id);
+            $enrollment = $memberEnrollments?->first(function ($e) use ($monthDate) {
+                $startDate = Carbon::parse($e->start_date)->startOfDay();
+                if ($startDate->gt($monthDate)) {
+                    return false;
+                }
+                if ($e->end_date !== null) {
+                    $endDate = Carbon::parse($e->end_date)->startOfDay();
+                    if ($endDate->lt($monthDate)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+            $classId = $enrollment?->class_id ?? $member->class_id;
+        } else {
+            $classId = $this->resolveMemberClassForMonth($member->id, $monthDate) ?? $member->class_id;
+        }
 
         // 2. Fetch active rules effective for this month
-        try {
-            $rules = MonthlyPaymentRule::query()
-                ->where('is_active', true)
-                ->whereDate('effective_from', '<=', $monthDate)
-                ->where(function ($q) use ($monthDate) {
-                    $q->whereNull('effective_to')
-                        ->orWhereDate('effective_to', '>=', $monthDate);
-                })
-                ->orderByDesc('class_id') // Class-specific rules take precedence over global (null class_id)
-                ->orderByDesc('effective_from')
-                ->get();
-        } catch (\Throwable $e) {
-            $rules = collect();
+        if ($context && isset($context['rules'])) {
+            $rules = $context['rules'];
+        } else {
+            try {
+                $rules = MonthlyPaymentRule::query()
+                    ->where('is_active', true)
+                    ->whereDate('effective_from', '<=', $monthDate)
+                    ->where(function ($q) use ($monthDate) {
+                        $q->whereNull('effective_to')
+                            ->orWhereDate('effective_to', '>=', $monthDate);
+                    })
+                    ->orderByDesc('class_id') // Class-specific rules take precedence over global (null class_id)
+                    ->orderByDesc('effective_from')
+                    ->get();
+            } catch (\Throwable $e) {
+                $rules = collect();
+            }
         }
 
         if ($rules->isEmpty()) {
@@ -120,7 +142,7 @@ class PaymentRuleService
                 ];
             }
 
-            if (! $this->isClassAtOrAboveMinimum($classId, (int) $applicableRule->minimum_class_id)) {
+            if (! $this->isClassAtOrAboveMinimum($classId, (int) $applicableRule->minimum_class_id, $context)) {
                 return [
                     'eligible' => false,
                     'status' => 'INELIGIBLE',
@@ -184,7 +206,7 @@ class PaymentRuleService
     /**
      * Determine if a given class is equal to or higher in the progression chain than minimum_class_id.
      */
-    protected function isClassAtOrAboveMinimum(int $classId, int $minimumClassId): bool
+    protected function isClassAtOrAboveMinimum(int $classId, int $minimumClassId, ?array $context = null): bool
     {
         if ($classId === $minimumClassId) {
             return true;
@@ -196,7 +218,10 @@ class PaymentRuleService
 
         while ($currentId && ! in_array($currentId, $visited, true)) {
             $visited[] = $currentId;
-            $class = SchoolClass::find($currentId);
+            $class = ($context && isset($context['classes']))
+                ? $context['classes']->get($currentId)
+                : SchoolClass::find($currentId);
+
             if (! $class || ! $class->next_class_id) {
                 break;
             }
@@ -215,18 +240,22 @@ class PaymentRuleService
      *
      * Net Credit = max(0.00, sum(prior_paid) - sum(prior_expected))
      */
-    public function calculateNetCreditForMember(Member $member, string $paymentMonth): float
+    public function calculateNetCreditForMember(Member $member, string $paymentMonth, ?array $context = null): float
     {
-        $eval = $this->evaluateMemberEligibility($member, $paymentMonth);
+        $eval = $this->evaluateMemberEligibility($member, $paymentMonth, $context);
         if (! ($eval['rule']?->allow_credit_carry_forward)) {
             return 0.00;
         }
 
-        $allPriorPayments = MemberPayment::where('member_id', $member->id)
-            ->where('payment_month', '<', $paymentMonth)
-            ->where('is_void', false)
-            ->get()
-            ->groupBy('payment_month');
+        if ($context && isset($context['prior_payments'])) {
+            $allPriorPayments = $context['prior_payments']->get($member->id, collect())->groupBy('payment_month');
+        } else {
+            $allPriorPayments = MemberPayment::where('member_id', $member->id)
+                ->where('payment_month', '<', $paymentMonth)
+                ->where('is_void', false)
+                ->get()
+                ->groupBy('payment_month');
+        }
 
         if ($allPriorPayments->isEmpty()) {
             return 0.00;
@@ -248,7 +277,7 @@ class PaymentRuleService
                 $totalPriorPaid += (float) $group->sum('paid_amount');
                 $totalPriorExpected += (float) $group->first()->expected_amount;
             } else {
-                $mEval = $this->evaluateMemberEligibility($member, $m);
+                $mEval = $this->evaluateMemberEligibility($member, $m, $context);
                 if ($mEval['eligible']) {
                     $totalPriorExpected += (float) $mEval['expected_amount'];
                 }

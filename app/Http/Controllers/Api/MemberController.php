@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MemberResource;
 use App\Models\Member;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MemberController extends Controller
 {
@@ -24,10 +25,20 @@ class MemberController extends Controller
         $query = Member::with('schoolClass')->latest();
         $search = trim((string) request()->query('search', ''));
         if ($search !== '') {
-            $query->where(function ($members) use ($search) {
-                $members->where('full_name', 'like', "%{$search}%")
-                    ->orWhere('christian_name', 'like', "%{$search}%")
+            $driver = DB::connection()->getDriverName();
+            $likeOp = $driver === 'pgsql' ? 'ilike' : 'like';
+
+            $query->where(function ($members) use ($search, $likeOp, $driver) {
+                $members->where('full_name->en', $likeOp, "%{$search}%")
+                    ->orWhere('full_name->am', $likeOp, "%{$search}%")
+                    ->orWhere('christian_name', $likeOp, "%{$search}%")
                     ->orWhere('phone_number', 'like', "%{$search}%");
+
+                if ($driver === 'pgsql') {
+                    $members->orWhereRaw('full_name::text ilike ?', ["%{$search}%"]);
+                } else {
+                    $members->orWhereRaw('cast(full_name as text) like ?', ["%{$search}%"]);
+                }
             });
         }
 

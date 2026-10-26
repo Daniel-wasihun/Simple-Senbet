@@ -5,7 +5,13 @@ namespace App\Services;
 use App\Models\Member;
 use App\Models\MemberPayment;
 use App\Models\MonthlyPaymentRule;
+use App\Models\SchoolClass;
+use App\Models\StudentEnrollment;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class PaymentDashboardService
 {
@@ -24,6 +30,12 @@ class PaymentDashboardService
 
         $members = $membersQuery->get();
 
+        if ($members->isEmpty()) {
+            return $this->emptyDashboardSummary($paymentMonth, $classId);
+        }
+
+        $context = $this->buildBatchContext($members, $paymentMonth);
+
         $totalExpected = 0.00;
         $totalCollected = 0.00;
         $totalCollectedEligible = 0.00;
@@ -37,17 +49,12 @@ class PaymentDashboardService
         $exemptCount = 0;
 
         foreach ($members as $member) {
-            $eval = $this->ruleService->evaluateMemberEligibility($member, $paymentMonth);
+            $eval = $this->ruleService->evaluateMemberEligibility($member, $paymentMonth, $context);
             $expected = (float) $eval['expected_amount'];
             $isEligible = (bool) $eval['eligible'];
 
-            // Fetch active payments for this member and month
-            $payments = MemberPayment::where('member_id', $member->id)
-                ->where('payment_month', $paymentMonth)
-                ->where('is_void', false)
-                ->get();
-
-            $credit = $this->ruleService->calculateNetCreditForMember($member, $paymentMonth);
+            $payments = $context['payments']->get($member->id, collect());
+            $credit = $this->ruleService->calculateNetCreditForMember($member, $paymentMonth, $context);
             $paidThisMonth = round((float) $payments->sum('paid_amount'), 2);
             $effectivePaid = round($paidThisMonth + $credit, 2);
             $totalCollected += $paidThisMonth;
@@ -93,11 +100,7 @@ class PaymentDashboardService
             ? round(($totalCollectedEligible / $totalExpected) * 100, 2)
             : 0.00;
 
-        try {
-            $activeRules = MonthlyPaymentRule::where('is_active', true)->get();
-        } catch (\Throwable $e) {
-            $activeRules = collect();
-        }
+        $activeRules = $context['rules'] ?? collect();
 
         return [
             'payment_month' => $paymentMonth,
@@ -144,37 +147,84 @@ class PaymentDashboardService
         $allowedClassIds = isset($filters['allowed_class_ids']) ? (array) $filters['allowed_class_ids'] : null;
         $statusFilter = ! empty($filters['status']) ? strtoupper((string) $filters['status']) : null;
         $search = ! empty($filters['search']) ? trim((string) $filters['search']) : null;
-        $page = isset($filters['page']) ? (int) $filters['page'] : 1;
-        $perPage = isset($filters['per_page']) ? (int) $filters['per_page'] : 15;
+        $page = isset($filters['page']) ? max(1, (int) $filters['page']) : 1;
+        $perPage = isset($filters['per_page']) ? max(1, (int) $filters['per_page']) : 15;
+
+        $driver = DB::connection()->getDriverName();
+        $likeOp = $driver === 'pgsql' ? 'ilike' : 'like';
 
         $query = Member::with('schoolClass')
             ->when($classId, fn ($q, $cid) => $q->where('class_id', $cid))
             ->when($allowedClassIds !== null, fn ($q) => $q->whereIn('class_id', $allowedClassIds))
-            ->when($search, function ($q, $s) {
-                $q->where(function ($sub) use ($s) {
-                    $sub->where('id', $s)
-                        ->orWhere('full_name->en', 'like', "%{$s}%")
-                        ->orWhere('full_name->am', 'like', "%{$s}%")
+            ->when($search, function ($q, $s) use ($likeOp, $driver) {
+                $q->where(function ($sub) use ($s, $likeOp, $driver) {
+                    if (is_numeric($s)) {
+                        $sub->where('id', (int) $s);
+                    }
+                    $sub->orWhere('full_name->en', $likeOp, "%{$s}%")
+                        ->orWhere('full_name->am', $likeOp, "%{$s}%")
+                        ->orWhere('christian_name', $likeOp, "%{$s}%")
                         ->orWhere('phone_number', 'like', "%{$s}%");
+
+                    if ($driver === 'pgsql') {
+                        $sub->orWhereRaw('full_name::text ilike ?', ["%{$s}%"]);
+                    } else {
+                        $sub->orWhereRaw('cast(full_name as text) like ?', ["%{$s}%"]);
+                    }
                 });
             })
             ->orderBy('id');
 
-        $allMembers = $query->get();
+        // Database-level pagination when no computed status filter is specified
+        if (! $statusFilter || $statusFilter === 'ALL') {
+            $totalItems = $query->count();
+            $pageMembers = $query->forPage($page, $perPage)->get();
 
+            $context = $this->buildBatchContext($pageMembers, $paymentMonth);
+            $rows = $this->computeRowsForMembers($pageMembers, $paymentMonth, $context);
+
+            return new LengthAwarePaginator(
+                $rows,
+                $totalItems,
+                $perPage,
+                $page,
+                ['path' => request()->url(), 'query' => request()->query()]
+            );
+        }
+
+        // When filtering by computed status, evaluate all matching members using batch preloading
+        $allMembers = $query->get();
+        $context = $this->buildBatchContext($allMembers, $paymentMonth);
+        $allRows = $this->computeRowsForMembers($allMembers, $paymentMonth, $context, $statusFilter);
+
+        $totalItems = count($allRows);
+        $offset = ($page - 1) * $perPage;
+        $itemsForPage = array_slice($allRows, $offset, $perPage);
+
+        return new LengthAwarePaginator(
+            $itemsForPage,
+            $totalItems,
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+    }
+
+    /**
+     * Compute ledger rows for a collection of members using batch context.
+     *
+     * @param  EloquentCollection<int, Member>|Collection<int, Member>  $members
+     */
+    protected function computeRowsForMembers(EloquentCollection|Collection $members, string $paymentMonth, array $context, ?string $statusFilter = null): array
+    {
         $rows = [];
-        foreach ($allMembers as $member) {
-            $eval = $this->ruleService->evaluateMemberEligibility($member, $paymentMonth);
+        foreach ($members as $member) {
+            $eval = $this->ruleService->evaluateMemberEligibility($member, $paymentMonth, $context);
             $expected = (float) $eval['expected_amount'];
             $isEligible = (bool) $eval['eligible'];
 
-            $payments = MemberPayment::where('member_id', $member->id)
-                ->where('payment_month', $paymentMonth)
-                ->where('is_void', false)
-                ->latest('payment_date')
-                ->get();
-
-            $credit = $this->ruleService->calculateNetCreditForMember($member, $paymentMonth);
+            $payments = $context['payments']->get($member->id, collect());
+            $credit = $this->ruleService->calculateNetCreditForMember($member, $paymentMonth, $context);
             $paidThisMonth = round((float) $payments->sum('paid_amount'), 2);
             $effectivePaid = round($paidThisMonth + $credit, 2);
             $remaining = max(0.00, round($expected - $effectivePaid, 2));
@@ -246,16 +296,125 @@ class PaymentDashboardService
             ];
         }
 
-        $totalItems = count($rows);
-        $offset = ($page - 1) * $perPage;
-        $itemsForPage = array_slice($rows, $offset, $perPage);
+        return $rows;
+    }
 
-        return new LengthAwarePaginator(
-            $itemsForPage,
-            $totalItems,
-            $perPage,
-            $page,
-            ['path' => request()->url(), 'query' => request()->query()]
-        );
+    /**
+     * Build reusable batch context for a collection of members to eliminate N+1 queries.
+     *
+     * @param  EloquentCollection<int, Member>|Collection<int, Member>  $members
+     */
+    protected function buildBatchContext(EloquentCollection|Collection $members, string $paymentMonth): array
+    {
+        if ($members->isEmpty()) {
+            return [
+                'rules' => collect(),
+                'classes' => collect(),
+                'enrollments' => collect(),
+                'payments' => collect(),
+                'prior_payments' => collect(),
+            ];
+        }
+
+        $monthDate = Carbon::parse($paymentMonth.'-01')->startOfDay();
+        $memberIds = $members->pluck('id')->all();
+
+        // 1. Fetch active rules for this month (1 query)
+        try {
+            $rules = MonthlyPaymentRule::query()
+                ->where('is_active', true)
+                ->whereDate('effective_from', '<=', $monthDate)
+                ->where(function ($q) use ($monthDate) {
+                    $q->whereNull('effective_to')
+                        ->orWhereDate('effective_to', '>=', $monthDate);
+                })
+                ->orderByDesc('class_id')
+                ->orderByDesc('effective_from')
+                ->get();
+        } catch (\Throwable $e) {
+            $rules = collect();
+        }
+
+        // 2. Preload all school classes (1 query)
+        $classes = SchoolClass::all()->keyBy('id');
+
+        // 3. Preload student enrollments for these members (1 query)
+        $enrollments = StudentEnrollment::whereIn('member_id', $memberIds)
+            ->whereDate('start_date', '<=', $monthDate->toDateString())
+            ->where(function ($q) use ($monthDate) {
+                $q->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $monthDate->toDateString());
+            })
+            ->orderByDesc('start_date')
+            ->get()
+            ->groupBy('member_id');
+
+        // 4. Preload active payments for this month (1 query)
+        $payments = MemberPayment::whereIn('member_id', $memberIds)
+            ->where('payment_month', $paymentMonth)
+            ->where('is_void', false)
+            ->latest('payment_date')
+            ->get()
+            ->groupBy('member_id');
+
+        // 5. Preload prior payments if any active rule allows credit carry-forward (1 query)
+        $hasCarryForward = $rules->contains(fn ($r) => (bool) $r->allow_credit_carry_forward);
+        $priorPayments = collect();
+        if ($hasCarryForward) {
+            $priorPayments = MemberPayment::whereIn('member_id', $memberIds)
+                ->where('payment_month', '<', $paymentMonth)
+                ->where('is_void', false)
+                ->get()
+                ->groupBy('member_id');
+        }
+
+        return [
+            'rules' => $rules,
+            'classes' => $classes,
+            'enrollments' => $enrollments,
+            'payments' => $payments,
+            'prior_payments' => $priorPayments,
+        ];
+    }
+
+    /**
+     * Return empty dashboard structure when no members match filters.
+     */
+    protected function emptyDashboardSummary(string $paymentMonth, ?int $classId): array
+    {
+        return [
+            'payment_month' => $paymentMonth,
+            'billing_month' => $paymentMonth,
+            'filter_class_id' => $classId,
+            'metrics' => [
+                'expected_amount' => 0.00,
+                'collected_amount' => 0.00,
+                'remaining_amount' => 0.00,
+                'collection_rate' => 0.00,
+                'total_members' => 0,
+                'fully_paid_count' => 0,
+                'partially_paid_count' => 0,
+                'unpaid_count' => 0,
+                'overpaid_count' => 0,
+                'exempt_count' => 0,
+            ],
+            'financial_summary' => [
+                'total_expected' => 0.00,
+                'total_collected' => 0.00,
+                'total_remaining' => 0.00,
+                'total_overpaid' => 0.00,
+                'collection_rate_percent' => 0.00,
+            ],
+            'member_counts' => [
+                'total_members' => 0,
+                'eligible_members' => 0,
+                'paid_members' => 0,
+                'partial_members' => 0,
+                'unpaid_members' => 0,
+                'overpaid_members' => 0,
+                'exempt_members' => 0,
+            ],
+            'active_rules' => collect(),
+        ];
     }
 }

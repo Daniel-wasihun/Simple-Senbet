@@ -25,6 +25,8 @@ class Role extends SpatieRole
     /** @use HasFactory<RoleFactory> */
     use HasFactory;
 
+    protected string $guard_name = 'web';
+
     protected $fillable = ['name', 'guard_name', 'label'];
 
     protected $appends = ['slug'];

@@ -38,6 +38,7 @@ class AcademicYearController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', AcademicYear::class);
         return $this->indexCrud(AcademicYear::class, AcademicYearResource::class, [], true);
     }
 
@@ -46,6 +47,7 @@ class AcademicYearController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', AcademicYear::class);
         return $this->storeCrud($request, AcademicYear::class, AcademicYearResource::class, $this->rules(), [], true);
     }
 
@@ -54,6 +56,7 @@ class AcademicYearController extends Controller
      */
     public function show(AcademicYear $academicYear)
     {
+        $this->authorize('view', $academicYear);
         return $this->showCrud($academicYear, AcademicYearResource::class, [], true);
     }
 
@@ -82,6 +85,7 @@ class AcademicYearController extends Controller
      */
     public function update(Request $request, AcademicYear $academicYear)
     {
+        $this->authorize('update', $academicYear);
         return $this->updateCrud($request, $academicYear, AcademicYearResource::class, $this->rules($academicYear), [], true);
     }
 
@@ -90,6 +94,7 @@ class AcademicYearController extends Controller
      */
     public function destroy(AcademicYear $academicYear)
     {
+        $this->authorize('delete', $academicYear);
         return $this->destroyCrud($academicYear, true);
     }
 }

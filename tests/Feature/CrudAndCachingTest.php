@@ -30,8 +30,10 @@ class CrudAndCachingTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(\Database\Seeders\RoleAndPermissionSeeder::class);
+
         // Setup Superadmin
-        $role = Role::firstOrCreate(['name' => 'superadmin', 'guard_name' => 'web']);
+        $role = Role::findByName('superadmin', 'web');
         $this->superadmin = User::factory()->create(['role_id' => $role->id]);
         $this->superadmin->syncRoles(['superadmin']);
 
@@ -108,8 +110,7 @@ class CrudAndCachingTest extends TestCase
 
         // 5. Cannot delete self
         $this->actingAs($this->superadmin, 'sanctum')->deleteJson("/api/users/{$this->superadmin->id}")
-            ->assertStatus(422)
-            ->assertJsonPath('message', __('auth.cannot_delete_self'));
+            ->assertForbidden();
 
         // 6. Delete user
         $deleteRes = $this->actingAs($this->superadmin, 'sanctum')->deleteJson("/api/users/{$newUserId}");

@@ -136,4 +136,108 @@ class PolicyPermissionEnforcementTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_superadmin_can_view_roles_and_create_academic_year(): void
+    {
+        $superadminRole = Role::where('name', 'superadmin')->firstOrFail();
+        $superadmin = User::factory()->create(['role_id' => $superadminRole->id]);
+        $superadmin->syncRoles(['superadmin']);
+
+        $response = $this->actingAs($superadmin, 'sanctum')->postJson('/api/academic-years', [
+            'name' => '2029-2030 Academic Year',
+            'start_date' => '2029-09-01',
+            'end_date' => '2030-06-30',
+            'is_current' => false,
+        ]);
+
+        $response->assertCreated();
+    }
+
+    public function test_superadmin_cannot_delete_self(): void
+    {
+        $superadminRole = Role::where('name', 'superadmin')->firstOrFail();
+        $superadmin = User::factory()->create(['role_id' => $superadminRole->id]);
+        $superadmin->syncRoles(['superadmin']);
+
+        $response = $this->actingAs($superadmin, 'sanctum')->deleteJson("/api/users/{$superadmin->id}");
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('users', ['id' => $superadmin->id]);
+    }
+
+    public function test_superadmin_can_delete_other_user(): void
+    {
+        $superadminRole = Role::where('name', 'superadmin')->firstOrFail();
+        $superadmin = User::factory()->create(['role_id' => $superadminRole->id]);
+        $superadmin->syncRoles(['superadmin']);
+
+        $otherUser = User::factory()->create();
+
+        $response = $this->actingAs($superadmin, 'sanctum')->deleteJson("/api/users/{$otherUser->id}");
+
+        $response->assertOk();
+        $this->assertDatabaseMissing('users', ['id' => $otherUser->id]);
+    }
+
+    public function test_superadmin_cannot_alter_own_roles(): void
+    {
+        $superadminRole = Role::where('name', 'superadmin')->firstOrFail();
+        $superadmin = User::factory()->create(['role_id' => $superadminRole->id]);
+        $superadmin->syncRoles(['superadmin']);
+        $teacherRole = Role::where('name', 'teacher')->firstOrFail();
+
+        $response = $this->actingAs($superadmin, 'sanctum')->putJson("/api/users/{$superadmin->id}/roles", [
+            'role_ids' => [$teacherRole->id],
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_superadmin_cannot_delete_superadmin_role(): void
+    {
+        $superadminRole = Role::where('name', 'superadmin')->firstOrFail();
+        $superadmin = User::factory()->create(['role_id' => $superadminRole->id]);
+        $superadmin->syncRoles(['superadmin']);
+
+        $response = $this->actingAs($superadmin, 'sanctum')->deleteJson("/api/roles/{$superadminRole->id}");
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('roles', ['name' => 'superadmin']);
+    }
+
+    public function test_superadmin_cannot_modify_superadmin_role_permissions(): void
+    {
+        $superadminRole = Role::where('name', 'superadmin')->firstOrFail();
+        $superadmin = User::factory()->create(['role_id' => $superadminRole->id]);
+        $superadmin->syncRoles(['superadmin']);
+
+        $response = $this->actingAs($superadmin, 'sanctum')->putJson("/api/roles/{$superadminRole->id}/permissions", [
+            'permission_ids' => [],
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_ordinary_user_can_view_own_profile_but_cannot_view_others_or_delete_superadmin(): void
+    {
+        $studentRole = Role::where('name', 'student')->firstOrFail();
+        $ordinaryUser = User::factory()->create(['role_id' => $studentRole->id]);
+        $ordinaryUser->syncRoles(['student']);
+
+        $superadminRole = Role::where('name', 'superadmin')->firstOrFail();
+        $superadmin = User::factory()->create(['role_id' => $superadminRole->id]);
+        $superadmin->syncRoles(['superadmin']);
+
+        // Ordinary user can view own profile
+        $responseSelf = $this->actingAs($ordinaryUser, 'sanctum')->getJson("/api/users/{$ordinaryUser->id}");
+        $responseSelf->assertOk();
+
+        // Ordinary user cannot view superadmin profile
+        $responseOther = $this->actingAs($ordinaryUser, 'sanctum')->getJson("/api/users/{$superadmin->id}");
+        $responseOther->assertForbidden();
+
+        // Ordinary user cannot delete superadmin
+        $responseDelete = $this->actingAs($ordinaryUser, 'sanctum')->deleteJson("/api/users/{$superadmin->id}");
+        $responseDelete->assertForbidden();
+    }
 }
