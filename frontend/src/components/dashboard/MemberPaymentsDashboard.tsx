@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { TableShimmerSkeleton, FinancePaymentsShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { useRouter } from "next/navigation";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { paymentsService } from "@/services/payments.service";
@@ -482,6 +483,10 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
     }
   };
 
+  if (authLoading || (loading && !dashboardData && !members.length)) {
+    return <FinancePaymentsShimmerSkeleton />;
+  }
+
   const financial = dashboardData?.financial_summary;
   const counts = dashboardData?.member_counts;
   return (
@@ -783,39 +788,41 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
               </div>
 
               <div>
-                <select
+                <AppSelect
                   value={filterClassId}
-                  onChange={(e) => {
-                    setFilterClassId(e.target.value);
+                  onChange={(val) => {
+                    setFilterClassId(val);
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="">All Classes</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={String(c.id)}>
-                      {formatText(c.name)} ({c.code})
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "All Classes" },
+                    ...classes.map((c) => ({ value: String(c.id), label: `${formatText(c.name)} (${c.code})` })),
+                  ]}
+                  placeholder="All Classes"
+                  size="sm"
+                  ariaLabel="Filter by Class"
+                />
               </div>
 
               <div>
-                <select
+                <AppSelect
                   value={filterStatus}
-                  onChange={(e) => {
-                    setFilterStatus(e.target.value);
+                  onChange={(val) => {
+                    setFilterStatus(val);
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="all">All Payment Statuses</option>
-                  <option value="PAID">Paid in Full</option>
-                  <option value="PARTIAL">Partially Paid</option>
-                  <option value="UNPAID">Unpaid</option>
-                  <option value="OVERPAID">Overpaid (Credit)</option>
-                  <option value="EXEMPT">Exempt / Minor</option>
-                </select>
+                  options={[
+                    { value: "all", label: "All Payment Statuses" },
+                    { value: "PAID", label: "Paid in Full" },
+                    { value: "PARTIAL", label: "Partially Paid" },
+                    { value: "UNPAID", label: "Unpaid" },
+                    { value: "OVERPAID", label: "Overpaid (Credit)" },
+                    { value: "EXEMPT", label: "Exempt / Minor" },
+                  ]}
+                  placeholder="All Payment Statuses"
+                  size="sm"
+                  ariaLabel="Filter by Payment Status"
+                />
               </div>
             </div>
           </div>
@@ -1016,17 +1023,18 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                 <label className="block font-semibold text-slate-700 mb-1">
                   Payment Method *
                 </label>
-                <select
+                <AppSelect
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="CASH">Cash (ጥሬ ገንዘብ)</option>
-                  <option value="BANK_TRANSFER">Bank Transfer (ባንክ ዝውውር)</option>
-                  <option value="CHECK">Check (ቼክ)</option>
-                  <option value="MOBILE_MONEY">Telebirr / Mobile Money</option>
-                  <option value="OTHER">Other</option>
-                </select>
+                  onChange={(val) => setPaymentMethod(val)}
+                  options={[
+                    { value: "CASH", label: "Cash (ጥሬ ገንዘብ)" },
+                    { value: "BANK_TRANSFER", label: "Bank Transfer (ባንክ ዝውውር)" },
+                    { value: "CHECK", label: "Check (ቼክ)" },
+                    { value: "MOBILE_MONEY", label: "Telebirr / Mobile Money" },
+                    { value: "OTHER", label: "Other" },
+                  ]}
+                  placeholder="Select payment method"
+                />
               </div>
 
               <div>
@@ -1467,35 +1475,29 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                   <label className="block font-semibold text-slate-700 mb-1">
                     Minimum Grade/Class
                   </label>
-                  <select
+                  <AppSelect
                     value={ruleMinClassId}
-                    onChange={(e) => setRuleMinClassId(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
-                  >
-                    <option value="">No minimum class</option>
-                    {classes.map((c) => (
-                      <option key={c.id} value={String(c.id)}>
-                        {formatText(c.name)} ({c.code})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setRuleMinClassId(val)}
+                    options={[
+                      { value: "", label: "No minimum class" },
+                      ...classes.map((c) => ({ value: String(c.id), label: `${formatText(c.name)} (${c.code})` })),
+                    ]}
+                    placeholder="No minimum class"
+                  />
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
                     Specific Target Class
                   </label>
-                  <select
+                  <AppSelect
                     value={ruleTargetClassId}
-                    onChange={(e) => setRuleTargetClassId(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
-                  >
-                    <option value="">Global (All Classes)</option>
-                    {classes.map((c) => (
-                      <option key={c.id} value={String(c.id)}>
-                        {formatText(c.name)} ({c.code})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setRuleTargetClassId(val)}
+                    options={[
+                      { value: "", label: "Global (All Classes)" },
+                      ...classes.map((c) => ({ value: String(c.id), label: `${formatText(c.name)} (${c.code})` })),
+                    ]}
+                    placeholder="Global (All Classes)"
+                  />
                 </div>
               </div>
 

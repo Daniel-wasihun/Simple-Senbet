@@ -45,7 +45,9 @@ import {
 import {
   DashboardContentShimmerSkeleton,
   TableShimmerSkeleton,
+  AttendanceDashboardShimmerSkeleton,
 } from "@/components/ui/DashboardShimmerSkeleton";
+import { AppSelect } from "@/components/ui/AppSelect";
 
 export type SchoolDashboardArea = "overview" | "academic" | "attendance";
 
@@ -438,7 +440,11 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
   if (authLoading || !user) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
-        <DashboardContentShimmerSkeleton />
+        {area === "attendance" ? (
+          <AttendanceDashboardShimmerSkeleton />
+        ) : (
+          <DashboardContentShimmerSkeleton />
+        )}
       </div>
     );
   }
@@ -1015,19 +1021,19 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                     onChange={(e) => setSummaryDate(e.target.value)}
                     className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 font-medium"
                   />
-                  <select
-                    aria-label="Filter Summary by Class"
-                    value={summaryClassId}
-                    onChange={(e) => setSummaryClassId(e.target.value)}
-                    className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 font-medium"
-                  >
-                    <option value="">All School Classes</option>
-                    {adminClasses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {formatText(c.name)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-48">
+                    <AppSelect
+                      value={summaryClassId}
+                      onChange={(val) => setSummaryClassId(val)}
+                      options={[
+                        { value: "", label: "All School Classes" },
+                        ...adminClasses.map((c) => ({ value: String(c.id), label: formatText(c.name) })),
+                      ]}
+                      placeholder="All School Classes"
+                      size="sm"
+                      ariaLabel="Filter Summary by Class"
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={summaryLoading}
@@ -1158,34 +1164,38 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-medium text-slate-500">Class:</span>
-                  <select
-                    aria-label="Filter by Class"
-                    value={filterClassId}
-                    onChange={(e) => setFilterClassId(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-slate-800"
-                  >
-                    <option value="">All Classes</option>
-                    {adminClasses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {formatText(c.name)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-36">
+                    <AppSelect
+                      value={filterClassId}
+                      onChange={(val) => setFilterClassId(val)}
+                      options={[
+                        { value: "", label: "All Classes" },
+                        ...adminClasses.map((c) => ({ value: String(c.id), label: formatText(c.name) })),
+                      ]}
+                      placeholder="All Classes"
+                      size="sm"
+                      ariaLabel="Filter by Class"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-medium text-slate-500">Status:</span>
-                  <select
-                    aria-label="Filter by Status"
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-slate-800"
-                  >
-                    <option value="">All Statuses</option>
-                    <option value="draft">Draft</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="closed">Closed</option>
-                  </select>
+                  <div className="w-32">
+                    <AppSelect
+                      value={filterStatus}
+                      onChange={(val) => setFilterStatus(val)}
+                      options={[
+                        { value: "", label: "All Statuses" },
+                        { value: "draft", label: "Draft" },
+                        { value: "submitted", label: "Submitted" },
+                        { value: "closed", label: "Closed" },
+                      ]}
+                      placeholder="All Statuses"
+                      size="sm"
+                      ariaLabel="Filter by Status"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 ml-auto">
@@ -1338,42 +1348,50 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
                 {/* Gradebook Filter Controls & Actions */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    aria-label="Filter Gradebook by Class"
-                    value={gradebookClassId}
-                    onChange={(e) => setGradebookClassId(e.target.value)}
-                    className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-800 font-medium"
-                  >
-                    <option value="">Select Class...</option>
-                    {adminClasses.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {formatText(c.name)} ({c.code})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-48">
+                    <AppSelect
+                      value={gradebookClassId}
+                      onChange={(val) => setGradebookClassId(val)}
+                      options={[
+                        { value: "", label: "Select Class..." },
+                        ...adminClasses.map((c) => ({ value: String(c.id), label: `${formatText(c.name)} (${c.code})` })),
+                      ]}
+                      placeholder="Select Class..."
+                      size="sm"
+                      ariaLabel="Filter Gradebook by Class"
+                    />
+                  </div>
 
-                  <select
-                    aria-label="Filter Gradebook by Section"
-                    value={gradebookSection}
-                    onChange={(e) => setGradebookSection(e.target.value)}
-                    className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-800 font-medium"
-                  >
-                    <option value="">All Sections</option>
-                    <option value="A">Section A</option>
-                    <option value="B">Section B</option>
-                    <option value="C">Section C</option>
-                    <option value="D">Section D</option>
-                  </select>
+                  <div className="w-36">
+                    <AppSelect
+                      value={gradebookSection}
+                      onChange={(val) => setGradebookSection(val)}
+                      options={[
+                        { value: "", label: "All Sections" },
+                        { value: "A", label: "Section A" },
+                        { value: "B", label: "Section B" },
+                        { value: "C", label: "Section C" },
+                        { value: "D", label: "Section D" },
+                      ]}
+                      placeholder="All Sections"
+                      size="sm"
+                      ariaLabel="Filter Gradebook by Section"
+                    />
+                  </div>
 
-                  <select
-                    aria-label="Filter Gradebook by Semester"
-                    value={gradebookSemester}
-                    onChange={(e) => setGradebookSemester(e.target.value)}
-                    className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-800 font-medium"
-                  >
-                    <option value="semester_1">Semester 1</option>
-                    <option value="semester_2">Semester 2</option>
-                  </select>
+                  <div className="w-36">
+                    <AppSelect
+                      value={gradebookSemester}
+                      onChange={(val) => setGradebookSemester(val)}
+                      options={[
+                        { value: "semester_1", label: "Semester 1" },
+                        { value: "semester_2", label: "Semester 2" },
+                      ]}
+                      placeholder="Semester 1"
+                      size="sm"
+                      ariaLabel="Filter Gradebook by Semester"
+                    />
+                  </div>
 
                   {canExportReports && <button
                     type="button"
@@ -1562,17 +1580,18 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
               <div>
                 <label className="block text-slate-600 font-semibold mb-1">Time Slot / Period</label>
-                <select
+                <AppSelect
                   value={newSessionSlot}
-                  onChange={(e) => setNewSessionSlot(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-medium focus:ring-1 focus:ring-indigo-500 focus:outline-none"
-                >
-                  <option value="Period 1 (08:30-09:15)">Period 1 (08:30-09:15)</option>
-                  <option value="Period 2 (09:20-10:05)">Period 2 (09:20-10:05)</option>
-                  <option value="Period 3 (10:10-10:55)">Period 3 (10:10-10:55)</option>
-                  <option value="Period 4 (11:00-11:45)">Period 4 (11:00-11:45)</option>
-                  <option value="Homeroom Sunday (08:00-09:00)">Homeroom Sunday (08:00-09:00)</option>
-                </select>
+                  onChange={(val) => setNewSessionSlot(val)}
+                  options={[
+                    { value: "Period 1 (08:30-09:15)", label: "Period 1 (08:30-09:15)" },
+                    { value: "Period 2 (09:20-10:05)", label: "Period 2 (09:20-10:05)" },
+                    { value: "Period 3 (10:10-10:55)", label: "Period 3 (10:10-10:55)" },
+                    { value: "Period 4 (11:00-11:45)", label: "Period 4 (11:00-11:45)" },
+                    { value: "Homeroom Sunday (08:00-09:00)", label: "Homeroom Sunday (08:00-09:00)" },
+                  ]}
+                  placeholder="Select time slot"
+                />
               </div>
             </div>
 

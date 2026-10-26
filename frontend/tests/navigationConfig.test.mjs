@@ -153,3 +153,70 @@ describe("Dashboard Sidebar Translation Parity & Integrity", () => {
     assert.equal(amLocale.dashboard.nav.accessControl, "ሚናዎችና ፈቃዶች");
   });
 });
+
+describe("Dedicated Per-Page Shimmer Skeletons Architecture", () => {
+  it("exports dedicated page skeletons for each sidebar destination in DashboardShimmerSkeleton.tsx", () => {
+    const skeletonFile = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/ui/DashboardShimmerSkeleton.tsx"),
+      "utf8"
+    );
+
+    assert.match(skeletonFile, /export function MemberRegistryShimmerSkeleton/);
+    assert.match(skeletonFile, /export function ManagementPageShimmerSkeleton/);
+    assert.match(skeletonFile, /export function AttendanceDashboardShimmerSkeleton/);
+    assert.match(skeletonFile, /export function FinancePaymentsShimmerSkeleton/);
+    assert.match(skeletonFile, /export function AccessManagementShimmerSkeleton/);
+    assert.match(skeletonFile, /export function PromotionsShimmerSkeleton/);
+    assert.match(skeletonFile, /export function OptimisticPageSkeleton/);
+  });
+
+  it("ensures DashboardShell uses OptimisticPageSkeleton on tab changes", () => {
+    const shellFile = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/layout/DashboardShell.tsx"),
+      "utf8"
+    );
+
+    assert.match(shellFile, /<OptimisticPageSkeleton path=\{optimisticPath\} \/>/);
+  });
+});
+
+describe("Reusable AppSelect Component Integration", () => {
+  it("defines clean, accessible AppSelect component using Radix primitives", () => {
+    const selectFile = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/ui/AppSelect.tsx"),
+      "utf8"
+    );
+
+    assert.match(selectFile, /export function AppSelect/);
+    assert.match(selectFile, /@radix-ui\/react-select/);
+    assert.match(selectFile, /SelectPrimitive\.Root/);
+    assert.match(selectFile, /SelectPrimitive\.Trigger/);
+    assert.match(selectFile, /SelectPrimitive\.Content/);
+  });
+
+  it("verifies main admin pages use AppSelect rather than native unstyled select", () => {
+    const schoolWorkspace = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/admin/SchoolManagementWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(schoolWorkspace, /import \{ AppSelect \} from "@\/components\/ui\/AppSelect"/);
+
+    const memberRegistry = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/dashboard/MemberRegistry.tsx"),
+      "utf8"
+    );
+    assert.match(memberRegistry, /import \{ AppSelect \} from "@\/components\/ui\/AppSelect"/);
+
+    const accessWorkspace = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/admin/AccessManagementWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(accessWorkspace, /import \{ AppSelect \} from "@\/components\/ui\/AppSelect"/);
+
+    const promotionWorkspace = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/admin/PromotionWorkspace.tsx"),
+      "utf8"
+    );
+    assert.match(promotionWorkspace, /import \{ AppSelect \} from "@\/components\/ui\/AppSelect"/);
+  });
+});

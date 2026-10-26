@@ -23,6 +23,7 @@ import { useNavigationStore } from "@/store/useNavigationStore";
 import {
   DashboardAppShimmerSkeleton,
   DashboardContentShimmerSkeleton,
+  OptimisticPageSkeleton,
 } from "@/components/ui/DashboardShimmerSkeleton";
 import {
   ADMIN_NAV_GROUPS,
@@ -445,9 +446,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50 dark:bg-[#0a0e1a] transition-colors">
           <div className="dashboard-content w-full">
             {optimisticPath && optimisticPath !== pathname ? (
-              <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-                <DashboardContentShimmerSkeleton />
-              </div>
+              <OptimisticPageSkeleton path={optimisticPath} />
             ) : (
               children
             )}

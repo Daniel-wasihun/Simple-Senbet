@@ -7,7 +7,8 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { accessManagementService } from "@/services/accessManagement.service";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { TableShimmerSkeleton, AccessManagementShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { AppSelect } from "@/components/ui/AppSelect";
 
 type AccessTab = "users" | "roles" | "permissions";
 type RoleRecord = { id: number; name: string; label?: Record<string, string> | string; permissions?: PermissionRecord[] | { data?: PermissionRecord[] }; users_count?: number };
@@ -179,6 +180,7 @@ export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTa
   };
 
   if (!availableTabs.length) return <section className="mx-auto max-w-4xl px-5 py-12"><h1 className="text-2xl font-semibold">{t("administration.accessDenied")}</h1></section>;
+  if (loading && !roles.length && !users.length) return <AccessManagementShimmerSkeleton />;
 
   return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -200,7 +202,7 @@ export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTa
         {createUserOpen && canCreateUser && <AdminModal open={createUserOpen} onOpenChange={(open) => { if (!open && !saving) setCreateUserOpen(false); }} title={t("administration.addUser")} description={t("administration.modalDescription", { defaultValue: "Enter the account details and initial role." })} size="lg"><form onSubmit={(event) => void submitNewUser(event)} className="mb-5 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3 dark:border-slate-800 dark:bg-slate-900">
           <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.name")}<input required maxLength={255} value={newUser.name} onChange={(event) => setNewUser({ ...newUser, name: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
           <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.email")}<input required type="email" value={newUser.email} onChange={(event) => setNewUser({ ...newUser, email: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.role")}<select value={newUser.role} onChange={(event) => setNewUser({ ...newUser, role: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950">{roles.filter((role) => ["student", "teacher", "superadmin"].includes(role.name) && (role.name !== "superadmin" || can("roles.assign-system"))).map((role) => <option key={role.id} value={role.name}>{roleLabel(role)}</option>)}</select></label>
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.role")}<div className="mt-1.5"><AppSelect value={newUser.role} onChange={(val) => setNewUser({ ...newUser, role: val })} options={roles.filter((role) => ["student", "teacher", "superadmin"].includes(role.name) && (role.name !== "superadmin" || can("roles.assign-system"))).map((role) => ({ value: role.name, label: roleLabel(role) }))} placeholder={t("administration.role")} /></div></label>
           <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.password")}<input required minLength={8} type="password" value={newUser.password} onChange={(event) => setNewUser({ ...newUser, password: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
           <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.confirmPassword")}<input required minLength={8} type="password" value={newUser.password_confirmation} onChange={(event) => setNewUser({ ...newUser, password_confirmation: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
           <div className="flex items-end gap-2"><button disabled={saving} className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"><Save className="h-4 w-4" />{saving ? t("administration.saving") : t("administration.createUser")}</button><button type="button" onClick={() => setCreateUserOpen(false)} className="min-h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700">{t("administration.cancel")}</button></div>
