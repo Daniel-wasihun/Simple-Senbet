@@ -6,6 +6,7 @@ use App\Enums\Semester;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TeachingAssignmentResource;
 use App\Http\Responses\ApiResponse;
+use App\Models\AcademicYear;
 use App\Models\TeachingAssignment;
 use App\Services\TeachingAssignmentService;
 use Illuminate\Http\JsonResponse;
@@ -83,7 +84,7 @@ class TeachingAssignmentController extends Controller
 
         $validated = $request->validate([
             'teacher_id' => ['required', 'integer', 'exists:users,id'],
-            'academic_year_id' => ['required', 'integer', 'exists:academic_years,id'],
+            'academic_year_id' => ['nullable', 'integer', 'exists:academic_years,id'],
             'class_id' => ['required', 'integer', 'exists:classes,id'],
             'section' => ['required', 'string', 'max:20'],
             'course_id' => ['required', 'integer', 'exists:courses,id'],
@@ -93,9 +94,24 @@ class TeachingAssignmentController extends Controller
             'is_primary' => ['sometimes', 'boolean'],
         ]);
 
+        $academicYearId = (int) ($validated['academic_year_id'] ?? 0);
+        if ($academicYearId <= 0) {
+            $currentYear = AcademicYear::where('is_current', true)->first()
+                ?? AcademicYear::latest('id')->first();
+            if (! $currentYear) {
+                $currentYear = AcademicYear::create([
+                    'name' => ['en' => 'Academic Year ' . date('Y'), 'am' => 'የትምህርት ዘመን ' . date('Y')],
+                    'start_date' => date('Y-01-01'),
+                    'end_date' => date('Y-12-31'),
+                    'is_current' => true,
+                ]);
+            }
+            $academicYearId = $currentYear->id;
+        }
+
         $assignment = $this->assignmentService->assign(
             teacherId: (int) $validated['teacher_id'],
-            academicYearId: (int) $validated['academic_year_id'],
+            academicYearId: $academicYearId,
             classId: (int) $validated['class_id'],
             section: (string) $validated['section'],
             courseId: (int) $validated['course_id'],

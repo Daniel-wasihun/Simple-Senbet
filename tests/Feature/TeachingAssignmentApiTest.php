@@ -96,6 +96,32 @@ class TeachingAssignmentApiTest extends TestCase
         ]);
     }
 
+    public function test_teaching_assignment_can_be_created_without_academic_year_id_using_semester_only(): void
+    {
+        $response = $this->actingAs($this->superadmin, 'sanctum')->postJson('/api/teaching-assignments', [
+            'teacher_id' => $this->teacher2->id,
+            'class_id' => $this->class->id,
+            'section' => 'B',
+            'course_id' => $this->course->id,
+            'semester' => Semester::Semester2->value,
+            'is_primary' => false,
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.teacher_id', $this->teacher2->id)
+            ->assertJsonPath('data.semester', Semester::Semester2->value);
+
+        $this->assertDatabaseHas('teaching_assignments', [
+            'teacher_id' => $this->teacher2->id,
+            'class_id' => $this->class->id,
+            'section' => 'B',
+            'course_id' => $this->course->id,
+            'semester' => Semester::Semester2->value,
+            'academic_year_id' => $this->academicYear->id,
+        ]);
+    }
+
     public function test_teacher_cannot_create_teaching_assignment(): void
     {
         $response = $this->actingAs($this->teacher1, 'sanctum')->postJson('/api/teaching-assignments', [

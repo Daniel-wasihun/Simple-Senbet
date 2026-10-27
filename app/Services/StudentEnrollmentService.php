@@ -242,7 +242,7 @@ class StudentEnrollmentService
     {
         $dateStr = is_string($date) ? Carbon::parse($date)->toDateString() : $date->toDateString();
 
-        return Member::query()
+        $enrolled = Member::query()
             ->join('student_enrollments as e', 'e.member_id', '=', 'members.id')
             ->where('e.class_id', $classId)
             ->where('e.section', $section)
@@ -254,6 +254,21 @@ class StudentEnrollmentService
             ->whereNull('members.deleted_at')
             ->select('members.*', 'e.start_date as enrollment_start_date', 'e.end_date as enrollment_end_date')
             ->orderBy('members.id')
+            ->get();
+
+        if ($enrolled->isNotEmpty()) {
+            return $enrolled;
+        }
+
+        // A member is considered enrolled upon registration: fallback to direct members query
+        return Member::query()
+            ->where('class_id', $classId)
+            ->where('section', $section)
+            ->where(function ($q) {
+                $q->whereNull('status')->orWhere('status', 'active');
+            })
+            ->whereNull('deleted_at')
+            ->orderBy('id')
             ->get();
     }
 }

@@ -39,13 +39,13 @@ interface SchoolState {
     userId?: number
   ) => Promise<any>;
   updateRecord: (
-    resource: Exclude<SchoolResource, "teaching-assignments" | "enrollments">,
+    resource: Exclude<SchoolResource, "teaching-assignments">,
     id: number | string,
     data: unknown,
     userId?: number
   ) => Promise<any>;
   deleteRecord: (
-    resource: Exclude<SchoolResource, "enrollments">,
+    resource: SchoolResource,
     id: number | string,
     userId?: number
   ) => Promise<void>;

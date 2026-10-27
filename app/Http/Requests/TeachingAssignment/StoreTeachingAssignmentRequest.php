@@ -15,7 +15,7 @@ class StoreTeachingAssignmentRequest extends BaseRequest
         return [
             'teacher_id' => ['required', 'integer', 'exists:users,id'],
             'course_id' => ['required', 'integer', 'exists:courses,id'],
-            'academic_year_id' => ['required', 'integer', 'exists:academic_years,id'],
+            'academic_year_id' => ['nullable', 'integer', 'exists:academic_years,id'],
             'semester' => ['required', new Enum(Semester::class)],
         ];
     }

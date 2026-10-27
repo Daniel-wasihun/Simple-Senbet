@@ -1,5 +1,5 @@
-﻿import { SchoolManagementWorkspace } from "@/components/admin/SchoolManagementWorkspace";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <SchoolManagementWorkspace module="enrollments" />;
+  redirect("/members");
 }

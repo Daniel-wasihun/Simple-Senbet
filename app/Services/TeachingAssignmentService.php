@@ -72,7 +72,20 @@ class TeachingAssignmentService
             }
 
             // Verify academic year and date boundaries
-            $academicYear = AcademicYear::findOrFail($academicYearId);
+            $academicYear = AcademicYear::find($academicYearId);
+            if (! $academicYear) {
+                $academicYear = AcademicYear::where('is_current', true)->first()
+                    ?? AcademicYear::latest('id')->first();
+                if (! $academicYear) {
+                    $academicYear = AcademicYear::create([
+                        'name' => ['en' => 'Academic Year ' . date('Y'), 'am' => 'የትምህርት ዘመን ' . date('Y')],
+                        'start_date' => date('Y-01-01'),
+                        'end_date' => date('Y-12-31'),
+                        'is_current' => true,
+                    ]);
+                }
+                $academicYearId = $academicYear->id;
+            }
             $yearStart = Carbon::parse($academicYear->start_date)->startOfDay();
             $yearEnd = Carbon::parse($academicYear->end_date)->endOfDay();
 
