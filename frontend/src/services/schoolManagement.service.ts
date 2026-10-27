@@ -1,5 +1,22 @@
 import { backendApiService, type BackendResponse } from "@/services/backendApi.service";
+import { apiService } from "./api.service";
+export interface schoolClassApi{
+  id:number | string,
+  name:{
+    en:string,
+    am:string,
+    om:string,
+  },
+  code:string,
+  number_of_sections:number,
+  passing_score:number,
+  next_class_id:number | null | string,
+  is_active:boolean,
+  created_at:any,
+  updated_at:any,
 
+
+}
 export type SchoolResource = "academic-years" | "school-classes" | "courses" | "teaching-assignments" | "enrollments" | "assessments" | "assessment-results";
 
 export const schoolManagementService = {
@@ -25,3 +42,7 @@ export const schoolManagementService = {
     return this.request<T>(`enrollments/members/${memberId}/withdraw`, "POST", payload, userId);
   },
 };
+
+
+
+
