@@ -24,42 +24,42 @@ export const ROLE_DASHBOARDS: Record<string, RoleDashboardMeta> = {
     role: "academic_director",
     label: "Academic Director",
     amharicLabel: "የትምህርት ክፍል ኃላፊ",
-    route: "/academics/dashboard",
+    route: "/academics",
     description: "Curriculum oversight, course syllabi, teacher assignments, and grading terms.",
   },
   finance_officer: {
     role: "finance_officer",
     label: "Finance Officer",
     amharicLabel: "የፋይናንስና ሂሳብ ኃላፊ",
-    route: "/finance/dashboard",
+    route: "/finance",
     description: "Parish contributions, student tuition, event dues, and financial reports.",
   },
   attendance_officer: {
     role: "attendance_officer",
     label: "Attendance Officer",
     amharicLabel: "የቁጥጥርና ክትትል ኃላፊ",
-    route: "/attendance/dashboard",
+    route: "/attendance",
     description: "Weekly liturgy & Sunday School attendance verification and session records.",
   },
   teacher: {
     role: "teacher",
     label: "Sunday School Teacher",
     amharicLabel: "የሰንበት ት/ቤት መምህር",
-    route: "/attendance/dashboard",
+    route: "/attendance",
     description: "Class rosters, weekly attendance recording, and student academic evaluations.",
   },
   member_coordinator: {
     role: "member_coordinator",
     label: "Member Coordinator / Registrar",
     amharicLabel: "የአባላትና ምዝገባ አስተባባሪ",
-    route: "/members/dashboard",
+    route: "/members",
     description: "Sunday school roster, spiritual records, family information, and baptism records.",
   },
   student: {
     role: "student",
     label: "Sunday School Student / Member",
     amharicLabel: "የሰንበት ት/ቤት ተማሪ",
-    route: "/members/dashboard",
+    route: "/members",
     description: "Student profile, course enrollments, grade cards, and attendance record.",
   },
 };
@@ -67,77 +67,43 @@ export const ROLE_DASHBOARDS: Record<string, RoleDashboardMeta> = {
 export function getDashboardRouteForRole(role?: string | null, permissions?: string[]): string {
   const normalized = role?.toLowerCase().trim();
   if (permissions?.length) {
-    if (permissions.includes("payments.view") && !permissions.includes("attendance.view") && !permissions.some((permission) => ["academic-years.view", "school-classes.create", "courses.create", "assessments.create"].includes(permission))) {
-      return "/finance/dashboard";
+    if (permissions.includes("payments.view") && !permissions.includes("attendance.view") && !permissions.some((p) => ["academic-years.view", "school-classes.create", "courses.create", "assessments.create"].includes(p))) {
+      return "/finance";
     }
     if (permissions.includes("attendance.view") && !permissions.includes("school-classes.create") && !permissions.includes("courses.create")) {
-      return "/attendance/dashboard";
+      return "/attendance";
     }
     if (permissions.includes("members.view") && !permissions.includes("school-classes.create") && !permissions.includes("attendance.view")) {
-      return "/members/dashboard";
+      return "/members";
     }
     if (normalized === "student" && permissions.includes("courses.view")) {
-      return "/academics/dashboard";
+      return "/academics";
     }
-    if (permissions.some((permission) => ["academic-years.view", "school-classes.create", "courses.create", "assessments.create"].includes(permission))) {
-      return "/academics/dashboard";
+    if (permissions.some((p) => ["academic-years.view", "school-classes.create", "courses.create", "assessments.create"].includes(p))) {
+      return "/academics";
     }
   }
   if (!role) return "/dashboard";
 
   const resolvedRole = normalized ?? "";
 
-  // Superadmin / Admin
-  if (
-    resolvedRole === "superadmin" ||
-    resolvedRole === "super_admin" ||
-    resolvedRole === "admin" ||
-    resolvedRole === "super admin"
-  ) {
+  if (resolvedRole === "superadmin" || resolvedRole === "super_admin" || resolvedRole === "admin" || resolvedRole === "super admin") {
     return "/dashboard";
   }
-
-  // Academic Director / Academic Admin
-  if (
-    resolvedRole === "academic_director" ||
-    resolvedRole === "academic_administrator" ||
-    resolvedRole.includes("academic")
-  ) {
-    return "/academics/dashboard";
+  if (resolvedRole === "academic_director" || resolvedRole === "academic_administrator" || resolvedRole.includes("academic")) {
+    return "/academics";
   }
-
-  // Finance Officer / Admin
-  if (
-    resolvedRole === "finance_officer" ||
-    resolvedRole === "finance_administrator" ||
-    resolvedRole.includes("finance")
-  ) {
-    return "/finance/dashboard";
+  if (resolvedRole === "finance_officer" || resolvedRole === "finance_administrator" || resolvedRole.includes("finance")) {
+    return "/finance";
   }
-
-  // Attendance Officer / Teacher
-  if (
-    resolvedRole === "attendance_officer" ||
-    resolvedRole === "teacher" ||
-    resolvedRole.includes("attendance") ||
-    resolvedRole.includes("teacher")
-  ) {
-    return "/attendance/dashboard";
+  if (resolvedRole === "attendance_officer" || resolvedRole === "teacher" || resolvedRole.includes("attendance") || resolvedRole.includes("teacher")) {
+    return "/attendance";
   }
-
-  // Member Coordinator / Registrar
-  if (
-    resolvedRole === "member_coordinator" ||
-    resolvedRole === "registrar" ||
-    resolvedRole.includes("member") ||
-    resolvedRole.includes("registra")
-  ) {
-    return "/members/dashboard";
+  if (resolvedRole === "member_coordinator" || resolvedRole === "registrar" || resolvedRole.includes("member") || resolvedRole.includes("registra")) {
+    return "/members";
   }
-
-  // Student / General Member
   if (resolvedRole === "student") {
-    return "/academics/dashboard";
+    return "/academics";
   }
 
   return "/dashboard";

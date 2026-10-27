@@ -40,7 +40,7 @@ interface SchoolClass {
 interface CreateSchoolClassFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (data: schoolClassApi) => void;
+  onConfirm: (data: any) => void | Promise<void>;
   selectedClass?: SchoolClass | null | any;
   isSaving?: boolean | undefined;
 }

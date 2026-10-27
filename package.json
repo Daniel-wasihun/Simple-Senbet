@@ -3,13 +3,16 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "npx --yes concurrently -k -p \"[{name}]\" -n \"LARAVEL,NEXT\" -c \"magenta,cyan\" \"php artisan serve\" \"npm --prefix frontend run dev\"",
-        "dev:backend": "php artisan serve",
+        "dev": "npx --yes concurrently -k -p \"[{name}]\" -n \"LARAVEL,NEXT\" -c \"magenta,cyan\" \"php artisan serve --port=8001\" \"npm --prefix frontend run dev\"",
+        "dev:backend": "php artisan serve --port=8001",
         "dev:frontend": "npm --prefix frontend run dev",
         "install:all": "composer install && npm --prefix frontend install",
         "build:frontend": "npm --prefix frontend run build"
     },
     "dependencies": {
         "xlsx": "^0.18.5"
+    },
+    "devDependencies": {
+        "@laravel/multiplex": "^0.4.5"
     }
 }

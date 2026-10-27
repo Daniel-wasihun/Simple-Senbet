@@ -206,7 +206,7 @@ class RoleAndPermissionSeeder extends Seeder
             'school-classes.view', 'school-classes.create', 'school-classes.update', 'school-classes.delete',
             'courses.view', 'courses.create', 'courses.update', 'courses.delete',
             'teaching-assignments.view', 'teaching-assignments.create', 'teaching-assignments.update', 'teaching-assignments.delete',
-            'members.view', 'members.update',
+            'members.view', 'members.create', 'members.update',
             'student-enrollments.view', 'student-enrollments.create', 'student-enrollments.update', 'student-enrollments.delete',
             'attendance.view', 'attendance.create', 'attendance.submit', 'attendance.correct', 'attendance.close', 'attendance.delete',
             'assessments.view', 'assessments.create', 'assessments.update', 'assessments.delete',

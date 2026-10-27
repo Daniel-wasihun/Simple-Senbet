@@ -9,7 +9,6 @@ import {
   LogOut,
   Home,
   UserRound,
-  ChevronDown,
   KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -27,7 +26,6 @@ import {
 } from "@/components/ui/DashboardShimmerSkeleton";
 import {
   ADMIN_NAV_GROUPS,
-  ADMIN_NAV_HOME_KEY,
   ADMIN_NAV_LINKS,
   ADMIN_ROUTE_PERMISSIONS,
 } from "@/config/admin-nav.config";
@@ -44,6 +42,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const sidebarToggleRef = useRef<HTMLButtonElement>(null);
   const { t } = useTranslation();
 
+  const userInitials = useMemo(() => {
+    if (!user?.name) return "U";
+    const parts = user.name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return (user.name.slice(0, 2) || "U").toUpperCase();
+  }, [user?.name]);
+
   const { optimisticPath, setOptimisticPath } = useNavigationStore();
   const currentPath = optimisticPath ?? pathname;
 
@@ -52,33 +59,39 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     setOptimisticPath(null);
   }, [pathname, setOptimisticPath]);
 
-  const permissions = user?.permissions ?? [];
+  const isSuperAdmin = useMemo(() => {
+    if (!user) return false;
+    const role = (user.role || "").toLowerCase();
+    const roles = (user.roles || []).map((r) =>
+      typeof r === "string" ? r.toLowerCase() : ""
+    );
+    return (
+      role === "superadmin" ||
+      role === "admin" ||
+      role === "administrator" ||
+      roles.includes("superadmin") ||
+      roles.includes("admin") ||
+      roles.includes("administrator") ||
+      Boolean(user.permissions?.includes("*"))
+    );
+  }, [user]);
 
-  const visibleNavItems = useMemo(
-    () =>
-      ADMIN_NAV_LINKS.filter((item) =>
-        item.permissions.some((permission) => permissions.includes(permission))
-      ),
-    [permissions]
-  );
+  const permissions = useMemo(() => user?.permissions ?? [], [user?.permissions]);
 
-  const visibleGroups = useMemo(
-    () =>
-      ADMIN_NAV_GROUPS.map((group) => ({
-        ...group,
-        links: group.links.filter((item) =>
-          item.permissions.some((permission) => permissions.includes(permission))
-        ),
-      })).filter((group) => group.links.length > 0),
-    [permissions]
-  );
-
-  // Exactly one dashboard option pointing to /dashboard
-  const navigationItems = visibleNavItems;
-  const groupedNavItems = useMemo(
-    () => visibleGroups.flatMap((group) => group.links),
-    [visibleGroups]
-  );
+  // All sidebar options listed normally; superadmin gets full access to everything,
+  // otherwise strictly checked against user permissions.
+  const navigationItems = useMemo(() => {
+    const allLinks = [
+      ...ADMIN_NAV_LINKS,
+      ...ADMIN_NAV_GROUPS.flatMap((group) => group.links),
+    ];
+    if (isSuperAdmin) {
+      return allLinks;
+    }
+    return allLinks.filter((item) =>
+      item.permissions.some((permission) => permissions.includes(permission))
+    );
+  }, [isSuperAdmin, permissions]);
 
   const isItemActive = (href: string) => {
     if (href === "/dashboard") {
@@ -87,24 +100,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return currentPath === href || currentPath.startsWith(`${href}/`);
   };
 
-  const fallbackRoute =
-    navigationItems[0]?.href ?? groupedNavItems[0]?.href ?? "/";
-
-  const activeGroupId = visibleGroups.find((group) =>
-    group.links.some((item) => isItemActive(item.href))
-  )?.id;
-
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(() =>
-    visibleGroups.map((g) => g.id)
-  );
-
-  useEffect(() => {
-    if (activeGroupId) {
-      setExpandedGroups((current) =>
-        current.includes(activeGroupId) ? current : [...current, activeGroupId]
-      );
-    }
-  }, [activeGroupId]);
+  const fallbackRoute = navigationItems[0]?.href ?? "/";
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -117,6 +113,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading || !user) return;
+    if (isSuperAdmin) return; // Superadmin has access to everything and is never blocked
+
     const routeRule = ADMIN_ROUTE_PERMISSIONS.find(
       ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`)
     );
@@ -126,7 +124,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     ) {
       router.replace(fallbackRoute);
     }
-  }, [fallbackRoute, isLoading, pathname, permissions, router, user]);
+  }, [fallbackRoute, isLoading, isSuperAdmin, pathname, permissions, router, user]);
 
   useEffect(() => {
     if (!profileMenuOpen) return;
@@ -203,15 +201,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // Current active item for header title
   const currentItem = useMemo(() => {
     return (
-      [...navigationItems, ...groupedNavItems]
+      navigationItems
         .filter((item) => isItemActive(item.href))
         .sort((left, right) => right.href.length - left.href.length)[0] ?? navigationItems[0]
     );
-  }, [groupedNavItems, navigationItems, currentPath]);
+  }, [navigationItems, currentPath]);
 
-  // Zero-spinner: display skeleton shimmer on initial session load
+  // Zero-spinner: display skeleton shimmer on initial session load (route-aware)
   if (isLoading || !user || !currentItem) {
-    return <DashboardAppShimmerSkeleton />;
+    return <DashboardAppShimmerSkeleton path={pathname} />;
   }
 
   return (
@@ -262,72 +260,20 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        {/* Navigation Items (Separately Scrollable on its own, Single Dashboard + Grouped Semantic Options) */}
-        <nav className="flex-1 min-h-0 px-3 py-4 space-y-1.5 overflow-y-auto scrollbar-thin">
-          {/* Top-Level Single Dashboard Option */}
-          <div className="mb-3 space-y-1.5">
-            {navigationItems.map((item) => {
-              const active = isItemActive(item.href);
-              return (
-                <SidebarItem
-                  key={item.href}
-                  label={t(item.translationKey)}
-                  amharicLabel=""
-                  href={item.href}
-                  icon={item.icon}
-                  isActive={active}
-                  onClick={() => handleNavClick(item.href)}
-                />
-              );
-            })}
-          </div>
-
-          {/* Grouped Navigation in Strict Pedagogical Order */}
-          {visibleGroups.map((group) => {
-            const isExpanded = expandedGroups.includes(group.id);
-            const isGroupActive = group.id === activeGroupId;
+        {/* Navigation Items (Separately Scrollable on its own, Flat List of All Permitted Options) */}
+        <nav className="flex-1 min-h-0 px-3 py-3 space-y-1 overflow-y-auto scrollbar-thin">
+          {navigationItems.map((item) => {
+            const active = isItemActive(item.href);
             return (
-              <section key={group.id} aria-label={t(group.translationKey)} className="mb-2">
-                <button
-                  type="button"
-                  aria-expanded={isExpanded}
-                  aria-controls={`admin-nav-${group.id}`}
-                  onClick={() =>
-                    setExpandedGroups((current) =>
-                      isExpanded ? current.filter((id) => id !== group.id) : [...current, group.id]
-                    )
-                  }
-                  className={`flex min-h-10 w-full items-center justify-between rounded-lg px-3 text-left text-[11px] font-bold uppercase tracking-[0.12em] transition ${
-                    isGroupActive
-                      ? "text-blue-700 dark:text-blue-300"
-                      : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60"
-                  }`}
-                >
-                  <span>{t(group.translationKey)}</span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {isExpanded && (
-                  <div id={`admin-nav-${group.id}`} className="mt-1 space-y-1 pl-2">
-                    {group.links.map((item) => {
-                      const active = isItemActive(item.href);
-                      return (
-                        <SidebarItem
-                          key={item.href}
-                          label={t(item.translationKey)}
-                          amharicLabel=""
-                          href={item.href}
-                          icon={item.icon}
-                          isActive={active}
-                          onClick={() => handleNavClick(item.href)}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
+              <SidebarItem
+                key={item.href}
+                label={t(item.translationKey)}
+                amharicLabel=""
+                href={item.href}
+                icon={item.icon}
+                isActive={active}
+                onClick={() => handleNavClick(item.href)}
+              />
             );
           })}
         </nav>
@@ -385,43 +331,63 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   type="button"
                   aria-expanded={profileMenuOpen}
                   aria-haspopup="menu"
+                  aria-label="User profile options"
                   onClick={() => setProfileMenuOpen((open) => !open)}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 text-left text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-slate-700 dark:bg-[#141a29] dark:hover:bg-slate-800"
+                  className={`relative grid h-9 w-9 sm:h-9.5 sm:w-9.5 place-items-center rounded-full transition-all duration-150 cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0858a8] ${
+                    profileMenuOpen
+                      ? "ring-2 ring-[#0858a8] ring-offset-2 dark:ring-offset-[#0e1424] shadow-sm"
+                      : "ring-2 ring-transparent hover:ring-[#0858a8]/40 ring-offset-1 dark:ring-offset-[#0e1424]"
+                  }`}
                 >
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                    <UserRound aria-hidden="true" className="h-4 w-4" />
+                  <span className="grid h-full w-full place-items-center rounded-full bg-linear-to-tr from-[#0858a8] to-[#1e7fdc] text-white font-bold text-xs shadow-2xs">
+                    {userInitials}
                   </span>
-                  <span className="hidden max-w-32 truncate font-medium sm:block">{user.name}</span>
-                  <ChevronDown aria-hidden="true" className="h-4 w-4 text-slate-500" />
                 </button>
                 {profileMenuOpen && (
                   <div
                     role="menu"
-                    className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                    className="absolute right-0 top-full z-50 mt-2.5 w-64 origin-top-right rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#141a29] p-1.5 shadow-xl transition-all duration-150"
                   >
-                    <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
-                      <p className="truncate text-sm font-semibold">{user.name}</p>
-                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                    <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800/80 px-3 py-3">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-linear-to-tr from-[#0858a8] to-[#1e7fdc] text-white font-bold text-sm shadow-2xs">
+                        {userInitials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                          {user.name}
+                        </p>
+                        <p className="truncate text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                          {user.email}
+                        </p>
+                        <span className="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-[3px] bg-blue-50 dark:bg-blue-950/60 text-[#0858a8] dark:text-blue-300 border border-blue-200/60 dark:border-blue-900/40">
+                          {user.role ? user.role.replace(/_/g, " ") : "Member"}
+                        </span>
+                      </div>
                     </div>
-                    <Link
-                      role="menuitem"
-                      href="/profile"
-                      onClick={() => setProfileMenuOpen(false)}
-                      className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-200 dark:hover:bg-slate-800"
-                    >
-                      <UserRound aria-hidden="true" className="h-4 w-4" />
-                      {t("profile.menuProfile", { defaultValue: "Profile" })}
-                    </Link>
-                    <Link
-                      role="menuitem"
-                      href="/change-password"
-                      onClick={() => setProfileMenuOpen(false)}
-                      className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-slate-200 dark:hover:bg-slate-800"
-                    >
-                      <KeyRound aria-hidden="true" className="h-4 w-4" />
-                      {t("profile.menuPassword", { defaultValue: "Change password" })}
-                    </Link>
-                    <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+
+                    <div className="py-1">
+                      <Link
+                        role="menuitem"
+                        href="/profile"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-[4px] px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-[#0858a8] dark:hover:text-blue-400 transition cursor-pointer"
+                      >
+                        <UserRound aria-hidden="true" className="h-4 w-4 text-[#0858a8] dark:text-blue-400" />
+                        {t("profile.menuProfile", { defaultValue: "Profile" })}
+                      </Link>
+                      <Link
+                        role="menuitem"
+                        href="/change-password"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-[4px] px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-[#0858a8] dark:hover:text-blue-400 transition cursor-pointer"
+                      >
+                        <KeyRound aria-hidden="true" className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                        {t("profile.menuPassword", { defaultValue: "Change password" })}
+                      </Link>
+                    </div>
+
+                    <div className="my-1 border-t border-slate-100 dark:border-slate-800/80" />
+
                     <button
                       role="menuitem"
                       type="button"
@@ -430,7 +396,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                         setProfileMenuOpen(false);
                         void handleLogout();
                       }}
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                      className="flex w-full items-center gap-2.5 rounded-[4px] px-3 py-2 text-left text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer disabled:opacity-50"
                     >
                       <LogOut aria-hidden="true" className="h-4 w-4" />
                       {t("profile.signOut", { defaultValue: "Sign out" })}

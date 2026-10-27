@@ -20,7 +20,6 @@ import {
   Lock,
   ArrowRight,
   RefreshCw,
-  Sparkles,
   Plus,
   Percent,
   UserX,
@@ -439,7 +438,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
   if (authLoading || !user) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-8">
         {area === "attendance" ? (
           <AttendanceDashboardShimmerSkeleton />
         ) : (
@@ -492,7 +491,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
       {/* Top Header & Navbar */}
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <Link href="/" className="flex items-center gap-2.5 group">
@@ -510,7 +509,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
             <div className="flex items-center gap-3 sm:gap-4">
               {canViewPayments && <Link
-                href="/finance/dashboard"
+                href="/finance"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold transition"
               >
                 <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
@@ -540,32 +539,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
       </header>
 
       {/* Main Content Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        {/* Welcome Banner */}
-        <section aria-labelledby="welcome-heading" className="mb-8">
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 text-white shadow-xl shadow-indigo-950/10 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-xs text-xs font-medium text-indigo-200 mb-3 border border-white/10">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Simple Senbet Attendance MVP</span>
-              </div>
-              <h1 id="welcome-heading" className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                እንኳን ደህና መጡ፣ {formatText(user.name)}
-              </h1>
-              <p className="mt-2 text-indigo-200 text-sm max-w-2xl">
-                {isTeacher
-                  ? "Welcome to your teacher attendance portal. Take roll-call for your assigned classes, review submitted records, and track daily student absences."
-                  : isAdmin
-                  ? "Welcome to the administrator overview. Monitor classes, courses, and school-wide attendance records."
-                  : "Welcome to your student dashboard."}
-              </p>
-            </div>
-            <div className="absolute right-0 bottom-0 translate-x-8 translate-y-8 opacity-10 pointer-events-none">
-              <GraduationCap className="w-64 h-64 text-white" />
-            </div>
-          </div>
-        </section>
-
+      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-8">
         {/* Global Error Alert */}
         {fetchError && (
           <div

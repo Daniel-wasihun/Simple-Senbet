@@ -161,9 +161,17 @@ class DevelopmentSampleDataSeeder extends Seeder
     {
         $classes = [];
         foreach (range(1, 10) as $grade) {
-            $classes[] = SchoolClass::firstOrCreate(
+            $classes[] = SchoolClass::updateOrCreate(
                 ['code' => sprintf('DEV-G%02d', $grade)],
-                ['name' => ['en' => "Grade {$grade}", 'am' => "Grade {$grade}"], 'number_of_sections' => 3, 'passing_score' => 50]
+                [
+                    'name' => [
+                        'en' => "Grade {$grade}",
+                        'am' => "ክፍል {$grade}",
+                        'om' => "Kutaa {$grade}",
+                    ],
+                    'number_of_sections' => 3,
+                    'passing_score' => 50,
+                ]
             );
         }
 
@@ -214,32 +222,153 @@ class DevelopmentSampleDataSeeder extends Seeder
     /** @param list<SchoolClass> $classes */
     private function seedMembers(array $classes): \Illuminate\Support\Collection
     {
-        $names = [
-            ['Abel Sample', 'male'], ['Hana Sample', 'female'], ['Liya Sample', 'female'],
-            ['Mikael Sample', 'male'], ['Sara Sample', 'female'], ['Dawit Sample', 'male'],
-            ['Ruth Sample', 'female'], ['Natan Sample', 'male'], ['Martha Sample', 'female'],
-            ['Yonas Sample', 'male'], ['Selam Sample', 'female'], ['Bereket Sample', 'male'],
-            ['Eden Sample', 'female'], ['Samuel Sample', 'male'], ['Rahel Sample', 'female'],
+        $memberData = [
+            [
+                'name' => ['en' => 'Daniel Wasihun', 'am' => 'ዳንኤል ዋሲሁን', 'om' => 'Daani\'eel Waasihuun'],
+                'christian_name' => ['en' => 'Wolde Giorgis', 'am' => 'ወልደ ጊዮርጊስ', 'om' => 'Walda Giyoorgis'],
+                'gender' => 'male',
+                'dob' => '2012-04-15',
+                'emergency' => ['en' => 'Wasihun Tekle', 'am' => 'ዋሲሁን ተክሌ', 'om' => 'Waasihuun Taklee'],
+                'clergy' => ['en' => 'Qes Wolde Mariam', 'am' => 'ቀሲስ ወልደ ማርያም', 'om' => 'Lubbuu Walda Maariyaam'],
+            ],
+            [
+                'name' => ['en' => 'Bethlehem Tesfaye', 'am' => 'ቤተልሔም ተስፋዬ', 'om' => 'Beetaliheem Tasfaayee'],
+                'christian_name' => ['en' => 'Walatta Petros', 'am' => 'ወለተ ጴጥሮስ', 'om' => 'Walatta Pheexroos'],
+                'gender' => 'female',
+                'dob' => '2013-08-22',
+                'emergency' => ['en' => 'Tesfaye Alemayehu', 'am' => 'ተስፋዬ አለማየሁ', 'om' => 'Tasfaayee Alamayyahuu'],
+                'clergy' => ['en' => 'Megabi Hadis Eshetu', 'am' => 'መጋቤ ሐዲስ እሸቱ', 'om' => 'Megaabii Haadiis Ishatuu'],
+            ],
+            [
+                'name' => ['en' => 'Yohannes Haile', 'am' => 'ዮሐንስ ኃይሌ', 'om' => 'Yohaannis Hayilee'],
+                'christian_name' => ['en' => 'Wolde Yesus', 'am' => 'ወልደ ኢየሱስ', 'om' => 'Walda Yesuus'],
+                'gender' => 'male',
+                'dob' => '2014-01-10',
+                'emergency' => ['en' => 'Haile Gebre', 'am' => 'ኃይሌ ገብሬ', 'om' => 'Hayilee Gabree'],
+                'clergy' => ['en' => 'Melake Selam Berhanu', 'am' => 'መልአከ ሰላም ብርሃኑ', 'om' => 'Mala\'aka Salaam Birhaanuu'],
+            ],
+            [
+                'name' => ['en' => 'Selamawit Bekele', 'am' => 'ሰላማዊት በቀለ', 'om' => 'Salamaawit Baqqalaa'],
+                'christian_name' => ['en' => 'Walatta Mariam', 'am' => 'ወለተ ማርያም', 'om' => 'Walatta Maariyaam'],
+                'gender' => 'female',
+                'dob' => '2015-05-18',
+                'emergency' => ['en' => 'Bekele Desta', 'am' => 'በቀለ ደስታ', 'om' => 'Baqqalaa Dastaa'],
+                'clergy' => ['en' => 'Qes Haile Yesus', 'am' => 'ቀሲስ ኃይለ ኢየሱስ', 'om' => 'Lubbuu Hayila Yesuus'],
+            ],
+            [
+                'name' => ['en' => 'Tewodros Girma', 'am' => 'ቴዎድሮስ ግርማ', 'om' => 'Teewodroos Girmaa'],
+                'christian_name' => ['en' => 'Habte Selassie', 'am' => 'ሀብተ ሥላሴ', 'om' => 'Habta Sillaasee'],
+                'gender' => 'male',
+                'dob' => '2012-11-03',
+                'emergency' => ['en' => 'Girma Tadesse', 'am' => 'ግርማ ታደሰ', 'om' => 'Girmaa Taaddasaa'],
+                'clergy' => ['en' => 'Komos Abba Gebre', 'am' => 'ቆሞስ አባ ገብረ', 'om' => 'Qoophos Abbaa Gabree'],
+            ],
+            [
+                'name' => ['en' => 'Mahlet Alemu', 'am' => 'ማኅሌት ዓለሙ', 'om' => 'Maahleet Alamuu'],
+                'christian_name' => ['en' => 'Walatta Michael', 'am' => 'ወለተ ሚካኤል', 'om' => 'Walatta Mikaa\'eel'],
+                'gender' => 'female',
+                'dob' => '2013-03-30',
+                'emergency' => ['en' => 'Alemu Kebede', 'am' => 'ዓለሙ ከበደ', 'om' => 'Alamuu Kabbadaa'],
+                'clergy' => ['en' => 'Qes Wolde Mariam', 'am' => 'ቀሲስ ወልደ ማርያም', 'om' => 'Lubbuu Walda Maariyaam'],
+            ],
+            [
+                'name' => ['en' => 'Dawit Tadesse', 'am' => 'ዳዊት ታደሰ', 'om' => 'Daawit Taaddasaa'],
+                'christian_name' => ['en' => 'Gebre Meskel', 'am' => 'ገብረ መስቀል', 'om' => 'Gabra Masqal'],
+                'gender' => 'male',
+                'dob' => '2014-07-14',
+                'emergency' => ['en' => 'Tadesse Assefa', 'am' => 'ታደሰ አሰፋ', 'om' => 'Taaddasaa Asaffaa'],
+                'clergy' => ['en' => 'Megabi Hadis Eshetu', 'am' => 'መጋቤ ሐዲስ እሸቱ', 'om' => 'Megaabii Haadiis Ishatuu'],
+            ],
+            [
+                'name' => ['en' => 'Hanna Mengistu', 'am' => 'ሐና መንግሥቱ', 'om' => 'Haannaa Mangistuu'],
+                'christian_name' => ['en' => 'Fiqre Mariam', 'am' => 'ፍቅረ ማርያም', 'om' => 'Fiqra Maariyaam'],
+                'gender' => 'female',
+                'dob' => '2015-09-25',
+                'emergency' => ['en' => 'Mengistu Worku', 'am' => 'መንግሥቱ ወርቁ', 'om' => 'Mangistuu Warquu'],
+                'clergy' => ['en' => 'Melake Selam Berhanu', 'am' => 'መልአከ ሰላም ብርሃኑ', 'om' => 'Mala\'aka Salaam Birhaanuu'],
+            ],
+            [
+                'name' => ['en' => 'Natnael Berhanu', 'am' => 'ናትናኤል ብርሃኑ', 'om' => 'Naatnaa\'eel Birhaanuu'],
+                'christian_name' => ['en' => 'Wolde Gabriel', 'am' => 'ወልደ ገብርኤል', 'om' => 'Walda Gabri\'eel'],
+                'gender' => 'male',
+                'dob' => '2013-12-05',
+                'emergency' => ['en' => 'Berhanu Negash', 'am' => 'ብርሃኑ ነጋሽ', 'om' => 'Birhaanuu Nagaash'],
+                'clergy' => ['en' => 'Qes Haile Yesus', 'am' => 'ቀሲስ ኃይለ ኢየሱስ', 'om' => 'Lubbuu Hayila Yesuus'],
+            ],
+            [
+                'name' => ['en' => 'Ruth Solomon', 'am' => 'ሩት ሰሎሞን', 'om' => 'Ruut Solomoon'],
+                'christian_name' => ['en' => 'Walatta Hanna', 'am' => 'ወለተ ሐና', 'om' => 'Walatta Haannaa'],
+                'gender' => 'female',
+                'dob' => '2016-02-19',
+                'emergency' => ['en' => 'Solomon Getachew', 'am' => 'ሰሎሞን ጌታቸው', 'om' => 'Solomoon Geetaachoo'],
+                'clergy' => ['en' => 'Komos Abba Gebre', 'am' => 'ቆሞስ አባ ገብረ', 'om' => 'Qoophos Abbaa Gabree'],
+            ],
+            [
+                'name' => ['en' => 'Bereket Assefa', 'am' => 'በረከት አሰፋ', 'om' => 'Barakat Asaffaa'],
+                'christian_name' => ['en' => 'Tesfa Selassie', 'am' => 'ተስፋ ሥላሴ', 'om' => 'Tasfaa Sillaasee'],
+                'gender' => 'male',
+                'dob' => '2014-04-12',
+                'emergency' => ['en' => 'Assefa Belay', 'am' => 'አሰፋ በላይ', 'om' => 'Asaffaa Balaay'],
+                'clergy' => ['en' => 'Qes Wolde Mariam', 'am' => 'ቀሲስ ወልደ ማርያም', 'om' => 'Lubbuu Walda Maariyaam'],
+            ],
+            [
+                'name' => ['en' => 'Liya Kebede', 'am' => 'ሊያ ከበደ', 'om' => 'Liiyaa Kabbadaa'],
+                'christian_name' => ['en' => 'Walatta Tsion', 'am' => 'ወለተ ጽዮን', 'om' => 'Walatta Tsiyoon'],
+                'gender' => 'female',
+                'dob' => '2015-10-08',
+                'emergency' => ['en' => 'Kebede Mamo', 'am' => 'ከበደ ማሞ', 'om' => 'Kabbadaa Maammoo'],
+                'clergy' => ['en' => 'Megabi Hadis Eshetu', 'am' => 'መጋቤ ሐዲስ እሸቱ', 'om' => 'Megaabii Haadiis Ishatuu'],
+            ],
+            [
+                'name' => ['en' => 'Samuel Getachew', 'am' => 'ሳሙኤል ጌታቸው', 'om' => 'Saamu\'eel Geetaachoo'],
+                'christian_name' => ['en' => 'Haile Gabriel', 'am' => 'ኃይለ ገብርኤል', 'om' => 'Hayila Gabri\'eel'],
+                'gender' => 'male',
+                'dob' => '2013-06-20',
+                'emergency' => ['en' => 'Getachew Desta', 'am' => 'ጌታቸው ደስታ', 'om' => 'Geetaachoo Dastaa'],
+                'clergy' => ['en' => 'Melake Selam Berhanu', 'am' => 'መልአከ ሰላም ብርሃኑ', 'om' => 'Mala\'aka Salaam Birhaanuu'],
+            ],
+            [
+                'name' => ['en' => 'Eden Worku', 'am' => 'ኤደን ወርቁ', 'om' => 'Eedan Warquu'],
+                'christian_name' => ['en' => 'Walatta Kidan', 'am' => 'ወለተ ኪዳን', 'om' => 'Walatta Kidaan'],
+                'gender' => 'female',
+                'dob' => '2016-01-30',
+                'emergency' => ['en' => 'Worku Tilahun', 'am' => 'ወርቁ ጥላሁን', 'om' => 'Warquu Xilaahuun'],
+                'clergy' => ['en' => 'Qes Haile Yesus', 'am' => 'ቀሲስ ኃይለ ኢየሱስ', 'om' => 'Lubbuu Hayila Yesuus'],
+            ],
+            [
+                'name' => ['en' => 'Mikael Negash', 'am' => 'ሚካኤል ነጋሽ', 'om' => 'Mikaa\'eel Nagaash'],
+                'christian_name' => ['en' => 'Gebre Giorgis', 'am' => 'ገብረ ጊዮርጊስ', 'om' => 'Gabra Giyoorgis'],
+                'gender' => 'male',
+                'dob' => '2012-09-17',
+                'emergency' => ['en' => 'Negash Hailu', 'am' => 'ነጋሽ ኃይሉ', 'om' => 'Nagaash Haayiluu'],
+                'clergy' => ['en' => 'Komos Abba Gebre', 'am' => 'ቆሞስ አባ ገብረ', 'om' => 'Qoophos Abbaa Gabree'],
+            ],
         ];
+
         $members = collect();
 
-        foreach ($names as $index => [$name, $gender]) {
+        foreach ($memberData as $index => $data) {
             $class = $classes[$index % count($classes)];
-            $members->push(Member::withTrashed()->firstOrCreate(
-                ['phone_number' => sprintf('+1-202-555-%04d', 100 + $index)],
+            $phone = sprintf('+1-202-555-%04d', 100 + $index);
+
+            $member = Member::withTrashed()->updateOrCreate(
+                ['phone_number' => $phone],
                 [
-                    'full_name' => ['en' => $name, 'am' => $name],
-                    'christian_name' => ['en' => $name, 'am' => $name],
-                    'date_of_birth' => Carbon::parse('2010-01-01')->addDays($index * 43)->toDateString(),
-                    'gender' => $gender,
-                    'emergency_contact_name' => ['en' => 'Sample Guardian '.($index + 1), 'am' => 'Sample Guardian '.($index + 1)],
+                    'full_name' => $data['name'],
+                    'christian_name' => $data['christian_name'],
+                    'date_of_birth' => $data['dob'],
+                    'gender' => $data['gender'],
+                    'emergency_contact_name' => $data['emergency'],
                     'emergency_contact_phone' => '+1-202-555-0199',
-                    'membership_date' => Carbon::parse('2020-01-01')->addDays($index * 17)->toDateString(),
-                    'sol_father_name' => ['en' => 'Sample Clergy '.($index % 5 + 1), 'am' => 'Sample Clergy '.($index % 5 + 1)],
+                    'membership_date' => Carbon::parse('2022-09-01')->addDays($index * 14)->toDateString(),
+                    'sol_father_name' => $data['clergy'],
                     'class_id' => $class->id,
                     'section' => chr(65 + ($index % 3)),
+                    'deleted_at' => null,
                 ]
-            ));
+            );
+
+            $members->push($member);
         }
 
         return $members;

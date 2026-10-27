@@ -205,7 +205,8 @@ export default function AdminSchoolClassPage() {
           {DateFormat(schoolClass.created_at)}
         </span>
       ),
-      exportValue: (schoolClass:schoolClassApi) => DateFormat(schoolClass.created_at),
+      exportValue: (schoolClass: schoolClassApi) =>
+        schoolClass.created_at ? String(schoolClass.created_at) : "",
     },
     {
       header: t("common.status") || "Status",
@@ -305,7 +306,7 @@ export default function AdminSchoolClassPage() {
               variant="outline"
               size="icon"
               onClick={() => void fetchSchoolClasses()}
-              disabled={isFetching || storeLoading}
+              disabled={isFetching || Boolean(storeLoading["school-classes"])}
               aria-label="Refresh school classes"
               title="Refresh"
               className="h-10 w-10 border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
@@ -313,7 +314,7 @@ export default function AdminSchoolClassPage() {
               <RefreshCw
                 size={18}
                 className={cn(
-                  (isFetching || storeLoading) && "animate-spin"
+                  (isFetching || Boolean(storeLoading["school-classes"])) && "animate-spin"
                 )}
               />
             </Button>
@@ -390,7 +391,7 @@ export default function AdminSchoolClassPage() {
         }}
         onConfirm={handleCreateOrUpdateSchoolClass}
         selectedClass={selectedSchoolClass}
-        isSaving={storeLoading}
+        isSaving={Boolean(storeLoading["school-classes"])}
       />
     </div>
   );
