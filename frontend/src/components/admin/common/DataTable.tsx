@@ -20,7 +20,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-interface Column<T> {
+export interface Column<T> {
   header: string;
   accessor: keyof T | ((item: T) => React.ReactNode);
   exportValue?: (item: T) => string;
@@ -117,7 +117,7 @@ export function DataTable<T>({
 
       autoTable(doc, {
         head: [headers],
-        body: body,
+        body: body as any,
         theme: "striped",
         headStyles: {
           fillColor: [59, 130, 246],

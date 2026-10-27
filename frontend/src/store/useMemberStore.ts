@@ -22,6 +22,7 @@ interface MemberState {
   error: string | null;
   currentQuery: string;
   timestamp: number;
+  queryCache: Record<string, { items: MemberRecord[]; pagination: PaginationMeta; timestamp: number }>;
 
   // Actions
   fetchMembers: (
@@ -45,6 +46,10 @@ interface MemberState {
     id: number | string,
     userId?: number
   ) => Promise<void>;
+  deleteMembersBulk: (
+    ids: (number | string)[],
+    userId?: number
+  ) => Promise<void>;
   invalidate: () => void;
   clearError: () => void;
 }
@@ -57,6 +62,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
   error: null,
   currentQuery: "",
   timestamp: 0,
+  queryCache: {},
 
   fetchMembers: async (params = {}, options = {}) => {
     const searchParams = new URLSearchParams();
@@ -64,8 +70,23 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       if (val !== undefined && val !== "") searchParams.set(key, String(val));
     }
     const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
-    const { items, pagination, currentQuery, timestamp, loading } = get();
+    const { items, pagination, currentQuery, timestamp, loading, queryCache } = get();
     const ttl = options.ttl ?? DEFAULT_STORE_TTL;
+
+    // Check query cache first for instant zero-fetch response
+    const cachedEntry = queryCache[query];
+    if (!options.force && cachedEntry && isFresh(cachedEntry.timestamp, ttl)) {
+      if (currentQuery !== query || items !== cachedEntry.items) {
+        set({
+          items: cachedEntry.items,
+          pagination: cachedEntry.pagination,
+          currentQuery: query,
+          loading: false,
+          error: null,
+        });
+      }
+      return { items: cachedEntry.items, pagination: cachedEntry.pagination };
+    }
 
     if (!options.force && currentQuery === query && isFresh(timestamp, ttl) && pagination) {
       return { items, pagination };
@@ -75,7 +96,10 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       return { items, pagination: pagination ?? { total: items.length, last_page: 1, current_page: 1, per_page: 15 } };
     }
 
-    set({ loading: true, error: null });
+    const hasExistingData = items.length > 0 && currentQuery === query;
+    if (!hasExistingData) {
+      set({ loading: true, error: null });
+    }
 
     try {
       const response = await membersService.list(query, options.userId);
@@ -89,14 +113,19 @@ export const useMemberStore = create<MemberState>((set, get) => ({
 
       const { data, pagination: parsedPagination } = extractDataAndPagination<MemberRecord>(json);
 
-      set({
+      const now = Date.now();
+      set((state) => ({
         items: data,
         pagination: parsedPagination,
         currentQuery: query,
-        timestamp: Date.now(),
+        timestamp: now,
+        queryCache: {
+          ...state.queryCache,
+          [query]: { items: data, pagination: parsedPagination, timestamp: now },
+        },
         loading: false,
         error: null,
-      });
+      }));
 
       return { items: data, pagination: parsedPagination };
     } catch (err) {
@@ -161,6 +190,7 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       items: state.items.map((m) => (m.id === Number(id) ? { ...m, ...updated } : m)),
       activeMember: state.activeMember?.id === Number(id) ? { ...state.activeMember, ...updated } : state.activeMember,
       timestamp: 0,
+      queryCache: {},
     }));
     return updated;
   },
@@ -175,11 +205,38 @@ export const useMemberStore = create<MemberState>((set, get) => ({
       items: state.items.filter((m) => m.id !== Number(id)),
       activeMember: state.activeMember?.id === Number(id) ? null : state.activeMember,
       timestamp: 0,
+      queryCache: {},
+    }));
+  },
+
+  deleteMembersBulk: async (ids, userId) => {
+    const idSet = new Set(ids.map(Number));
+    await Promise.all(
+      ids.map(async (id) => {
+        const response = await membersService.delete(id, userId);
+        if (!response.ok) {
+          const json = await response.json().catch(() => ({}));
+          throw new Error(extractErrorMessage(json, `Failed to delete member #${id}.`));
+        }
+      })
+    );
+
+    set((state) => ({
+      items: state.items.filter((m) => !idSet.has(Number(m.id))),
+      activeMember: state.activeMember && idSet.has(Number(state.activeMember.id)) ? null : state.activeMember,
+      pagination: state.pagination
+        ? {
+            ...state.pagination,
+            total: Math.max(0, state.pagination.total - idSet.size),
+          }
+        : null,
+      timestamp: 0,
+      queryCache: {},
     }));
   },
 
   invalidate: () => {
-    set({ timestamp: 0, currentQuery: "" });
+    set({ timestamp: 0, currentQuery: "", queryCache: {} });
   },
 
   clearError: () => {

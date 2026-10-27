@@ -53,13 +53,15 @@ export function AppSelect({
   };
 
   const sizeClasses = {
-    sm: "h-8 text-xs px-2.5 rounded-lg",
-    md: "min-h-10 text-sm px-3.5 py-2 rounded-xl",
-    lg: "h-11 text-base px-4 rounded-xl",
+    sm: "h-8 text-xs px-2.5 rounded-[4px]",
+    md: "h-9 text-xs px-3 py-1.5 rounded-[4px]",
+    lg: "h-10 text-sm px-3.5 rounded-[4px]",
   };
 
-  // Radix select requires string value
-  const selectValue = value !== undefined ? String(value) : undefined;
+  // Radix Select: passing an empty string means "no value selected" which shows the placeholder.
+  // If value is undefined we keep it uncontrolled; otherwise always pass a string.
+  // Passing "" as value causes Radix to show the placeholder text correctly.
+  const selectValue = value !== undefined ? (String(value) || undefined) : undefined;
   const initialValue = defaultValue !== undefined ? String(defaultValue) : undefined;
 
   return (
@@ -101,7 +103,7 @@ export function AppSelect({
             sideOffset={5}
             className={cn(
               "relative z-50 min-w-[var(--radix-select-trigger-width)] max-h-80 overflow-hidden",
-              "rounded-xl border border-slate-200/90 dark:border-slate-800",
+              "rounded-[4px] border border-slate-200/90 dark:border-slate-800",
               "bg-white/95 dark:bg-[#141a29]/95 backdrop-blur-md shadow-xl",
               "text-slate-800 dark:text-slate-100",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
