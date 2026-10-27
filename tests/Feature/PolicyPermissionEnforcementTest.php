@@ -124,14 +124,14 @@ class PolicyPermissionEnforcementTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_user_without_student_enrollments_create_is_forbidden_from_enrolling_students(): void
+    public function test_user_without_members_create_is_forbidden_from_registering_members(): void
     {
-        $response = $this->actingAs($this->unauthorizedUser, 'sanctum')->postJson('/api/enrollments', [
-            'member_id' => 1,
-            'academic_year_id' => 1,
+        $response = $this->actingAs($this->unauthorizedUser, 'sanctum')->postJson('/api/members', [
+            'full_name' => ['en' => 'Test User'],
+            'gender' => 'male',
+            'date_of_birth' => '2015-01-01',
             'class_id' => 1,
             'section' => 'A',
-            'start_date' => '2026-10-01',
         ]);
 
         $response->assertForbidden();

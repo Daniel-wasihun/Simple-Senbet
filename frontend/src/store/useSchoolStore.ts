@@ -54,16 +54,6 @@ interface SchoolState {
     endDate: string,
     userId?: number
   ) => Promise<any>;
-  transferStudent: (
-    memberId: number | string,
-    payload: Record<string, unknown>,
-    userId?: number
-  ) => Promise<any>;
-  withdrawStudent: (
-    memberId: number | string,
-    payload: Record<string, unknown>,
-    userId?: number
-  ) => Promise<any>;
   invalidate: (resource?: string) => void;
   clearError: (key?: string) => void;
 }
@@ -209,26 +199,6 @@ export const useSchoolStore = create<SchoolState>((set, get) => ({
       throw new Error(extractErrorMessage(json, "Failed to end teaching assignment."));
     }
     get().invalidate("teaching-assignments");
-    return json;
-  },
-
-  transferStudent: async (memberId, payload, userId) => {
-    const res = await schoolManagementService.transferStudent(memberId, payload, userId);
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(extractErrorMessage(json, "Failed to transfer student."));
-    }
-    get().invalidate("enrollments");
-    return json;
-  },
-
-  withdrawStudent: async (memberId, payload, userId) => {
-    const res = await schoolManagementService.withdrawStudent(memberId, payload, userId);
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(extractErrorMessage(json, "Failed to withdraw student."));
-    }
-    get().invalidate("enrollments");
     return json;
   },
 

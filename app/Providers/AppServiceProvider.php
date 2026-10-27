@@ -20,7 +20,6 @@ use App\Models\MemberPayment;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\SchoolClass;
-use App\Models\StudentEnrollment;
 use App\Models\TeachingAssignment;
 use App\Models\User;
 
@@ -60,7 +59,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Permission::class, \App\Policies\PermissionPolicy::class);
         Gate::policy(Role::class, \App\Policies\RolePolicy::class);
         Gate::policy(SchoolClass::class, \App\Policies\SchoolClassPolicy::class);
-        Gate::policy(StudentEnrollment::class, \App\Policies\StudentEnrollmentPolicy::class);
         Gate::policy(TeachingAssignment::class, \App\Policies\TeachingAssignmentPolicy::class);
         Gate::policy(User::class, \App\Policies\UserPolicy::class);
 

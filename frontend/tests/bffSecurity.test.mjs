@@ -157,8 +157,6 @@ test("BFF Security - Route Allowlist Validation", async (t) => {
     assert.equal(validateProxyPathAndMethod("POST", ["teaching-assignments"]).allowed, true);
     assert.equal(validateProxyPathAndMethod("GET", ["teaching-assignments", "expected"]).allowed, true);
     assert.equal(validateProxyPathAndMethod("POST", ["teaching-assignments", "1", "end"]).allowed, true);
-    assert.equal(validateProxyPathAndMethod("GET", ["enrollments"]).allowed, true);
-    assert.equal(validateProxyPathAndMethod("POST", ["enrollments", "members", "10", "transfer"]).allowed, true);
     assert.equal(validateProxyPathAndMethod("POST", ["promotion", "dry-run"]).allowed, true);
     // Tolerates accidental api/backend prefixing
     assert.equal(validateProxyPathAndMethod("GET", ["api", "backend", "school-classes"]).allowed, true);

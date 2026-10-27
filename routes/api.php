@@ -16,7 +16,6 @@ use App\Http\Controllers\Api\ReportCardController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\SchoolClassController;
-use App\Http\Controllers\Api\StudentEnrollmentController;
 use App\Http\Controllers\Api\TeachingAssignmentController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
@@ -126,16 +125,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{teachingAssignment}', [TeachingAssignmentController::class, 'show'])->name('teaching-assignments.show');
         Route::post('/{teachingAssignment}/end', [TeachingAssignmentController::class, 'end'])->name('teaching-assignments.end');
         Route::delete('/{teachingAssignment}', [TeachingAssignmentController::class, 'destroy'])->name('teaching-assignments.destroy');
-    });
-
-    // Student Enrollments Subsystem
-    Route::prefix('enrollments')->group(function () {
-        Route::get('/', [StudentEnrollmentController::class, 'index'])->name('enrollments.index');
-        Route::post('/', [StudentEnrollmentController::class, 'store'])->name('enrollments.store');
-        Route::get('/roster', [StudentEnrollmentController::class, 'roster'])->name('enrollments.roster');
-        Route::get('/{enrollment}', [StudentEnrollmentController::class, 'show'])->name('enrollments.show');
-        Route::post('/members/{member}/transfer', [StudentEnrollmentController::class, 'transfer'])->name('enrollments.transfer');
-        Route::post('/members/{member}/withdraw', [StudentEnrollmentController::class, 'withdraw'])->name('enrollments.withdraw');
     });
 
     // Assessments & Gradebook Results

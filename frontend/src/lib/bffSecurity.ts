@@ -29,9 +29,6 @@ export const ALLOWED_PROXY_ROUTES: RouteRule[] = [
   { pattern: /^teaching-assignments\/expected$/, allowedMethods: ["GET"], description: "List expected teachers" },
   { pattern: /^teaching-assignments\/\d+$/, allowedMethods: ["GET", "DELETE"], description: "Read or remove teaching assignments" },
   { pattern: /^teaching-assignments\/\d+\/end$/, allowedMethods: ["POST"], description: "End a teaching assignment" },
-  { pattern: /^enrollments$/, allowedMethods: ["GET", "POST"], description: "List or create enrollments" },
-  { pattern: /^enrollments\/(roster|\d+)$/, allowedMethods: ["GET"], description: "Read enrollment roster or detail" },
-  { pattern: /^enrollments\/members\/\d+\/(transfer|withdraw)$/, allowedMethods: ["POST"], description: "Transfer or withdraw a student" },
   { pattern: /^promotion\/student\/\d+$/, allowedMethods: ["GET"], description: "Evaluate an individual student promotion" },
   { pattern: /^promotion\/(dry-run|commit)$/, allowedMethods: ["POST"], description: "Simulate or commit student promotions" },
   // 1. Attendance Sessions Collection: GET (list/filter), POST (create session)

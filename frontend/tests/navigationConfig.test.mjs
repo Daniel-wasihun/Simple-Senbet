@@ -43,16 +43,15 @@ describe("Dashboard Sidebar Navigation Architecture", () => {
       "utf8"
     );
 
-    // Membership: Registration -> Enrollments
+    // Membership: Registration
     const membershipIdx = configFile.indexOf('id: "membership"');
-    const membersLinkIdx = configFile.indexOf('href: "/members/dashboard"');
-    const enrollmentsLinkIdx = configFile.indexOf('href: "/academics/enrollments"');
+    const membersLinkIdx = configFile.indexOf('href: "/members"');
     assert.ok(membershipIdx !== -1, "Membership group must exist");
-    assert.ok(membershipIdx < membersLinkIdx && membersLinkIdx < enrollmentsLinkIdx);
+    assert.ok(membershipIdx < membersLinkIdx);
 
     // Academics: Attendance -> Assessments -> Results -> Assignments -> Courses -> Classes -> Years -> Promotions
     const academicsIdx = configFile.indexOf('id: "academics"');
-    const attendanceIdx = configFile.indexOf('href: "/attendance/dashboard"');
+    const attendanceIdx = configFile.indexOf('href: "/attendance"');
     const assessmentsIdx = configFile.indexOf('href: "/academics/assessments"');
     const resultsIdx = configFile.indexOf('href: "/academics/assessment-results"');
     const assignmentsIdx = configFile.indexOf('href: "/academics/teaching-assignments"');
@@ -72,7 +71,7 @@ describe("Dashboard Sidebar Navigation Architecture", () => {
 
     // Finance: Payments
     const financeIdx = configFile.indexOf('id: "finance"');
-    const paymentsIdx = configFile.indexOf('href: "/finance/dashboard"');
+    const paymentsIdx = configFile.indexOf('href: "/finance"');
     assert.ok(promotionsIdx < financeIdx);
     assert.ok(financeIdx < paymentsIdx);
 
@@ -90,7 +89,6 @@ describe("Dashboard Sidebar Translation Parity & Integrity", () => {
   const expectedNavKeys = [
     "dashboard",
     "members",
-    "enrollments",
     "attendance",
     "assessments",
     "results",
@@ -139,7 +137,6 @@ describe("Dashboard Sidebar Translation Parity & Integrity", () => {
   it("verifies amharic translation contains proper Ethiopian Ge'ez characters", () => {
     assert.equal(amLocale.dashboard.nav.dashboard, "ዳሽቦርድ");
     assert.equal(amLocale.dashboard.nav.members, "የአባላት ምዝገባ");
-    assert.equal(amLocale.dashboard.nav.enrollments, "የተማሪዎች ምዝገባ");
     assert.equal(amLocale.dashboard.nav.attendance, "የተማሪዎች ክትትል");
     assert.equal(amLocale.dashboard.nav.assessments, "ምዘናዎችና ፈተናዎች");
     assert.equal(amLocale.dashboard.nav.results, "የምዘና ውጤቶች");

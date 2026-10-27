@@ -35,12 +35,6 @@ export const schoolManagementService = {
   endTeachingAssignment<T = Record<string, unknown>>(id: number | string, endDate: string, userId?: number) {
     return this.request<T>(`teaching-assignments/${id}/end`, "POST", { end_date: endDate }, userId);
   },
-  transferStudent<T = Record<string, unknown>>(memberId: number | string, payload: Record<string, unknown>, userId?: number) {
-    return this.request<T>(`enrollments/members/${memberId}/transfer`, "POST", payload, userId);
-  },
-  withdrawStudent<T = Record<string, unknown>>(memberId: number | string, payload: Record<string, unknown>, userId?: number) {
-    return this.request<T>(`enrollments/members/${memberId}/withdraw`, "POST", payload, userId);
-  },
 };
 
 
