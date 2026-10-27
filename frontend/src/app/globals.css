@@ -1,10 +1,15 @@
 @import "tailwindcss";
+@import "./app.css";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-brand-blue-start: #1D4ED8;
-  --color-brand-blue-end: #2563EB;
+  --color-brand-blue: #0858a8;
+  --color-brand-blue-hover: #074c91;
+  --color-brand-blue-active: #063e77;
+  --color-brand-blue-subtle: #f0f7ff;
+  --color-brand-blue-start: #0858a8;
+  --color-brand-blue-end: #0A66C2;
   --color-brand-red-start: #9b1c31;
   --color-brand-red-end: #e37789;
 
@@ -391,19 +396,57 @@
   background-color: #1c2438 !important;
 }
 
-/* Custom scrollbar for sidebar */
+/* Sleek theme-aware scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.48);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* Custom scrollbar for sidebar & containers */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
+}
 .scrollbar-thin::-webkit-scrollbar {
   width: 5px;
+  height: 5px;
 }
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(100, 116, 139, 0.28);
   border-radius: 9999px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(100, 116, 139, 0.48);
+}
+
+.dark .scrollbar-thin {
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
 }
 
 /* Shimmer Skeleton Styles */
@@ -452,6 +495,23 @@
     rgba(255, 255, 255, 0.12) 50%,
     rgba(255, 255, 255, 0) 100%
   );
+}
+
+/* Ensure all buttons and button-roles across the entire application have pointer cursor */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled {
+  cursor: not-allowed;
 }
 
 

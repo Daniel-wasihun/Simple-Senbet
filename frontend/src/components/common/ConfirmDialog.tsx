@@ -41,7 +41,7 @@ export function ConfirmDialog({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="max-w-[400px] rounded-xl border border-input bg-card dark:bg-card">
+      <AlertDialogContent className="max-w-[400px] rounded-[6px] border border-input bg-card dark:bg-card">
         <AlertDialogHeader className="px-4 pt-4 pb-2">
           <div className="flex items-center gap-3 mb-2">
             <div
@@ -67,28 +67,29 @@ export function ConfirmDialog({
         <AlertDialogFooter className="mt-6 gap-2">
           <AlertDialogCancel asChild className={undefined}>
             <Button
+              type="button"
               variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="font-bold border-border"
+              className="font-medium border-slate-200 dark:border-slate-700 cursor-pointer"
             >
-              {isAm ? "ሰርዝ" : "Cancel"}
+              {isAm ? "ይቅር" : "Cancel"}
             </Button>
           </AlertDialogCancel>
           <AlertDialogAction asChild className={undefined}>
             <Button
+              type="button"
               onClick={(e) => {
                 e.preventDefault(); // Prevents auto-closing so we can handle loading
                 onConfirm();
               }}
               disabled={isLoading}
-              variant={variant === "destructive" ? "destructive" : "default"}
-              className="font-semibold px-5 min-w-[100px]"
+              className="font-semibold px-5 min-w-[100px] bg-[#0858a8] hover:bg-[#074c91] active:bg-[#063e77] text-white cursor-pointer shadow-2xs border-0 focus-visible:ring-2 focus-visible:ring-[#0858a8]"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : isAm ? (
-                "አረጋግጥ"
+                variant === "destructive" ? "ይሰርዙ" : "ያረጋግጡ"
               ) : (
                 "Confirm"
               )}

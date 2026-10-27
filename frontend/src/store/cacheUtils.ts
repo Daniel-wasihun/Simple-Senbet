@@ -38,21 +38,39 @@ export function extractDataAndPagination<T = any>(
     : [];
 
   const metaSource =
+    payload?.meta ??
     payload?.pagination ??
     (container && typeof container === "object" && !Array.isArray(container) ? container : payload);
 
-  const total = typeof metaSource?.total === "number" ? metaSource.total : rawList.length;
+  const total = typeof metaSource?.total === "number"
+    ? metaSource.total
+    : typeof payload?.total === "number"
+    ? payload.total
+    : rawList.length;
+
+  const per_page = typeof metaSource?.per_page === "number"
+    ? metaSource.per_page
+    : typeof payload?.per_page === "number"
+    ? payload.per_page
+    : defaultPerPage;
+
   const last_page = typeof metaSource?.last_page === "number"
     ? metaSource.last_page
+    : typeof payload?.last_page === "number"
+    ? payload.last_page
     : typeof metaSource?.pages === "number"
     ? metaSource.pages
-    : 1;
+    : typeof payload?.pages === "number"
+    ? payload.pages
+    : Math.max(1, Math.ceil(total / Math.max(1, per_page)));
+
   const current_page = typeof metaSource?.current_page === "number"
     ? metaSource.current_page
+    : typeof payload?.current_page === "number"
+    ? payload.current_page
     : typeof metaSource?.page === "number"
     ? metaSource.page
     : 1;
-  const per_page = typeof metaSource?.per_page === "number" ? metaSource.per_page : defaultPerPage;
 
   return {
     data: rawList,

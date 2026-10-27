@@ -1,0 +1,50 @@
+/* Simple-Senbet Brand Styling - Professionally Configured */
+:root {
+  /* Brand Blue: Subtly deeper than #0A66C2 for higher contrast & elegance */
+  --brand-blue: #0858a8;
+  --brand-blue-hover: #074c91;
+  --brand-blue-active: #063e77;
+  --brand-blue-subtle: #f0f7ff;
+  --brand-blue-border: #93c5fd;
+}
+
+.bg-brand-blue {
+  background-color: var(--brand-blue);
+}
+
+.hover\:bg-brand-blue-hover:hover {
+  background-color: var(--brand-blue-hover);
+}
+
+.active\:bg-brand-blue-active:active {
+  background-color: var(--brand-blue-active);
+}
+
+.text-brand-blue {
+  color: var(--brand-blue);
+}
+
+.border-brand-blue {
+  border-color: var(--brand-blue);
+}
+
+.ring-brand-blue {
+  --tw-ring-color: var(--brand-blue);
+}
+
+/* Ensure all buttons and button-roles across the entire application have pointer cursor */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled {
+  cursor: not-allowed;
+}
