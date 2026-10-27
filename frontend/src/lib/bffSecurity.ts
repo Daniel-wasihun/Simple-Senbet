@@ -207,8 +207,8 @@ export function getTrustedOrigins(customConfiguredOrigins?: string[]): string[] 
 
   // Standard development host origins: only permitted in non-production environments when custom origins are not passed
   if (process.env.NODE_ENV !== "production" && !customConfiguredOrigins) {
-    trusted.add("http://localhost:3000");
-    trusted.add("http://127.0.0.1:3000");
+    trusted.add("http://localhost:5174");
+    trusted.add("http://127.0.0.1:5174");
   }
 
   return Array.from(trusted);

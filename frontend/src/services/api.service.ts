@@ -12,18 +12,29 @@ const getCookie = (name: string): string | null => {
   return null;
 };
 
-// Function to ensure CSRF token is available
-const ensureCsrfToken = async (): Promise<void> => {
-  // Always refresh the CSRF token to ensure it's valid
-  // Some servers invalidate tokens after use or after a period
-  await setupCsrf();
-};
-
+// BFF requests (/api/backend/*) are proxied through Next.js server routes — no client-side
+// CSRF handshake needed. CSRF only applies to direct calls to the Laravel backend origin.
 const isBffRequest = (url: string): boolean => url.includes("/api/backend/");
 const withClientOrigin = (url: string): string => {
   if (typeof window === "undefined" || /^https?:\/\//i.test(url)) return url;
   return new URL(url, window.location.origin).toString();
 };
+
+/** Build axios config with auth headers (no CSRF init for BFF). */
+function buildConfig(extraHeaders?: Record<string, string | undefined>): any {
+  const headers: Record<string, string | undefined> = {
+    Accept: "application/json",
+    "X-Requested-With": "XMLHttpRequest",
+    ...extraHeaders,
+  };
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const xsrfToken = getCookie("XSRF-TOKEN");
+    if (xsrfToken) headers["X-XSRF-TOKEN"] = decodeURIComponent(xsrfToken);
+  }
+  return { headers, withCredentials: true };
+}
 
 export const apiService = {
   localRequest: async (url: string, init: RequestInit = {}): Promise<Response> => fetch(url, {
@@ -37,12 +48,15 @@ export const apiService = {
     const target = withClientOrigin(path);
     try {
       let result: T;
+      // Only BFF requests — no CSRF needed since Next.js handles auth server-side.
+      // For non-BFF (direct backend) calls, still initialize CSRF.
+      if (!isBffRequest(target)) await setupCsrf();
       switch (method.toUpperCase()) {
-        case "POST": result = await apiService.post<T>(target, data); break;
-        case "PUT": result = await apiService.put<T>(target, data); break;
-        case "PATCH": result = await apiService.patch<T>(target, data); break;
+        case "POST":   result = await apiService.post<T>(target, data); break;
+        case "PUT":    result = await apiService.put<T>(target, data); break;
+        case "PATCH":  result = await apiService.patch<T>(target, data); break;
         case "DELETE": result = await apiService.delete<T>(target); break;
-        case "GET": result = await apiService.get<T>(target); break;
+        case "GET":    result = await apiService.get<T>(target); break;
         default: throw new Error(`Unsupported API method: ${method}`);
       }
       return { data: result, status: 200, ok: true };
@@ -51,240 +65,55 @@ export const apiService = {
       return { data: response?.data ?? ({ message: error instanceof Error ? error.message : "The request failed." } as T), status: response?.status ?? 0, ok: false };
     }
   },
+
   get: async <T>(url: string): Promise<T> => {
-    // Ensure CSRF token is available before making request
-    if (!isBffRequest(url)) await ensureCsrfToken();
-
-    // Prepare config to ensure auth headers are set
-    const config: any = {
-      headers: {}, // Initialize headers object
-    };
-
-    // Ensure auth headers are set for GET requests
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-
-      // Add XSRF token from cookies
-      const xsrfToken = getCookie('XSRF-TOKEN');
-      if (xsrfToken) {
-        config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
-      }
-    }
-
-    // Add common headers for Laravel Sanctum compatibility
-    config.headers["Accept"] = "application/json";
-    config.headers["X-Requested-With"] = "XMLHttpRequest";
-
-    // For cross-origin requests, ensure credentials are included
-    config.withCredentials = true;
-
-    const response = await api.get<T>(url, config);
+    if (!isBffRequest(url)) await setupCsrf();
+    const response = await api.get<T>(url, buildConfig());
     return response.data;
   },
 
   post: async <T>(url: string, data?: any): Promise<T> => {
-    // Ensure CSRF token is available before making request
-    if (!isBffRequest(url)) await ensureCsrfToken();
-
+    if (!isBffRequest(url)) await setupCsrf();
     const isFormData = data instanceof FormData;
-
-    if (isFormData) {
-      const dataObj: any = {};
-      data.forEach((value, key) => {
-        dataObj[key] = value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value;
-      });
-    } else {
-      console.log("API Service v2: Request data:");
-    }
-
+    const config = buildConfig(isFormData ? { "Content-Type": undefined } : undefined);
     try {
-      // For FormData, we must let axios/browser set the Content-Type with the boundary.
-      // We explicitly delete/override the default application/json.
-      const config: any = {
-        headers: {}, // Initialize headers object
-      };
-
-      if (isFormData) {
-        config.headers["Content-Type"] = undefined;
-      }
-
-      // Ensure auth headers are set even for FormData requests
-      if (typeof window !== "undefined") {
-        const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-
-        // Add XSRF token from cookies
-        const xsrfToken = getCookie('XSRF-TOKEN');
-        if (xsrfToken) {
-          config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
-        }
-      }
-
-      // Add common headers for Laravel Sanctum compatibility
-      config.headers["Accept"] = "application/json";
-      config.headers["X-Requested-With"] = "XMLHttpRequest";
-
-      // For cross-origin requests, ensure credentials are included
-      config.withCredentials = true;
-
       const response = await api.post<T>(url, data, config);
       return response.data;
     } catch (error: any) {
-      console.error("API Service v2: POST request failed");
-      console.error("API Service v2: Error status:", error.response?.status);
-     // console.error("API Service v2: Error data:", error.response?.data);
+      console.error("POST request failed:", error.response?.status);
       throw error;
     }
   },
 
   put: async <T>(url: string, data?: any): Promise<T> => {
-    // Ensure CSRF token is available before making request
-    if (!isBffRequest(url)) await ensureCsrfToken();
-
+    if (!isBffRequest(url)) await setupCsrf();
     const isFormData = data instanceof FormData;
-
-    if (isFormData) {
-      const dataObj: any = {};
-      data.forEach((value, key) => {
-        dataObj[key] = value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value;
-      });
-    } else {
-      console.log("API Service v2: Request data:");
-    }
-
+    const config = buildConfig(isFormData ? { "Content-Type": undefined } : undefined);
     try {
-      const config: any = {
-        headers: {}, // Initialize headers object
-      };
-
-      if (isFormData) {
-        config.headers["Content-Type"] = undefined;
-      }
-
-      // Ensure auth headers are set even for FormData requests
-      if (typeof window !== "undefined") {
-        const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-
-        // Add XSRF token from cookies
-        const xsrfToken = getCookie('XSRF-TOKEN');
-        if (xsrfToken) {
-          config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
-        }
-      }
-
-      // Add common headers for Laravel Sanctum compatibility
-      config.headers["Accept"] = "application/json";
-      config.headers["X-Requested-With"] = "XMLHttpRequest";
-
-      // For cross-origin requests, ensure credentials are included
-      config.withCredentials = true;
-
       const response = await api.put<T>(url, data, config);
       return response.data;
     } catch (error: any) {
-      console.error("API Service v2: Error status:", error.response?.status);
-      //console.error("API Service v2: Error data:", error.response?.data);
+      console.error("PUT request failed:", error.response?.status);
       throw error;
     }
   },
-   patch: async <T>(url: string, data?: any): Promise<T> => {
-    // Ensure CSRF token is available before making request
-    if (!isBffRequest(url)) await ensureCsrfToken();
 
+  patch: async <T>(url: string, data?: any): Promise<T> => {
+    if (!isBffRequest(url)) await setupCsrf();
     const isFormData = data instanceof FormData;
-    //console.log("API Service: Sending PATCH request to", url);
-
-    if (isFormData) {
-      const dataObj: any = {};
-      data.forEach((value, key) => {
-        dataObj[key] = value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value;
-      });
-      console.log("API Service: Request FormData:");
-    } else {
-      console.log("API Service: Request data:");
-    }
-
+    const config = buildConfig(isFormData ? { "Content-Type": undefined } : undefined);
     try {
-      const config: any = {
-        headers: {}, // Initialize headers object
-      };
-      
-      if (isFormData) {
-        config.headers["Content-Type"] = undefined;
-      }
-      
-      // Ensure auth headers are set
-      if (typeof window !== "undefined") {
-        const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        
-        // Add XSRF token from cookies
-        const xsrfToken = getCookie('XSRF-TOKEN');
-        if (xsrfToken) {
-          config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
-        }
-      }
-      
-      // Add common headers for Laravel Sanctum compatibility
-      config.headers["Accept"] = "application/json";
-      config.headers["X-Requested-With"] = "XMLHttpRequest";
-      
-      // For cross-origin requests, ensure credentials are included
-      config.withCredentials = true;
-
       const response = await api.patch<T>(url, data, config);
-      console.log("API Service: PATCH response status:", response.status);
-     // console.log("API Service: PATCH response data:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("API Service: PATCH request failed");
-      console.error("API Service: Error status:", error.response?.status);
-     // console.error("API Service: Error data:", error.response?.data);
+      console.error("PATCH request failed:", error.response?.status);
       throw error;
     }
   },
 
   delete: async <T>(url: string): Promise<T> => {
-    // Ensure CSRF token is available before making request
-    if (!isBffRequest(url)) await ensureCsrfToken();
-
-    // Prepare config to ensure auth headers are set
-    const config: any = {
-      headers: {}, // Initialize headers object
-    };
-
-    // Ensure auth headers are set for DELETE requests
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-
-      // Add XSRF token from cookies
-      const xsrfToken = getCookie('XSRF-TOKEN');
-      if (xsrfToken) {
-        config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken);
-      }
-    }
-
-    // Add common headers for Laravel Sanctum compatibility
-    config.headers["Accept"] = "application/json";
-    config.headers["X-Requested-With"] = "XMLHttpRequest";
-
-    // For cross-origin requests, ensure credentials are included
-    config.withCredentials = true;
-
-    const response = await api.delete<T>(url, config);
+    if (!isBffRequest(url)) await setupCsrf();
+    const response = await api.delete<T>(url, buildConfig());
     return response.data;
   },
 };

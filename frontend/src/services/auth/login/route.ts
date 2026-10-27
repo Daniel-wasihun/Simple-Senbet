@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateOriginHeader, getTrustedOrigins } from "@/lib/bffSecurity";
 import { serverApiService } from "@/services/serverApi.service";
 
-const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const BACKEND_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
 
 export async function POST(request: NextRequest) {
   // Validate origin for login attempts

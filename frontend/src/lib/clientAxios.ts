@@ -40,19 +40,32 @@ clientAxiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
-export const setupCsrf = async () => {
-  try {
-    // Ensure we have a fresh CSRF cookie before making requests
-    await clientAxiosInstance.get("/sanctum/csrf-cookie");
+// Track whether CSRF is already initialized and a pending init promise for deduplication
+let csrfInitialized = false;
+let csrfPending: Promise<boolean> | null = null;
 
-    // Wait briefly to ensure the cookie is set in the browser
-    await new Promise(resolve => setTimeout(resolve, 100));
+export const setupCsrf = async (): Promise<boolean> => {
+  // Already initialized — skip entirely (major perf gain: no roundtrip)
+  if (csrfInitialized) return true;
 
-    return true;
-  } catch (error) {
-    console.error("CSRF initialization failed:", error);
-    return false;
-  }
+  // Deduplicate concurrent calls — return the same promise
+  if (csrfPending) return csrfPending;
+
+  csrfPending = (async () => {
+    try {
+      await clientAxiosInstance.get("/sanctum/csrf-cookie");
+      // No artificial delay — the interceptor attaches the cookie on the next request automatically
+      csrfInitialized = true;
+      return true;
+    } catch (error) {
+      console.error("CSRF initialization failed:", error);
+      return false;
+    } finally {
+      csrfPending = null;
+    }
+  })();
+
+  return csrfPending;
 };
 
 export default clientAxiosInstance;

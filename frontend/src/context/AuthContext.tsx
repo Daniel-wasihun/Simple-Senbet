@@ -11,7 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string; user?: User }>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: (silent?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,8 +21,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
 
-  const refreshUser = useCallback(async () => {
-    setIsLoading(true);
+  const refreshUser = useCallback(async (silent = false) => {
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       const res = await authService.session();
       if (res.ok) {
@@ -34,17 +36,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setUser(null);
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    refreshUser();
+    void refreshUser(false);
   }, [refreshUser]);
 
   useEffect(() => {
+    let lastRefresh = 0;
     const refreshOnFocus = () => {
-      if (document.visibilityState === "visible") void refreshUser();
+      const now = Date.now();
+      // Debounce focus checks to at most once every 30 seconds, and always silent
+      if (document.visibilityState === "visible" && now - lastRefresh > 30_000) {
+        lastRefresh = now;
+        void refreshUser(true);
+      }
     };
     window.addEventListener("focus", refreshOnFocus);
     document.addEventListener("visibilitychange", refreshOnFocus);

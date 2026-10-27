@@ -38,7 +38,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     amharicLabel: "የትምህርት ኃላፊ",
     email: "director@example.com",
     pass: "Director123!",
-    targetDashboard: "/academics/dashboard",
+    targetDashboard: "/academics",
   },
   {
     role: "superadmin",
@@ -54,7 +54,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     amharicLabel: "የሂሳብ ኃላፊ",
     email: "finance@example.com",
     pass: "Finance123!",
-    targetDashboard: "/finance/dashboard",
+    targetDashboard: "/finance",
   },
   {
     role: "teacher",
@@ -62,7 +62,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     amharicLabel: "የሰንበት መምህር",
     email: "teacher@example.com",
     pass: "Teacher123!",
-    targetDashboard: "/attendance/dashboard",
+    targetDashboard: "/attendance",
   },
   {
     role: "attendance_officer",
@@ -70,7 +70,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     amharicLabel: "የቁጥጥር ኃላፊ",
     email: "attendance@example.com",
     pass: "Attendance123!",
-    targetDashboard: "/attendance/dashboard",
+    targetDashboard: "/attendance",
   },
   {
     role: "member_coordinator",
@@ -78,7 +78,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     amharicLabel: "የምዝገባ ኃላፊ",
     email: "registrar@example.com",
     pass: "Registrar123!",
-    targetDashboard: "/members/dashboard",
+    targetDashboard: "/members",
   },
   {
     role: "student",
@@ -86,7 +86,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
     amharicLabel: "ተማሪ",
     email: "student@example.com",
     pass: "Student123!",
-    targetDashboard: "/members/dashboard",
+    targetDashboard: "/members",
   },
 ];
 
@@ -117,13 +117,13 @@ export default function LoginPage() {
     setIsCheckingAuth(false);
   }, [isLoading, user, router]);
 
-  // Pre-fetch all destination dashboard routes immediately for zero-delay navigation
+  // Pre-fetch all destination routes immediately for zero-delay navigation
   useEffect(() => {
     router.prefetch("/dashboard");
-    router.prefetch("/academics/dashboard");
-    router.prefetch("/attendance/dashboard");
-    router.prefetch("/finance/dashboard");
-    router.prefetch("/members/dashboard");
+    router.prefetch("/academics");
+    router.prefetch("/attendance");
+    router.prefetch("/finance");
+    router.prefetch("/members");
   }, [router]);
 
   const handleSelectDemo = (account: DemoAccount) => {

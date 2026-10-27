@@ -5,9 +5,10 @@ namespace App\Providers;
 use App\Services\Notification\Channels\LogNotificationChannel;
 use App\Services\Notification\Channels\NotificationChannelInterface;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use App\Models\AcademicYear;
 use App\Models\Assessment;
@@ -41,6 +42,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // --- Dev process definitions for `composer dev` / `php artisan dev` ---
+        DevCommands::withoutDefaultCommands();
+
+        DevCommands::register('php artisan serve --port=8001', 'server')->purple();
+        DevCommands::register('npm --prefix frontend run dev', 'frontend')->blue();
+        DevCommands::artisan('pail --timeout=0', 'logs')->green();
+
+        // --- Authorization ---
         Gate::policy(AcademicYear::class, \App\Policies\AcademicYearPolicy::class);
         Gate::policy(Assessment::class, \App\Policies\AssessmentPolicy::class);
         Gate::policy(AssessmentResult::class, \App\Policies\AssessmentResultPolicy::class);
