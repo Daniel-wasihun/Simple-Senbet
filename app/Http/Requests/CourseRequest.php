@@ -50,6 +50,9 @@ class CourseRequest extends FormRequest
                     }
                 }
             }
+            if ($attribute === 'name' && empty($value['en'])) {
+                $value['en'] = $value['am'] ?? $value['om'] ?? null;
+            }
             $this->merge([$attribute => $value]);
         }
     }

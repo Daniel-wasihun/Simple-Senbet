@@ -28,4 +28,16 @@ class StorePaymentRuleRequest extends BaseRequest
             'carry_forward_credit' => ['sometimes', 'boolean'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        $name = $this->input('name');
+        if (is_string($name)) {
+            $name = ['en' => $name];
+            $this->merge(['name' => $name]);
+        } elseif (is_array($name) && empty($name['en'])) {
+            $name['en'] = $name['am'] ?? $name['om'] ?? null;
+            $this->merge(['name' => $name]);
+        }
+    }
 }

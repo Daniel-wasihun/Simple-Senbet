@@ -8,6 +8,18 @@ use App\Models\User;
 class TeachingAssignmentPolicy
 {
     /**
+     * Perform pre-authorization checks.
+     */
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->hasRole('superadmin') || $user->primaryRole?->name === 'superadmin' || ($user->role ?? null) === 'superadmin') {
+            return true;
+        }
+
+        return null;
+    }
+
+    /**
      * Determine whether the user can view any teaching assignments.
      */
     public function viewAny(User $user): bool

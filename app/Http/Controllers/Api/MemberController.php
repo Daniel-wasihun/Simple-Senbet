@@ -112,11 +112,15 @@ class MemberController extends Controller
             $query->where('class_id', request()->integer('class_id'));
         }
 
+        if (request()->filled('section') && request()->query('section') !== 'all') {
+            $query->where('section', strtoupper(trim((string) request()->query('section'))));
+        }
+
         if (request()->filled('gender') && request()->query('gender') !== 'all') {
             $query->where('gender', strtolower(trim((string) request()->query('gender'))));
         }
 
-        $perPage = min(max(request()->integer('per_page', 15), 1), 100);
+        $perPage = min(max(request()->integer('per_page', 15), 1), 250);
         return MemberResource::collection($query->paginate($perPage));
     }
 

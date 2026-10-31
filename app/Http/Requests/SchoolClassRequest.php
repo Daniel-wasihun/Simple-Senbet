@@ -44,6 +44,9 @@ class SchoolClassRequest extends FormRequest
                 if (!isset($name[$locale]) || $name[$locale] === '') $name[$locale] = $stored[$locale] ?? null;
             }
         }
+        if (empty($name['en'])) {
+            $name['en'] = $name['am'] ?? $name['om'] ?? null;
+        }
         $this->merge(['name' => $name]);
     }
 }

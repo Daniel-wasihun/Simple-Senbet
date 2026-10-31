@@ -27,9 +27,10 @@ class TeachingAssignmentController extends Controller
         $this->authorize('viewAny', TeachingAssignment::class);
 
         $user = $request->user();
-        $isAdmin = ! $user->hasRole('teacher');
+        $isSuperAdmin = $user->hasRole('superadmin') || $user->primaryRole?->name === 'superadmin' || ($user->role ?? null) === 'superadmin';
+        $isAdmin = $isSuperAdmin || ! $user->hasRole('teacher') || $user->hasRole('admin');
 
-        $query = TeachingAssignment::with(['teacher', 'schoolClass', 'course', 'academicYear']);
+        $query = TeachingAssignment::with(['teacher', 'schoolClass', 'course', 'academicYear', 'assessments']);
 
         // Non-admin teachers can only view their own assignments
         if (! $isAdmin) {
@@ -85,14 +86,18 @@ class TeachingAssignmentController extends Controller
         $validated = $request->validate([
             'teacher_id' => ['required', 'integer', 'exists:users,id'],
             'academic_year_id' => ['nullable', 'integer', 'exists:academic_years,id'],
-            'class_id' => ['required', 'integer', 'exists:classes,id'],
-            'section' => ['required', 'string', 'max:20'],
+            'class_id' => ['nullable', 'integer', 'exists:classes,id'],
+            'section' => ['nullable', 'string', 'max:20'],
             'course_id' => ['required', 'integer', 'exists:courses,id'],
             'semester' => ['required', Rule::enum(Semester::class)],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'is_primary' => ['sometimes', 'boolean'],
         ]);
+
+        $course = \App\Models\Course::findOrFail((int) $validated['course_id']);
+        $classId = (int) ($validated['class_id'] ?? $course->class_id);
+        $section = (string) ($validated['section'] ?? 'A');
 
         $academicYearId = (int) ($validated['academic_year_id'] ?? 0);
         if ($academicYearId <= 0) {
@@ -112,8 +117,8 @@ class TeachingAssignmentController extends Controller
         $assignment = $this->assignmentService->assign(
             teacherId: (int) $validated['teacher_id'],
             academicYearId: $academicYearId,
-            classId: (int) $validated['class_id'],
-            section: (string) $validated['section'],
+            classId: $classId,
+            section: $section,
             courseId: (int) $validated['course_id'],
             semester: $validated['semester'],
             startDate: $validated['start_date'] ?? null,
@@ -136,7 +141,7 @@ class TeachingAssignmentController extends Controller
     {
         $this->authorize('view', $teachingAssignment);
 
-        $teachingAssignment->load(['teacher', 'schoolClass', 'course', 'academicYear']);
+        $teachingAssignment->load(['teacher', 'schoolClass', 'course', 'academicYear', 'assessments']);
 
         return ApiResponse::success(
             new TeachingAssignmentResource($teachingAssignment),

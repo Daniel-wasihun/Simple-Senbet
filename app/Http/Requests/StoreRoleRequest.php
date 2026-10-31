@@ -22,4 +22,18 @@ class StoreRoleRequest extends FormRequest
             'label.om' => ['nullable', 'string', 'max:120'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        $label = $this->input('label');
+        if (is_string($label)) {
+            $label = ['en' => $label];
+        }
+        if (is_array($label)) {
+            if (empty($label['en'])) {
+                $label['en'] = $label['am'] ?? $label['om'] ?? null;
+            }
+            $this->merge(['label' => $label]);
+        }
+    }
 }

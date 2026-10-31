@@ -75,7 +75,7 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permission): bool
     {
-        if ($this->hasRole('superadmin') || $this->primaryRole?->name === 'superadmin') {
+        if ($this->hasRole('superadmin') || $this->primaryRole?->name === 'superadmin' || ($this->role ?? null) === 'superadmin') {
             return true;
         }
 

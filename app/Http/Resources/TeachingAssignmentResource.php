@@ -29,6 +29,7 @@ class TeachingAssignmentResource extends BaseJsonResource
             'course' => new CourseResource($this->whenLoaded('course')),
             'academic_year_id' => $this->academic_year_id,
             'academic_year' => new AcademicYearResource($this->whenLoaded('academicYear')),
+            'assessments' => AssessmentResource::collection($this->whenLoaded('assessments')),
             'section' => $this->section,
             'semester' => $this->semester?->value ?? $this->semester,
             'is_primary' => (bool) $this->is_primary,
