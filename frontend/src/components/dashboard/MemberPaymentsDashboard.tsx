@@ -2,17 +2,35 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { TableShimmerSkeleton, FinancePaymentsShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { FinancePaymentsShimmerSkeleton, TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 import { AppSelect } from "@/components/ui/AppSelect";
 import { LocalizedFieldInput, SupportedLocale } from "@/components/admin/LocalizedFieldInput";
 import { useRouter } from "next/navigation";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { paymentsService } from "@/services/payments.service";
 import { schoolManagementService } from "@/services/schoolManagement.service";
-import { getDashboardRouteForRole } from "@/utils/roleNavigation";
-import Link from "next/link";
 import {
-  ArrowLeft,
+  BRAND,
+  btnBase,
+  btnPrimary,
+  btnSecondary,
+  btnDanger,
+  inputCls,
+  textareaCls,
+  labelCls,
+  tableContainerCls,
+  tableHeaderRowCls,
+  tableHeaderCellCls,
+  tableRowCls,
+  actionBtnBase,
+  actionBtnView,
+  actionBtnDelete,
+  modalStickyFooter,
+  cardCls,
+  detailCardCls,
+  nestedLocalizedText,
+} from "@/components/admin/adminUiTokens";
+import {
   ChevronLeft,
   ChevronRight,
   DollarSign,
@@ -45,7 +63,21 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const permissions = useMemo(() => new Set(user?.permissions ?? []), [user?.permissions]);
-  const can = (permission: string) => permissions.has(permission);
+  const isSuperOrAdmin = useMemo(() => {
+    if (!user) return false;
+    const r = (user.role || "").toLowerCase();
+    const roles = (user.roles || []).map((x: any) =>
+      (typeof x === "string" ? x : x.name || "").toLowerCase()
+    );
+    const adminRoles = ["superadmin", "admin", "administrator", "finance_officer"];
+    if (adminRoles.includes(r)) return true;
+    return roles.some((x) => adminRoles.includes(x)) || Boolean(user.permissions?.includes("*"));
+  }, [user]);
+
+  const can = useCallback(
+    (permission: string) => isSuperOrAdmin || permissions.has(permission) || permissions.has("*"),
+    [isSuperOrAdmin, permissions]
+  );
   const canViewPayments = can("payments.view");
   const canRecordPayments = can("payments.record") || can("payments.record.all");
   const canVoidPayments = can("payments.void");
@@ -168,12 +200,10 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
     setError(null);
 
     try {
-      // 1. Fetch dashboard metrics
       const dashPromise = paymentRequest(`/api/backend/payments/dashboard?month=${selectedMonth}`, {
         headers: { Accept: "application/json" },
       });
 
-      // 2. Fetch member payments ledger
       const params = new URLSearchParams();
       params.set("month", selectedMonth);
       params.set("page", String(page));
@@ -198,11 +228,7 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
       if (membersRes.ok) {
         const memJson = await membersRes.json();
         setMembers(Array.isArray(memJson.data) ? memJson.data : []);
-        if (memJson.pagination) {
-          setPagination(memJson.pagination);
-        } else {
-          setPagination(null);
-        }
+        setPagination(memJson.pagination || null);
       } else {
         setError("Failed to load members payment ledger.");
       }
@@ -269,7 +295,6 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
         setPayingMember(null);
         await loadData(currentPage);
 
-        // Offer immediate receipt view
         if (json?.data?.id) {
           fetchReceipt(json.data.id);
         }
@@ -354,7 +379,6 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
         setActionSuccess(`Payment receipt #${paymentToVoid.receipt_number} has been voided.`);
         setPaymentToVoid(null);
         setVoidReason("");
-        // Refresh history & ledger
         if (historyMember) {
           openHistoryModal(historyMember);
         }
@@ -377,8 +401,9 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
     e.preventDefault();
     if (!canManageRules || submittingRule) return;
 
-    if (!ruleName.en?.trim()) {
-      setRuleError("English rule name is mandatory.");
+    const enName = ruleName.en?.trim() || ruleName.am?.trim() || ruleName.om?.trim();
+    if (!enName) {
+      setRuleError("Rule name is required in at least one language.");
       return;
     }
 
@@ -392,7 +417,7 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
     setRuleError(null);
 
     try {
-      const cleanName: Record<string, string> = { en: ruleName.en.trim() };
+      const cleanName: Record<string, string> = { en: enName };
       if (ruleName.am?.trim()) cleanName.am = ruleName.am.trim();
       if (ruleName.om?.trim()) cleanName.om = ruleName.om.trim();
 
@@ -432,67 +457,59 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
     }
   };
 
-  // Format Helper
-  const formatText = (text: any, fallback: string = "—"): string => {
-    if (text === null || text === undefined || text === "") return fallback;
-    if (typeof text === "string") return text;
-    if (typeof text === "number") return String(text);
-    if (typeof text === "object") {
-      if (text.am && text.en) return text.am || text.en;
-      if (text.am) return text.am;
-      if (text.en) return text.en;
-      const values = Object.values(text).filter((v) => typeof v === "string" || typeof v === "number");
-      if (values.length > 0) return String(values[0]);
-      return fallback;
-    }
-    return String(text);
-  };
-
   const getStatusBadge = (status: MemberMonthlyStatus["status"]) => {
     switch (status) {
       case "PAID":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <CheckCircle2 className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+            <CheckCircle2 className="w-3 h-3" />
             Paid
           </span>
         );
       case "OVERPAID":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            <TrendingUp className="w-3.5 h-3.5" />
-            Credit / Overpaid
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <TrendingUp className="w-3 h-3" />
+            Credit
           </span>
         );
       case "PARTIAL":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-            <Clock className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+            <Clock className="w-3 h-3" />
             Partial
           </span>
         );
       case "UNPAID":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-            <AlertCircle className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+            <AlertCircle className="w-3 h-3" />
             Unpaid
           </span>
         );
       case "EXEMPT":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-            <UserCheck className="w-3.5 h-3.5" />
-            Exempt / Minor
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <UserCheck className="w-3 h-3" />
+            Exempt
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
             {status}
           </span>
         );
     }
   };
+
+  if (!canViewPayments) {
+    return (
+      <section className="m-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111624] p-8 text-center text-sm text-slate-500">
+        You do not have permission to view financial payments and ledger records.
+      </section>
+    );
+  }
 
   if (authLoading || (loading && !dashboardData && !members.length)) {
     return <FinancePaymentsShimmerSkeleton />;
@@ -500,523 +517,506 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
 
   const financial = dashboardData?.financial_summary;
   const counts = dashboardData?.member_counts;
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <Link
-                href={getDashboardRouteForRole(user?.role, user?.permissions)}
-                className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition mr-2 text-sm font-semibold"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Dashboard</span>
-              </Link>
-              <div className="h-5 w-px bg-slate-200" />
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-sm">
-                  <DollarSign className="w-5 h-5" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-base text-slate-900 leading-tight">Monthly Member Payments</h1>
-                  <p className="text-[11px] text-slate-500">የአባላት ወርሃዊ መዋጮ አስተዳደር</p>
-                </div>
-              </div>
-            </div>
+    <div className="w-full space-y-5 px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-7">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-blue-600 dark:text-sky-400">
+              Financial Management
+            </span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+              የአባላት ወርሃዊ መዋጮ
+            </span>
+          </div>
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+            <DollarSign className="w-5 h-5 text-[#0858a8] shrink-0" />
+            Monthly Member Payments
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Track member obligations, record contributions, and configure payment rules.
+          </p>
+        </div>
 
-            <div className="flex items-center gap-3">
-              {canManageRules && (
-                <button
-                  onClick={() => setShowRuleModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition"
-                >
-                  <Sliders className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Configure Rules</span>
-                </button>
+        {/* Header Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Billing Month Navigation */}
+          <div className="inline-flex items-center rounded-[4px] border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] p-0.5 shadow-2xs">
+            <button
+              onClick={handlePrevMonth}
+              aria-label="Previous Month"
+              className="p-1 rounded-[3px] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 text-center px-2 py-0.5 focus:outline-hidden"
+            />
+            <button
+              onClick={handleNextMonth}
+              aria-label="Next Month"
+              className="p-1 rounded-[3px] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {canManageRules && (
+            <button
+              onClick={() => setShowRuleModal(true)}
+              className={btnSecondary}
+              title="Configure Monthly Contribution Rules"
+            >
+              <Sliders className="w-3.5 h-3.5 text-blue-600 dark:text-sky-400" />
+              <span>Configure Rules</span>
+            </button>
+          )}
+
+          {canExportPayments && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className={btnSecondary}
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Export CSV</span>
+              </button>
+              {showExportMenu && (
+                <div className="absolute right-0 mt-1 w-52 rounded-[4px] bg-white dark:bg-[#141a29] border border-slate-200/90 dark:border-slate-800 shadow-xl py-1 z-40 text-xs">
+                  <a
+                    href={`/api/backend/payments/export/monthly-summary?month=${selectedMonth}${filterClassId ? `&class_id=${filterClassId}` : ""}`}
+                    download
+                    onClick={() => setShowExportMenu(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Monthly Summary CSV</span>
+                  </a>
+                  <a
+                    href={`/api/backend/payments/export/transactions?month=${selectedMonth}${filterClassId ? `&class_id=${filterClassId}` : ""}`}
+                    download
+                    onClick={() => setShowExportMenu(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Transactions Detail CSV</span>
+                  </a>
+                </div>
               )}
-
-              {canExportPayments && <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition"
-                >
-                  <Download className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Export CSV</span>
-                </button>
-                {showExportMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs">
-                    <a
-                      href={`/api/backend/payments/export/monthly-summary?month=${selectedMonth}${filterClassId ? `&class_id=${filterClassId}` : ""}`}
-                      download
-                      onClick={() => setShowExportMenu(false)}
-                      className="flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 transition"
-                    >
-                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Monthly Summary CSV</span>
-                    </a>
-                    <a
-                      href={`/api/backend/payments/export/transactions?month=${selectedMonth}${filterClassId ? `&class_id=${filterClassId}` : ""}`}
-                      download
-                      onClick={() => setShowExportMenu(false)}
-                      className="flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 transition"
-                    >
-                      <CreditCard className="w-4 h-4 text-indigo-600 shrink-0" />
-                      <span>Transactions Detail CSV</span>
-                    </a>
-                  </div>
-                )}
-              </div>}
-
-              <button
-                onClick={() => loadData(currentPage)}
-                disabled={loading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-2xs transition"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-600" : ""}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-        {/* Month Selector & Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-emerald-600" />
-              Billing Month:
-            </span>
-            <div className="inline-flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
-              <button
-                onClick={handlePrevMonth}
-                aria-label="Previous Month"
-                className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-slate-900 transition"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => {
-                  setSelectedMonth(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="bg-transparent text-sm font-bold text-slate-800 text-center px-2 py-0.5 focus:outline-hidden"
-              />
-              <button
-                onClick={handleNextMonth}
-                aria-label="Next Month"
-                className="p-1.5 rounded-lg hover:bg-white text-slate-600 hover:text-slate-900 transition"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Active Rules:</span>
-            <span className="font-semibold text-slate-800">
-              {dashboardData?.active_rules?.length ? dashboardData.active_rules.map((r) => formatText(r.name)).join(", ") : "Standard Default (50 ETB / 18+)"}
-            </span>
-          </div>
-        </div>
-
-        {/* Global Notifications */}
-        {error && (
-          <div role="alert" className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-800 text-sm">
-            <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold">Unable to load payment data</p>
-              <p className="text-xs text-rose-700 mt-0.5">{error}</p>
-            </div>
-            <button onClick={() => loadData(currentPage)} className="px-3 py-1 bg-white border border-rose-300 rounded-lg text-xs font-semibold text-rose-700">
-              Retry
-            </button>
-          </div>
-        )}
-
-        {actionSuccess && (
-          <div role="status" className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 text-emerald-800 text-sm">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold">Transaction Completed</p>
-              <p className="text-xs text-emerald-700 mt-0.5">{actionSuccess}</p>
-            </div>
-            <button onClick={() => setActionSuccess(null)} className="text-emerald-600 hover:text-emerald-800 font-bold">
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* Financial KPI Cards */}
-        <section aria-labelledby="financial-metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Expected</p>
-                <p className="text-2xl font-black text-slate-900 mt-1">
-                  {financial ? `${financial.total_expected.toFixed(2)} ETB` : "—"}
-                </p>
-              </div>
-              <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <FileText className="w-6 h-6" />
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">
-              From {counts?.eligible_members ?? 0} eligible paying members
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Collected</p>
-                <p className="text-2xl font-black text-emerald-600 mt-1">
-                  {financial ? `${financial.total_collected.toFixed(2)} ETB` : "—"}
-                </p>
-              </div>
-              <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                <DollarSign className="w-6 h-6" />
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                {financial ? `${financial.collection_rate_percent.toFixed(1)}%` : "0%"}
-              </span>
-              <span className="text-[11px] text-slate-400">collection rate</span>
-            </div>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Remaining Balance</p>
-                <p className="text-2xl font-black text-rose-600 mt-1">
-                  {financial ? `${financial.total_remaining.toFixed(2)} ETB` : "—"}
-                </p>
-              </div>
-              <div className="w-11 h-11 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
-                <AlertCircle className="w-6 h-6" />
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Across {(counts?.unpaid_members ?? 0) + (counts?.partial_members ?? 0)} members pending
-            </p>
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Overpaid / Credit</p>
-                <p className="text-2xl font-black text-blue-600 mt-1">
-                  {financial ? `${financial.total_overpaid.toFixed(2)} ETB` : "—"}
-                </p>
-              </div>
-              <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                <TrendingUp className="w-6 h-6" />
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Excess contributions on credit
-            </p>
-          </div>
-        </section>
-
-        {/* Member Status Breakdown Pills */}
-        {counts && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            <div className="p-3 rounded-xl bg-white border border-slate-200 text-center">
-              <span className="text-xs text-slate-500">Fully Paid</span>
-              <p className="text-lg font-bold text-emerald-600">{counts.paid_members}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-white border border-slate-200 text-center">
-              <span className="text-xs text-slate-500">Partially Paid</span>
-              <p className="text-lg font-bold text-amber-600">{counts.partial_members}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-white border border-slate-200 text-center">
-              <span className="text-xs text-slate-500">Unpaid</span>
-              <p className="text-lg font-bold text-rose-600">{counts.unpaid_members}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-white border border-slate-200 text-center">
-              <span className="text-xs text-slate-500">Overpaid</span>
-              <p className="text-lg font-bold text-blue-600">{counts.overpaid_members}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-white border border-slate-200 text-center">
-              <span className="text-xs text-slate-500">Exempt (Minors)</span>
-              <p className="text-lg font-bold text-slate-600">{counts.exempt_members}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-white border border-slate-200 text-center">
-              <span className="text-xs text-slate-500">Total Members</span>
-              <p className="text-lg font-bold text-slate-900">{counts.total_members}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Member Payment Ledger Section */}
-        <section aria-labelledby="ledger-heading" className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
-          {/* Filter Bar */}
-          <div className="p-4 sm:p-6 border-b border-slate-100 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 id="ledger-heading" className="text-lg font-bold text-slate-900">
-                  Member Payment Ledger
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Obligations and contributions for {selectedMonth}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium">
-                  Showing {members.length} members
-                </span>
-              </div>
-            </div>
-
-            {/* Filter controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search by name, code, phone..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      setCurrentPage(1);
-                      loadData(1);
-                    }
-                  }}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <AppSelect
-                  value={filterClassId}
-                  onChange={(val) => {
-                    setFilterClassId(val);
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: "", label: "All Classes" },
-                    ...classes.map((c) => ({ value: String(c.id), label: `${formatText(c.name)} (${c.code})` })),
-                  ]}
-                  placeholder="All Classes"
-                  size="sm"
-                  ariaLabel="Filter by Class"
-                />
-              </div>
-
-              <div>
-                <AppSelect
-                  value={filterStatus}
-                  onChange={(val) => {
-                    setFilterStatus(val);
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: "all", label: "All Payment Statuses" },
-                    { value: "PAID", label: "Paid in Full" },
-                    { value: "PARTIAL", label: "Partially Paid" },
-                    { value: "UNPAID", label: "Unpaid" },
-                    { value: "OVERPAID", label: "Overpaid (Credit)" },
-                    { value: "EXEMPT", label: "Exempt / Minor" },
-                  ]}
-                  placeholder="All Payment Statuses"
-                  size="sm"
-                  ariaLabel="Filter by Payment Status"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-xs">
-              <thead className="bg-slate-50/75 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                <tr>
-                  <th scope="col" className="py-3.5 px-4 text-left">Member</th>
-                  <th scope="col" className="py-3.5 px-4 text-left">Class & Age</th>
-                  <th scope="col" className="py-3.5 px-4 text-right">Expected</th>
-                  <th scope="col" className="py-3.5 px-4 text-right">Paid</th>
-                  <th scope="col" className="py-3.5 px-4 text-right">Balance</th>
-                  <th scope="col" className="py-3.5 px-4 text-center">Status</th>
-                  <th scope="col" className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="p-4">
-                      <TableShimmerSkeleton rows={5} columns={7} />
-                    </td>
-                  </tr>
-                ) : members.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
-                      No member records found matching the current filters for {selectedMonth}.
-                    </td>
-                  </tr>
-                ) : (
-                  members.map((mem) => (
-                    <tr key={mem.member_id} className="hover:bg-slate-50/70 transition">
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 text-sm">
-                          {mem.full_name}
-                        </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                          <span className="font-mono text-indigo-600">{mem.member_code}</span>
-                          {mem.christian_name && <span>• {mem.christian_name}</span>}
-                          {mem.phone_number && <span>• {mem.phone_number}</span>}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-slate-800">
-                          {mem.class_name || "Unassigned Class"}
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          {mem.age !== null && mem.age !== undefined ? `${mem.age} yrs old` : "DOB Missing"}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right font-medium text-slate-700">
-                        {mem.expected_amount.toFixed(2)} ETB
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right font-bold text-emerald-600">
-                        {mem.paid_amount.toFixed(2)} ETB
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        {mem.remaining_balance > 0 ? (
-                          <span className="font-bold text-rose-600">
-                            {mem.remaining_balance.toFixed(2)} ETB
-                          </span>
-                        ) : mem.overpaid_amount > 0 ? (
-                          <span className="font-bold text-blue-600">
-                            +{mem.overpaid_amount.toFixed(2)} Credit
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">0.00 ETB</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        {getStatusBadge(mem.status)}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center gap-1.5">
-                          {canRecordPayments && <button
-                            onClick={() => openPaymentModal(mem)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" />
-                            <span>Pay</span>
-                          </button>}
-
-                          <button
-                            onClick={() => openHistoryModal(mem)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>History</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {pagination && pagination.total_pages > 1 && (
-            <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-              <div>
-                Page {pagination.current_page} of {pagination.total_pages} ({pagination.total} total members)
-              </div>
-              <div className="inline-flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={pagination.current_page <= 1}
-                  className="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(pagination.total_pages, p + 1))}
-                  disabled={pagination.current_page >= pagination.total_pages}
-                  className="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition"
-                >
-                  Next
-                </button>
-              </div>
             </div>
           )}
-        </section>
-      </main>
+
+          <button
+            onClick={() => loadData(currentPage)}
+            disabled={loading}
+            className={btnSecondary}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#0858a8]" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Global Alerts */}
+      {error && (
+        <div role="alert" className="p-3.5 rounded-[4px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-3 text-rose-800 dark:text-rose-200 text-xs">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">Unable to load payment data</p>
+            <p className="mt-0.5">{error}</p>
+          </div>
+          <button onClick={() => loadData(currentPage)} className={`${btnSecondary} h-7 px-2.5 text-xs text-rose-700 dark:text-rose-300`}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div role="status" className="p-3.5 rounded-[4px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex items-start gap-3 text-emerald-800 dark:text-emerald-200 text-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">Transaction Completed</p>
+            <p className="mt-0.5">{actionSuccess}</p>
+          </div>
+          <button onClick={() => setActionSuccess(null)} className="text-emerald-600 hover:text-emerald-800 font-bold p-1">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Financial KPI Cards */}
+      <section aria-labelledby="financial-metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Expected</p>
+              <p className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">
+                {financial ? `${financial.total_expected.toFixed(2)} ETB` : "—"}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-[4px] bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-[#0858a8] dark:text-sky-400">
+              <FileText className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+            From {counts?.eligible_members ?? 0} eligible paying members
+          </p>
+        </div>
+
+        <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Collected</p>
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {financial ? `${financial.total_collected.toFixed(2)} ETB` : "—"}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-[4px] bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded-[3px]">
+              {financial ? `${financial.collection_rate_percent.toFixed(1)}%` : "0%"}
+            </span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">collection rate</span>
+          </div>
+        </div>
+
+        <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Remaining Balance</p>
+              <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1">
+                {financial ? `${financial.total_remaining.toFixed(2)} ETB` : "—"}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-[4px] bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 dark:text-rose-400">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+            Across {(counts?.unpaid_members ?? 0) + (counts?.partial_members ?? 0)} pending members
+          </p>
+        </div>
+
+        <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Overpaid / Credit</p>
+              <p className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                {financial ? `${financial.total_overpaid.toFixed(2)} ETB` : "—"}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-[4px] bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+            Excess contributions on credit
+          </p>
+        </div>
+      </section>
+
+      {/* Member Status Breakdown Quick Strip */}
+      {counts && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="p-2.5 rounded-[4px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 text-center">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Fully Paid</span>
+            <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">{counts.paid_members}</p>
+          </div>
+          <div className="p-2.5 rounded-[4px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 text-center">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Partially Paid</span>
+            <p className="text-base font-bold text-amber-600 dark:text-amber-400">{counts.partial_members}</p>
+          </div>
+          <div className="p-2.5 rounded-[4px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 text-center">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Unpaid</span>
+            <p className="text-base font-bold text-rose-600 dark:text-rose-400">{counts.unpaid_members}</p>
+          </div>
+          <div className="p-2.5 rounded-[4px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 text-center">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Overpaid</span>
+            <p className="text-base font-bold text-blue-600 dark:text-blue-400">{counts.overpaid_members}</p>
+          </div>
+          <div className="p-2.5 rounded-[4px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 text-center">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Exempt (Minors)</span>
+            <p className="text-base font-bold text-slate-700 dark:text-slate-300">{counts.exempt_members}</p>
+          </div>
+          <div className="p-2.5 rounded-[4px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 text-center">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Total Members</span>
+            <p className="text-base font-bold text-slate-900 dark:text-slate-100">{counts.total_members}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Member Payment Ledger Container */}
+      <div className={tableContainerCls}>
+        {/* Toolbar & Filters */}
+        <div className="p-4 border-b border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-2.5">
+            {/* Search Input */}
+            <div className="relative w-full sm:w-80">
+              <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search member name, code, phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setCurrentPage(1);
+                    loadData(1);
+                  }
+                }}
+                className={`${inputCls()} pl-8`}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setCurrentPage(1);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Class Filter */}
+            <div className="w-full sm:w-48">
+              <AppSelect
+                value={filterClassId}
+                onChange={(val) => {
+                  setFilterClassId(val);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: "", label: "All Classes" },
+                  ...classes.map((c) => ({ value: String(c.id), label: `${nestedLocalizedText(c.name)} (${c.code})` })),
+                ]}
+                placeholder="All Classes"
+                size="sm"
+                ariaLabel="Filter by Class"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="w-full sm:w-44">
+              <AppSelect
+                value={filterStatus}
+                onChange={(val) => {
+                  setFilterStatus(val);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: "all", label: "All Statuses" },
+                  { value: "PAID", label: "Paid in Full" },
+                  { value: "PARTIAL", label: "Partially Paid" },
+                  { value: "UNPAID", label: "Unpaid" },
+                  { value: "OVERPAID", label: "Overpaid (Credit)" },
+                  { value: "EXEMPT", label: "Exempt / Minor" },
+                ]}
+                placeholder="All Statuses"
+                size="sm"
+                ariaLabel="Filter by Payment Status"
+              />
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap self-end md:self-center">
+            {members.length} members shown
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className={tableHeaderRowCls}>
+                <th scope="col" className={tableHeaderCellCls}>Member</th>
+                <th scope="col" className={tableHeaderCellCls}>Class & Age</th>
+                <th scope="col" className={`${tableHeaderCellCls} text-right`}>Expected</th>
+                <th scope="col" className={`${tableHeaderCellCls} text-right`}>Paid</th>
+                <th scope="col" className={`${tableHeaderCellCls} text-right`}>Balance</th>
+                <th scope="col" className={`${tableHeaderCellCls} text-center`}>Status</th>
+                <th scope="col" className={`${tableHeaderCellCls} text-right`}>Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="p-4">
+                    <TableShimmerSkeleton rows={6} columns={7} />
+                  </td>
+                </tr>
+              ) : members.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-500 dark:text-slate-400">
+                    No member records found matching the current filters for {selectedMonth}.
+                  </td>
+                </tr>
+              ) : (
+                members.map((mem) => (
+                  <tr key={mem.member_id} className={tableRowCls(false)}>
+                    <td className="py-3 px-4">
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                        {mem.full_name}
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                        <span className="font-mono text-[#0858a8] dark:text-sky-400">{mem.member_code}</span>
+                        {mem.christian_name && <span>• {mem.christian_name}</span>}
+                        {mem.phone_number && <span>• {mem.phone_number}</span>}
+                      </div>
+                    </td>
+
+                    <td className="py-3 px-4">
+                      <div className="font-medium text-slate-800 dark:text-slate-200">
+                        {mem.class_name || "Unassigned Class"}
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {mem.age !== null && mem.age !== undefined ? `${mem.age} yrs old` : "DOB Missing"}
+                      </div>
+                    </td>
+
+                    <td className="py-3 px-4 text-right font-medium text-slate-700 dark:text-slate-300">
+                      {mem.expected_amount.toFixed(2)} ETB
+                    </td>
+
+                    <td className="py-3 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                      {mem.paid_amount.toFixed(2)} ETB
+                    </td>
+
+                    <td className="py-3 px-4 text-right">
+                      {mem.remaining_balance > 0 ? (
+                        <span className="font-bold text-rose-600 dark:text-rose-400">
+                          {mem.remaining_balance.toFixed(2)} ETB
+                        </span>
+                      ) : mem.overpaid_amount > 0 ? (
+                        <span className="font-bold text-blue-600 dark:text-blue-400">
+                          +{mem.overpaid_amount.toFixed(2)} Credit
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500">0.00 ETB</span>
+                      )}
+                    </td>
+
+                    <td className="py-3 px-4 text-center">
+                      {getStatusBadge(mem.status)}
+                    </td>
+
+                    <td className="py-3 px-4 text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        {canRecordPayments && (
+                          <button
+                            onClick={() => openPaymentModal(mem)}
+                            className={`${btnBase} h-7 px-2.5 bg-emerald-600 text-white hover:bg-emerald-700 text-[11px]`}
+                            title="Record Payment"
+                          >
+                            <CreditCard className="w-3 h-3" />
+                            <span>Pay</span>
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => openHistoryModal(mem)}
+                          className={actionBtnView}
+                          title="View Payment History"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Footer */}
+        {pagination && pagination.total_pages > 1 && (
+          <div className="p-3.5 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+            <div>
+              Page {pagination.current_page} of {pagination.total_pages} ({pagination.total} total members)
+            </div>
+            <div className="inline-flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={pagination.current_page <= 1}
+                className={btnSecondary}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(pagination.total_pages, p + 1))}
+                disabled={pagination.current_page >= pagination.total_pages}
+                className={btnSecondary}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Record Payment Modal */}
       {payingMember && canRecordPayments && (
-        <AdminModal open={Boolean(payingMember && canRecordPayments)} onOpenChange={(open) => { if (!open && !submittingPayment) setPayingMember(null); }} title="Record Member Payment" description={`Record a payment for ${payingMember.full_name} · ${selectedMonth}`} size="md" showHeader={false}>
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Record Member Payment</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Month: {selectedMonth}</p>
-              </div>
-              <button
-                onClick={() => setPayingMember(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
+        <AdminModal
+          open={Boolean(payingMember && canRecordPayments)}
+          onOpenChange={(open) => {
+            if (!open && !submittingPayment) setPayingMember(null);
+          }}
+          title="Record Member Payment"
+          description={`Record contribution for ${payingMember.full_name} (${payingMember.member_code}) · ${selectedMonth}`}
+          size="md"
+          showHeader={true}
+        >
+          <div className="space-y-4">
             {paymentError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800">
+              <div className="p-3 rounded-[4px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-800 dark:text-rose-200">
                 {paymentError}
               </div>
             )}
 
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Member:</span>
-                <span className="font-bold text-slate-900">{payingMember.full_name} ({payingMember.member_code})</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Class:</span>
-                <span className="font-semibold text-slate-800">{payingMember.class_name || "Unassigned"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Expected / Paid:</span>
-                <span className="font-medium text-slate-800">
-                  {payingMember.expected_amount.toFixed(2)} ETB / {payingMember.paid_amount.toFixed(2)} ETB
-                </span>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-slate-200 font-bold">
-                <span className="text-slate-700">Remaining Balance:</span>
-                <span className={payingMember.remaining_balance > 0 ? "text-rose-600" : "text-emerald-600"}>
-                  {payingMember.remaining_balance.toFixed(2)} ETB
-                </span>
+            <div className={detailCardCls}>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-semibold">Member</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{payingMember.full_name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-semibold">Class</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{payingMember.class_name || "Unassigned"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-semibold">Expected / Paid</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">
+                    {payingMember.expected_amount.toFixed(2)} ETB / {payingMember.paid_amount.toFixed(2)} ETB
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px] uppercase font-semibold">Remaining Balance</span>
+                  <span className={`font-bold ${payingMember.remaining_balance > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                    {payingMember.remaining_balance.toFixed(2)} ETB
+                  </span>
+                </div>
               </div>
             </div>
 
-            <form onSubmit={handleRecordPayment} className="space-y-4 text-xs">
+            <form onSubmit={handleRecordPayment} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Payment Amount (ETB) *
+                <label className={labelCls}>
+                  Payment Amount (ETB) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1026,13 +1026,13 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  className={inputCls()}
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Payment Method *
+                <label className={labelCls}>
+                  Payment Method <span className="text-rose-500">*</span>
                 </label>
                 <AppSelect
                   value={paymentMethod}
@@ -1049,43 +1049,39 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Reference / Transaction No. (Optional)
-                </label>
+                <label className={labelCls}>Reference / Transaction No. (Optional)</label>
                 <input
                   type="text"
                   value={paymentReference}
                   onChange={(e) => setPaymentReference(e.target.value)}
                   placeholder="e.g. TXN-98421 or Bank Slip #"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  className={inputCls()}
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Internal Notes (Optional)
-                </label>
+                <label className={labelCls}>Internal Notes (Optional)</label>
                 <input
                   type="text"
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
                   placeholder="e.g. Paid in person after service"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  className={inputCls()}
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className={modalStickyFooter}>
                 <button
                   type="button"
                   onClick={() => setPayingMember(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+                  className={btnSecondary}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPayment}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs disabled:opacity-50"
+                  className={btnPrimary}
                 >
                   {submittingPayment ? "Recording..." : "Confirm & Issue Receipt"}
                 </button>
@@ -1097,81 +1093,75 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
 
       {/* Payment History & Receipts Modal */}
       {historyMember && (
-        <AdminModal open={Boolean(historyMember)} onOpenChange={(open) => { if (!open) setHistoryMember(null); }} title={`Payment History: ${historyMember.full_name}`} description={`Member Code: ${historyMember.member_code}`} size="xl" showHeader={false}>
-          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Payment History: {historyMember.full_name}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Member Code: {historyMember.member_code} • {historyMember.class_name || "Unassigned"}
-                </p>
-              </div>
-              <button
-                onClick={() => setHistoryMember(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-3">
+        <AdminModal
+          open={Boolean(historyMember)}
+          onOpenChange={(open) => {
+            if (!open) setHistoryMember(null);
+          }}
+          title={`Payment History: ${historyMember.full_name}`}
+          description={`Member Code: ${historyMember.member_code} • ${historyMember.class_name || "Unassigned"}`}
+          size="xl"
+          showHeader={true}
+        >
+          <div className="space-y-3.5">
+            <div className="max-h-[60vh] overflow-y-auto space-y-2.5 pr-1">
               {historyLoading ? (
-                <div className="py-8 text-center text-slate-500 text-xs">
+                <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-xs">
                   Loading payment history...
                 </div>
               ) : memberPayments.length === 0 ? (
-                <div className="py-8 text-center text-slate-500 text-xs">
+                <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-xs">
                   No payment transactions recorded for this member yet.
                 </div>
               ) : (
                 memberPayments.map((p) => (
                   <div
                     key={p.id}
-                    className={`p-3.5 rounded-2xl border ${
-                      p.is_void ? "bg-rose-50/40 border-rose-200 opacity-75" : "bg-slate-50 border-slate-200"
+                    className={`p-3 rounded-[4px] border ${
+                      p.is_void
+                        ? "bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60 opacity-80"
+                        : "bg-slate-50 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800"
                     } text-xs space-y-2`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-900">{p.receipt_number}</span>
+                        <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{p.receipt_number}</span>
                         {p.is_void ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
+                          <span className="px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
                             VOIDED
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          <span className="px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                             VALID
                           </span>
                         )}
                         <span className="text-slate-400">• {p.billing_month}</span>
                       </div>
-                      <span className="font-bold text-sm text-slate-900">{p.amount.toFixed(2)} ETB</span>
+                      <span className="font-bold text-sm text-slate-900 dark:text-slate-100">{p.amount.toFixed(2)} ETB</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-slate-600 text-[11px]">
+                    <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-[11px]">
                       <div>
                         <span>Method: {p.payment_method}</span>
                         {p.payment_reference && <span> • Ref: {p.payment_reference}</span>}
-                        {p.recorded_by_user && <span> • Cashier: {formatText(p.recorded_by_user.name)}</span>}
+                        {p.recorded_by_user && <span> • Cashier: {nestedLocalizedText(p.recorded_by_user.name)}</span>}
                       </div>
                       <span>{new Date(p.paid_at).toLocaleDateString()}</span>
                     </div>
 
                     {p.is_void && (
-                      <div className="p-2 rounded-xl bg-white border border-rose-200 text-rose-700 text-[11px]">
+                      <div className="p-2 rounded-[4px] bg-white dark:bg-[#111624] border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-[11px]">
                         <strong>Void Reason:</strong> {p.void_reason} (Voided on {p.voided_at})
                       </div>
                     )}
 
                     {!p.is_void && (
-                      <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-200/60">
+                      <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-200/60 dark:border-slate-700/60">
                         <button
                           onClick={() => fetchReceipt(p.id)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold"
+                          className={btnSecondary}
                         >
-                          <Printer className="w-3.5 h-3.5" />
+                          <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-sky-400" />
                           <span>Receipt</span>
                         </button>
 
@@ -1182,7 +1172,7 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                               setVoidReason("");
                               setVoidError(null);
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold"
+                            className={btnDanger}
                           >
                             <Ban className="w-3.5 h-3.5" />
                             <span>Void</span>
@@ -1195,10 +1185,10 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
               )}
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className={modalStickyFooter}>
               <button
                 onClick={() => setHistoryMember(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs"
+                className={btnSecondary}
               >
                 Close
               </button>
@@ -1209,33 +1199,32 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
 
       {/* Void Payment Confirmation Modal */}
       {paymentToVoid && canVoidPayments && (
-        <AdminModal open={Boolean(paymentToVoid && canVoidPayments)} onOpenChange={(open) => { if (!open && !voidingSubmitting) setPaymentToVoid(null); }} title="Void Payment Receipt" description={`Receipt #${paymentToVoid.receipt_number}`} size="md" showHeader={false}>
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-rose-700 flex items-center gap-2">
-                <Ban className="w-5 h-5" />
-                <span>Void Payment Receipt</span>
-              </h3>
-              <button onClick={() => setPaymentToVoid(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-slate-600">
+        <AdminModal
+          open={Boolean(paymentToVoid && canVoidPayments)}
+          onOpenChange={(open) => {
+            if (!open && !voidingSubmitting) setPaymentToVoid(null);
+          }}
+          title="Void Payment Receipt"
+          description={`Receipt #${paymentToVoid.receipt_number} · ${paymentToVoid.amount.toFixed(2)} ETB`}
+          size="md"
+          showHeader={true}
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-slate-600 dark:text-slate-300">
               Are you sure you want to void receipt <strong>#{paymentToVoid.receipt_number}</strong> for{" "}
               <strong>{paymentToVoid.amount.toFixed(2)} ETB</strong>? This action updates member balances and will be logged in the permanent audit trail.
             </p>
 
             {voidError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800">
+              <div className="p-3 rounded-[4px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-200">
                 {voidError}
               </div>
             )}
 
             <form onSubmit={handleVoidPayment} className="space-y-4">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Reason for Voiding * (minimum 5 characters)
+                <label className={labelCls}>
+                  Reason for Voiding <span className="text-rose-500">*</span> (minimum 5 characters)
                 </label>
                 <textarea
                   rows={3}
@@ -1243,22 +1232,22 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                   value={voidReason}
                   onChange={(e) => setVoidReason(e.target.value)}
                   placeholder="e.g. Payment recorded in duplicate or entered against wrong member account"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-rose-500"
+                  className={textareaCls()}
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2">
+              <div className={modalStickyFooter}>
                 <button
                   type="button"
                   onClick={() => setPaymentToVoid(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+                  className={btnSecondary}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={voidingSubmitting}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold disabled:opacity-50"
+                  className={btnDanger}
                 >
                   {voidingSubmitting ? "Voiding..." : "Confirm Void"}
                 </button>
@@ -1270,17 +1259,17 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
 
       {/* Printable Receipt Modal */}
       {activeReceipt && (
-        <AdminModal open={Boolean(activeReceipt)} onOpenChange={(open) => { if (!open) setActiveReceipt(null); }} title="Official Payment Receipt" description={`Receipt #${activeReceipt.receipt_number}`} size="lg" showHeader={false}>
-          <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Official Payment Receipt
-              </span>
-              <button onClick={() => setActiveReceipt(null)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
+        <AdminModal
+          open={Boolean(activeReceipt)}
+          onOpenChange={(open) => {
+            if (!open) setActiveReceipt(null);
+          }}
+          title="Official Payment Receipt"
+          description={`Receipt #${activeReceipt.receipt_number}`}
+          size="lg"
+          showHeader={true}
+        >
+          <div className="space-y-4">
             {/* Receipt Printable Card */}
             <style dangerouslySetInnerHTML={{ __html: `
               @media print {
@@ -1299,102 +1288,103 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                   margin: 0 auto !important;
                   border: 1px solid #cbd5e1 !important;
                   background: #ffffff !important;
+                  color: #0f172a !important;
                   box-shadow: none !important;
                   padding: 24px !important;
                 }
               }
             ` }} />
-            <div id="printable-receipt-card" className="p-6 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/50 space-y-4 text-xs font-mono">
-              <div className="text-center pb-3 border-b border-slate-200">
-                <h4 className="text-base font-black text-slate-900 tracking-tight font-sans">
+            <div id="printable-receipt-card" className="p-6 rounded-[6px] border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40 space-y-4 text-xs font-mono">
+              <div className="text-center pb-3 border-b border-slate-200 dark:border-slate-700">
+                <h4 className="text-base font-black text-slate-900 dark:text-slate-100 tracking-tight font-sans">
                   SIMPLE SENBET SUNDAY SCHOOL
                 </h4>
-                <p className="text-[11px] text-slate-500 font-sans">የሰንበት ትምህርት ቤት ወርሃዊ መዋጮ ደረሰኝ</p>
-                <p className="mt-2 text-xs font-bold text-indigo-700">RECEIPT #{activeReceipt.receipt_number}</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-sans">የሰንበት ትምህርት ቤት ወርሃዊ መዋጮ ደረሰኝ</p>
+                <p className="mt-2 text-xs font-bold text-[#0858a8] dark:text-sky-400">RECEIPT #{activeReceipt.receipt_number}</p>
                 <p className="text-[10px] text-slate-400">Date: {new Date(activeReceipt.receipt_date).toLocaleString()}</p>
                 {activeReceipt.payment_date_eth && (
-                  <p className="text-[11px] font-sans font-semibold text-indigo-900 mt-1">
+                  <p className="text-[11px] font-sans font-semibold text-slate-700 dark:text-slate-300 mt-1">
                     ቀን: {activeReceipt.payment_date_eth.formatted_am} ({activeReceipt.payment_date_eth.formatted_en})
                   </p>
                 )}
               </div>
 
               {activeReceipt.is_void && (
-                <div className="py-2 px-3 text-center bg-rose-50 border border-rose-300 rounded-xl text-rose-800 font-bold tracking-wider text-xs">
+                <div className="py-2 px-3 text-center bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 rounded-[4px] text-rose-800 dark:text-rose-200 font-bold tracking-wider text-xs">
                   ⚠️ VOIDED RECEIPT {activeReceipt.void_reason ? `— ${activeReceipt.void_reason}` : ""}
                 </div>
               )}
 
-              <div className="space-y-1.5 text-slate-700">
+              <div className="space-y-1.5 text-slate-700 dark:text-slate-300">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Member:</span>
-                  <span className="font-bold text-slate-900 font-sans">{formatText(activeReceipt.member.full_name)}</span>
+                  <span className="text-slate-500 dark:text-slate-400">Member:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 font-sans">{nestedLocalizedText(activeReceipt.member.full_name)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Member Code:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Member Code:</span>
                   <span>{activeReceipt.member.member_code}</span>
                 </div>
                 {activeReceipt.member.class_name && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Class:</span>
+                    <span className="text-slate-500 dark:text-slate-400">Class:</span>
                     <span>{activeReceipt.member.class_name}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Billing Month:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Billing Month:</span>
                   <span className="font-bold">
                     {activeReceipt.billing_month}
                     {activeReceipt.billing_month_eth && (
-                      <span className="text-slate-500 font-sans text-[11px] ml-1.5">
+                      <span className="text-slate-500 dark:text-slate-400 font-sans text-[11px] ml-1.5">
                         ({activeReceipt.billing_month_eth.formatted_am})
                       </span>
                     )}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Payment Method:</span>
+                  <span className="text-slate-500 dark:text-slate-400">Payment Method:</span>
                   <span>{activeReceipt.payment_method}</span>
                 </div>
                 {activeReceipt.payment_reference && (
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Reference:</span>
+                    <span className="text-slate-500 dark:text-slate-400">Reference:</span>
                     <span>{activeReceipt.payment_reference}</span>
                   </div>
                 )}
               </div>
 
-              <div className="pt-3 border-t-2 border-slate-300 space-y-1.5">
-                <div className="flex justify-between text-sm font-black text-slate-900">
+              <div className="pt-3 border-t-2 border-slate-300 dark:border-slate-700 space-y-1.5">
+                <div className="flex justify-between text-sm font-black text-slate-900 dark:text-slate-100">
                   <span>AMOUNT PAID:</span>
                   <span>{activeReceipt.amount.toFixed(2)} ETB</span>
                 </div>
-                <div className="flex justify-between text-[11px] text-slate-500">
+                <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
                   <span>Total Paid for Month:</span>
                   <span>{activeReceipt.status.total_paid_for_month.toFixed(2)} ETB</span>
                 </div>
-                <div className="flex justify-between text-[11px] text-slate-500">
+                <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
                   <span>Remaining Month Balance:</span>
                   <span>{activeReceipt.status.remaining_balance.toFixed(2)} ETB</span>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-200 text-center text-[10px] text-slate-400 font-sans">
-                Cashier: {formatText(activeReceipt.recorded_by?.name) || "System"} • Thank you for your faithful contribution!
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-700 text-center text-[10px] text-slate-400 font-sans">
+                Cashier: {nestedLocalizedText(activeReceipt.recorded_by?.name) || "System"} • Thank you for your faithful contribution!
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2">
+            <div className={modalStickyFooter}>
               <button
                 type="button"
                 onClick={() => setActiveReceipt(null)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold"
+                className={btnSecondary}
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs"
+                className={btnPrimary}
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Print Receipt</span>
@@ -1408,35 +1398,42 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
       {showRuleModal && canManageRules && (
         <AdminModal
           open={Boolean(showRuleModal && canManageRules)}
-          onOpenChange={(open) => { if (!open && !submittingRule) setShowRuleModal(false); }}
+          onOpenChange={(open) => {
+            if (!open && !submittingRule) setShowRuleModal(false);
+          }}
           title="Configure Monthly Payment Rule"
           description="Define contribution rates, age limits, and class criteria"
           size="lg"
           showHeader={true}
           headerAction={
-            <div className="w-36 sm:w-44">
-              <AppSelect
-                value={ruleEntryLanguage}
-                onChange={(val) => setRuleEntryLanguage(val as SupportedLocale)}
-                options={[
-                  { value: "en", label: "English (en)" },
-                  { value: "am", label: "አማርኛ (am)" },
-                  { value: "om", label: "Afaan Oromoo (om)" },
-                ]}
-                size="sm"
-                ariaLabel="Payment rule language"
-              />
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                Language:
+              </span>
+              <div className="w-40">
+                <AppSelect
+                  value={ruleEntryLanguage}
+                  onChange={(val) => setRuleEntryLanguage(val as SupportedLocale)}
+                  options={[
+                    { value: "en", label: "English" },
+                    { value: "am", label: "አማርኛ" },
+                    { value: "om", label: "Afaan Oromoo" },
+                  ]}
+                  size="sm"
+                  ariaLabel="Payment rule language"
+                />
+              </div>
             </div>
           }
         >
           <div className="space-y-4">
             {ruleError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800">
+              <div className="p-3 rounded-[4px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-800 dark:text-rose-200">
                 {ruleError}
               </div>
             )}
 
-            <form onSubmit={handleSaveRule} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveRule} className="space-y-3.5 text-xs">
               <LocalizedFieldInput
                 label="Rule Name"
                 value={ruleName}
@@ -1448,8 +1445,8 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Monthly Amount (ETB) *
+                  <label className={labelCls}>
+                    Monthly Amount (ETB) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -1458,49 +1455,43 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                     required
                     value={ruleAmount}
                     onChange={(e) => setRuleAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold"
+                    className={`${inputCls()} font-bold`}
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Minimum Age to Pay (Years)
-                  </label>
+                  <label className={labelCls}>Minimum Age to Pay (Years)</label>
                   <input
                     type="number"
                     min="0"
                     value={ruleMinAge}
                     onChange={(e) => setRuleMinAge(e.target.value)}
                     placeholder="Leave empty for all ages"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                    className={inputCls()}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Minimum Grade/Class
-                  </label>
+                  <label className={labelCls}>Minimum Grade/Class</label>
                   <AppSelect
                     value={ruleMinClassId}
                     onChange={(val) => setRuleMinClassId(val)}
                     options={[
                       { value: "", label: "No minimum class" },
-                      ...classes.map((c) => ({ value: String(c.id), label: `${formatText(c.name)} (${c.code})` })),
+                      ...classes.map((c) => ({ value: String(c.id), label: `${nestedLocalizedText(c.name)} (${c.code})` })),
                     ]}
                     placeholder="No minimum class"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Specific Target Class
-                  </label>
+                  <label className={labelCls}>Specific Target Class</label>
                   <AppSelect
                     value={ruleTargetClassId}
                     onChange={(val) => setRuleTargetClassId(val)}
                     options={[
                       { value: "", label: "Global (All Classes)" },
-                      ...classes.map((c) => ({ value: String(c.id), label: `${formatText(c.name)} (${c.code})` })),
+                      ...classes.map((c) => ({ value: String(c.id), label: `${nestedLocalizedText(c.name)} (${c.code})` })),
                     ]}
                     placeholder="Global (All Classes)"
                   />
@@ -1508,15 +1499,15 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Effective From Date *
+                <label className={labelCls}>
+                  Effective From Date <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="date"
                   required
                   value={ruleEffectiveFrom}
                   onChange={(e) => setRuleEffectiveFrom(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                  className={inputCls()}
                 />
               </div>
 
@@ -1526,25 +1517,25 @@ export function MemberPaymentsDashboard({ area: _area }: { area: "finance" | "me
                   id="carryForward"
                   checked={ruleCarryForward}
                   onChange={(e) => setRuleCarryForward(e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 rounded-sm border-slate-300 focus:ring-emerald-500"
+                  className="w-4 h-4 text-[#0858a8] rounded-[2px] border-slate-300 dark:border-slate-700 focus:ring-[#0858a8]"
                 />
-                <label htmlFor="carryForward" className="font-semibold text-slate-700 cursor-pointer">
+                <label htmlFor="carryForward" className="font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
                   Allow excess payment credit to carry forward to future months
                 </label>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              <div className={modalStickyFooter}>
                 <button
                   type="button"
                   onClick={() => setShowRuleModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+                  className={btnSecondary}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingRule}
-                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs disabled:opacity-50"
+                  className={btnPrimary}
                 >
                   {submittingRule ? "Saving..." : "Save Rule"}
                 </button>

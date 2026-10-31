@@ -25,7 +25,7 @@ import { AdminModal } from "@/components/admin/AdminModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useMemberStore } from "@/store/useMemberStore";
 import { schoolManagementService } from "@/services/schoolManagement.service";
-import { TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { MemberRegistryShimmerSkeleton, TableShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 import { AppSelect } from "@/components/ui/AppSelect";
 import { useLanguage } from "@/context/LanguageContext";
 import { toast } from "sonner";
@@ -265,7 +265,11 @@ function cleanTranslatable(f: TranslatableField): Record<string, string> | null 
   if (f.en?.trim()) r.en = f.en.trim();
   if (f.am?.trim()) r.am = f.am.trim();
   if (f.om?.trim()) r.om = f.om.trim();
-  return Object.keys(r).length > 0 ? r : null;
+  if (Object.keys(r).length === 0) return null;
+  if (!r.en) {
+    r.en = r.am || r.om || "";
+  }
+  return r;
 }
 
 function sectionLetters(count: number): string[] {
@@ -673,6 +677,10 @@ export function MemberRegistry() {
         {L.noAccess}
       </section>
     );
+  }
+
+  if (storeLoading && members.length === 0 && !search && !filterClass && !filterGender) {
+    return <MemberRegistryShimmerSkeleton />;
   }
 
   /* ── render ──────────────────────────────────────────────────────── */

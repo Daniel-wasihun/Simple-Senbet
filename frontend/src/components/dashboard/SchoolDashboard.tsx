@@ -10,7 +10,26 @@ import { schoolManagementService } from "@/services/schoolManagement.service";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import Link from "next/link";
 import {
-  LogOut,
+  BRAND,
+  btnBase,
+  btnPrimary,
+  btnSecondary,
+  btnDanger,
+  inputCls,
+  labelCls,
+  tableContainerCls,
+  tableHeaderRowCls,
+  tableHeaderCellCls,
+  tableRowCls,
+  actionBtnBase,
+  actionBtnView,
+  actionBtnDelete,
+  modalStickyFooter,
+  cardCls,
+  detailCardCls,
+  nestedLocalizedText,
+} from "@/components/admin/adminUiTokens";
+import {
   GraduationCap,
   BookOpen,
   CalendarCheck,
@@ -30,7 +49,7 @@ import {
   ChevronRight,
   Download,
   Printer,
-  DollarSign,
+  Calendar,
 } from "lucide-react";
 import {
   AttendanceSessionSummary,
@@ -42,7 +61,8 @@ import {
   ClassGradebookData,
 } from "@/types/auth";
 import {
-  DashboardContentShimmerSkeleton,
+  DashboardOverviewShimmerSkeleton,
+  AcademicDashboardShimmerSkeleton,
   TableShimmerSkeleton,
   AttendanceDashboardShimmerSkeleton,
 } from "@/components/ui/DashboardShimmerSkeleton";
@@ -51,7 +71,7 @@ import { AppSelect } from "@/components/ui/AppSelect";
 export type SchoolDashboardArea = "overview" | "academic" | "attendance";
 
 export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
-  const { user, isLoading: authLoading, logout } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   const [sessions, setSessions] = useState<AttendanceSessionSummary[]>([]);
@@ -60,7 +80,6 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
   const [summaryData, setSummaryData] = useState<AttendanceSummaryData | null>(null);
   const [dataLoading, setDataLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
 
   // Administrative Filters & Pagination
   const [filterDate, setFilterDate] = useState<string>("");
@@ -70,9 +89,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
 
   // Summary Date & Class Drilldown Filter
-  const [summaryDate, setSummaryDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  const [summaryDate, setSummaryDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [summaryClassId, setSummaryClassId] = useState<string>("");
   const [summaryLoading, setSummaryLoading] = useState<boolean>(false);
 
@@ -84,7 +101,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
   const [gradebookLoading, setGradebookLoading] = useState<boolean>(false);
   const [gradebookError, setGradebookError] = useState<string | null>(null);
 
-  // Quick Session Closure Modal (Admin)
+  // Session Closure & Deletion Modals
   const [sessionToClose, setSessionToClose] = useState<AttendanceSessionSummary | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<AttendanceSessionSummary | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
@@ -97,21 +114,32 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
   const [createSubmitting, setCreateSubmitting] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [newSessionSlot, setNewSessionSlot] = useState<string>("Period 1 (08:30-09:15)");
-  const [newSessionDate, setNewSessionDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  const [newSessionDate, setNewSessionDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+
   const permissions = useMemo(() => new Set(user?.permissions ?? []), [user?.permissions]);
-  const hasPermission = useCallback((permission: string) => permissions.has(permission), [permissions]);
+  const isSuperOrAdmin = useMemo(() => {
+    if (!user) return false;
+    const r = (user.role || "").toLowerCase();
+    const roles = (user.roles || []).map((x: any) =>
+      (typeof x === "string" ? x : x.name || "").toLowerCase()
+    );
+    const adminRoles = ["superadmin", "admin", "administrator", "academic_director", "academic_administrator", "attendance_officer"];
+    return adminRoles.includes(r) || roles.some((x) => adminRoles.includes(x)) || Boolean(user.permissions?.includes("*"));
+  }, [user]);
+
+  const hasPermission = useCallback(
+    (permission: string) => isSuperOrAdmin || permissions.has(permission) || permissions.has("*"),
+    [isSuperOrAdmin, permissions]
+  );
   const canViewAttendance = hasPermission("attendance.view") && area !== "academic";
   const canCreateAttendance = hasPermission("attendance.create") && canViewAttendance;
   const canCloseAttendance = hasPermission("attendance.close") && canViewAttendance;
   const canDeleteAttendance = hasPermission("attendance.delete") && canViewAttendance;
   const canViewReports = hasPermission("reports.view") && area !== "attendance";
   const canExportReports = hasPermission("reports.export") && canViewReports;
-  const canViewPayments = hasPermission("payments.view") || hasPermission("payments.view.all");
   const canViewAcademicData = ["academic-years.view", "school-classes.view", "courses.view", "assessments.view"].some(hasPermission);
 
-  // Authentication Guard: Redirect unauthenticated visitors to /login
+  // Authentication Guard
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace("/login");
@@ -126,7 +154,12 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
       status = filterStatus
     ) => {
       if (!user) return;
-      if (!canViewAttendance) { setSessions([]); setPagination(null); setDataLoading(false); return; }
+      if (!canViewAttendance) {
+        setSessions([]);
+        setPagination(null);
+        setDataLoading(false);
+        return;
+      }
       setDataLoading(true);
       setFetchError(null);
 
@@ -146,11 +179,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
           const json = await res.json();
           const list = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
           setSessions(list);
-          if (json?.pagination) {
-            setPagination(json.pagination);
-          } else {
-            setPagination(null);
-          }
+          setPagination(json?.pagination || null);
         } else {
           setFetchError("Unable to load attendance sessions. Please refresh or verify permissions.");
         }
@@ -166,7 +195,11 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
   const loadSummary = useCallback(
     async (date = summaryDate, classId = summaryClassId) => {
       if (!user) return;
-      if (!canViewAttendance) { setSummaryData(null); setSummaryLoading(false); return; }
+      if (!canViewAttendance) {
+        setSummaryData(null);
+        setSummaryLoading(false);
+        return;
+      }
       setSummaryLoading(true);
       try {
         const params = new URLSearchParams();
@@ -196,8 +229,12 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
     try {
       const [classesRes, coursesRes] = await Promise.all([
-        hasPermission("school-classes.view") ? schoolManagementService.request("school-classes", {}, undefined, user.id).catch(() => null) : null,
-        hasPermission("courses.view") ? schoolManagementService.request("courses", {}, undefined, user.id).catch(() => null) : null,
+        hasPermission("school-classes.view")
+          ? schoolManagementService.request("school-classes", {}, undefined, user.id).catch(() => null)
+          : null,
+        hasPermission("courses.view")
+          ? schoolManagementService.request("courses", {}, undefined, user.id).catch(() => null)
+          : null,
       ]);
 
       if (classesRes && classesRes.ok) {
@@ -227,15 +264,6 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
       loadDashboardData();
     }
   }, [user, loadDashboardData]);
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logout();
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
 
   const handleApplyFilters = (e: React.FormEvent) => {
     e.preventDefault();
@@ -308,18 +336,25 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
     if (!canDeleteAttendance || !sessionToDelete || sessionToDelete.status === "closed" || deleteSubmitting) return;
     setDeleteSubmitting(true);
     try {
-      const response = await attendanceService.request(`attendance/sessions/${sessionToDelete.id}`, { method: "DELETE", headers: { Accept: "application/json" } });
+      const response = await attendanceService.request(`attendance/sessions/${sessionToDelete.id}`, {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+      });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || "Unable to delete attendance session.");
       setActionSuccessMsg(`Attendance session #${sessionToDelete.id} deleted.`);
       setSessionToDelete(null);
-      await Promise.all([loadSessions(currentPage, filterDate, filterClassId, filterStatus), loadSummary(summaryDate, summaryClassId)]);
+      await Promise.all([
+        loadSessions(currentPage, filterDate, filterClassId, filterStatus),
+        loadSummary(summaryDate, summaryClassId),
+      ]);
     } catch (cause) {
       setFetchError(cause instanceof Error ? cause.message : "Unable to delete attendance session.");
-    } finally { setDeleteSubmitting(false); }
+    } finally {
+      setDeleteSubmitting(false);
+    }
   };
 
-  // Quick Session Creation for Teachers
   const handleCreateSession = async (assignment: TeachingAssignmentSummary) => {
     if (!canCreateAttendance || !assignment) return;
     setCreateSubmitting(true);
@@ -365,24 +400,13 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
     }
   };
 
-  const formatText = (text: any, fallback: string = "—"): string => {
-    if (text === null || text === undefined || text === "") return fallback;
-    if (typeof text === "string") return text;
-    if (typeof text === "number") return String(text);
-    if (typeof text === "object") {
-      if (text.am && text.en) return text.am || text.en;
-      if (text.am) return text.am;
-      if (text.en) return text.en;
-      const values = Object.values(text).filter((v) => typeof v === "string" || typeof v === "number");
-      if (values.length > 0) return String(values[0]);
-      return fallback;
-    }
-    return String(text);
-  };
-
   const loadGradebook = useCallback(
     async (classId: string, section: string, semester: string) => {
-      if (!canViewReports || !classId) { setGradebookData(null); setGradebookLoading(false); return; }
+      if (!canViewReports || !classId) {
+        setGradebookData(null);
+        setGradebookLoading(false);
+        return;
+      }
       setGradebookLoading(true);
       setGradebookError(null);
       try {
@@ -405,7 +429,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
         setGradebookLoading(false);
       }
     },
-    [canViewReports]
+    [canViewReports, user?.id]
   );
 
   useEffect(() => {
@@ -436,16 +460,30 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
     window.open(`/api/backend/report-cards/class/${gradebookClassId}/export/print?${params.toString()}`, "_blank");
   };
 
-  if (authLoading || !user) {
+  if (area === "attendance" && !canViewAttendance) {
     return (
-      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-8">
-        {area === "attendance" ? (
-          <AttendanceDashboardShimmerSkeleton />
-        ) : (
-          <DashboardContentShimmerSkeleton />
-        )}
-      </div>
+      <section className="m-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111624] p-8 text-center text-sm text-slate-500">
+        You do not have permission to view attendance sessions and records.
+      </section>
     );
+  }
+
+  if (area === "academic" && !canViewAcademicData && !canViewReports) {
+    return (
+      <section className="m-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111624] p-8 text-center text-sm text-slate-500">
+        You do not have permission to view academic dashboard and performance metrics.
+      </section>
+    );
+  }
+
+  if (authLoading || !user || (dataLoading && sessions.length === 0 && !summaryData && !adminClasses.length)) {
+    if (area === "attendance") {
+      return <AttendanceDashboardShimmerSkeleton />;
+    }
+    if (area === "academic") {
+      return <AcademicDashboardShimmerSkeleton />;
+    }
+    return <DashboardOverviewShimmerSkeleton />;
   }
 
   const userRoles = user.roles ?? [user.role];
@@ -459,529 +497,536 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
     switch (session.status) {
       case "draft":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
             <Clock className="w-3 h-3" />
             Draft
           </span>
         );
       case "submitted":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
             <CheckCircle2 className="w-3 h-3" />
             Submitted
           </span>
         );
       case "closed":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
             <Lock className="w-3 h-3" />
-            Closed (Archived)
+            Closed
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
             {session.status}
           </span>
         );
     }
   };
 
+  const getAreaHeading = () => {
+    if (area === "attendance") {
+      return {
+        eyebrow: "Attendance Management",
+        title: "Attendance & Roll Call Sessions",
+        subtitle: "Monitor daily attendance, launch roll calls, and manage session records.",
+      };
+    }
+    if (area === "academic") {
+      return {
+        eyebrow: "Academic Operations",
+        title: "Academic Performance & Gradebook",
+        subtitle: "Official rankings, passing/failing marks, and exportable grade reports.",
+      };
+    }
+    return {
+      eyebrow: "School Management",
+      title: "Sunday School Dashboard",
+      subtitle: "Sunday school attendance, academic rosters, and class schedules.",
+    };
+  };
+
+  const heading = getAreaHeading();
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
-      {/* Top Header & Navbar */}
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
-        <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-2.5 group">
-                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-600/20 group-hover:bg-indigo-700 transition">
-                  <GraduationCap className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="font-bold text-lg text-slate-900 tracking-tight">Simple Senbet</span>
-                  <span className="hidden sm:inline-block ml-2 text-xs font-medium text-slate-500">
-                    የሰንበት ትምህርት ቤት
-                  </span>
-                </div>
-              </Link>
-            </div>
-
-            <div className="flex items-center gap-3 sm:gap-4">
-              {canViewPayments && <Link
-                href="/finance"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold transition"
-              >
-                <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">Payments</span>
-              </Link>}
-
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200/60 text-xs">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-semibold text-slate-700 hidden sm:inline">{formatText(user.name)}</span>
-                <span className="px-2 py-0.5 rounded-md font-bold text-[10px] uppercase tracking-wider bg-white text-indigo-700 border border-slate-200 shadow-2xs">
-                  {user.role}
-                </span>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                aria-label="Sign out"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-1 text-xs font-semibold transition disabled:opacity-50"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
-              </button>
-            </div>
+    <div className="w-full space-y-5 px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-7">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-blue-600 dark:text-sky-400">
+              {heading.eyebrow}
+            </span>
           </div>
+          <h1 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
+            {area === "attendance" ? (
+              <CalendarCheck className="w-5 h-5 text-[#0858a8] shrink-0" />
+            ) : area === "academic" ? (
+              <GraduationCap className="w-5 h-5 text-[#0858a8] shrink-0" />
+            ) : (
+              <BookOpen className="w-5 h-5 text-[#0858a8] shrink-0" />
+            )}
+            {heading.title}
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {heading.subtitle}
+          </p>
         </div>
-      </header>
 
-      {/* Main Content Container */}
-      <main className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 pt-8">
-        {/* Global Error Alert */}
-        {fetchError && (
-          <div
-            role="alert"
-            className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-800 text-sm"
-          >
-            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold">Unable to refresh records</p>
-              <p className="text-xs text-rose-700 mt-0.5">{fetchError}</p>
-            </div>
+        {/* Header Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          {primaryAssignment && canCreateAttendance && (
             <button
-              onClick={loadDashboardData}
-              className="px-3 py-1 bg-white border border-rose-300 rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-100 transition"
+              onClick={() => setShowCreateModal(true)}
+              className={btnPrimary}
             >
-              Retry
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Session</span>
             </button>
-          </div>
-        )}
+          )}
 
-        {/* Global Success Alert */}
-        {actionSuccessMsg && (
-          <div
-            role="status"
-            className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 text-emerald-800 text-sm"
+          <button
+            onClick={loadDashboardData}
+            disabled={dataLoading}
+            className={btnSecondary}
           >
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-semibold">Action Completed</p>
-              <p className="text-xs text-emerald-700 mt-0.5">{actionSuccessMsg}</p>
-            </div>
-            <button
-              onClick={() => setActionSuccessMsg(null)}
-              className="text-emerald-500 hover:text-emerald-700 font-bold"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+            <RefreshCw className={`w-3.5 h-3.5 ${dataLoading ? "animate-spin text-[#0858a8]" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
+      </div>
 
-        {/* TEACHER VIEW */}
-        {isTeacher && (
-          <div className="space-y-8">
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              {hasPermission("school-classes.view") && <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+      {/* Global Alerts */}
+      {fetchError && (
+        <div role="alert" className="p-3.5 rounded-[4px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-start gap-3 text-rose-800 dark:text-rose-200 text-xs">
+          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">Unable to refresh records</p>
+            <p className="mt-0.5">{fetchError}</p>
+          </div>
+          <button onClick={loadDashboardData} className={`${btnSecondary} h-7 px-2.5 text-xs text-rose-700 dark:text-rose-300`}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {actionSuccessMsg && (
+        <div role="status" className="p-3.5 rounded-[4px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 flex items-start gap-3 text-emerald-800 dark:text-emerald-200 text-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">Action Completed</p>
+            <p className="mt-0.5">{actionSuccessMsg}</p>
+          </div>
+          <button onClick={() => setActionSuccessMsg(null)} className="text-emerald-600 hover:text-emerald-800 font-bold p-1">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* TEACHER VIEW */}
+      {isTeacher && (
+        <div className="space-y-6">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+            {hasPermission("school-classes.view") && (
+              <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Assigned Classes</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{assignments.length}</p>
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Assigned Classes</p>
+                    <p className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">{assignments.length}</p>
                   </div>
-                  <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                    <GraduationCap className="w-6 h-6" />
+                  <div className="w-9 h-9 rounded-[4px] bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-[#0858a8] dark:text-sky-400">
+                    <GraduationCap className="w-5 h-5" />
                   </div>
                 </div>
-              </div>}
+              </div>
+            )}
 
-              {canViewAttendance && <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+            {canViewAttendance && (
+              <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Active Sessions</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{sessions.length}</p>
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Sessions</p>
+                    <p className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">{sessions.length}</p>
                   </div>
-                  <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                    <CalendarCheck className="w-6 h-6" />
+                  <div className="w-9 h-9 rounded-[4px] bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <CalendarCheck className="w-5 h-5" />
                   </div>
                 </div>
-              </div>}
+              </div>
+            )}
 
-              {canViewAttendance && <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+            {canViewAttendance && (
+              <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Daily Attendance</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {summaryData?.attendance_rate !== undefined ? `${summaryData.attendance_rate}%` : "-"}
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Daily Attendance</p>
+                    <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                      {summaryData?.attendance_rate !== undefined ? `${summaryData.attendance_rate}%` : "—"}
                     </p>
                   </div>
-                  <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                    <Percent className="w-6 h-6" />
+                  <div className="w-9 h-9 rounded-[4px] bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <Percent className="w-5 h-5" />
                   </div>
                 </div>
-              </div>}
+              </div>
+            )}
 
-              {canViewAttendance && <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+            {canViewAttendance && (
+              <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Daily Absences</p>
-                    <p className="text-2xl font-bold text-rose-600 mt-1">
+                    <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Daily Absences</p>
+                    <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-1">
                       {summaryData?.counts?.absent ?? 0}
                     </p>
                   </div>
-                  <div className="w-11 h-11 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
-                    <UserX className="w-6 h-6" />
+                  <div className="w-9 h-9 rounded-[4px] bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                    <UserX className="w-5 h-5" />
                   </div>
                 </div>
-              </div>}
-            </div>
-
-            {/* Daily Attendance Summary & Absentee List Card */}
-            {summaryData && (
-              <section aria-labelledby="summary-heading" className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
-                  <div>
-                    <h2 id="summary-heading" className="text-base font-bold text-slate-900 flex items-center gap-2">
-                      <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
-                      <span>Daily Attendance Summary & Absentee List</span>
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Aggregated roll-call records for {summaryData.date}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
-                      {summaryData.counts.present} Present
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold border border-rose-200">
-                      {summaryData.counts.absent} Absent
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 font-semibold border border-amber-200">
-                      {summaryData.counts.late} Late
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 font-semibold border border-purple-200">
-                      {summaryData.counts.excused} Excused
-                    </span>
-                  </div>
-                </div>
-
-                {/* Absentee List Sub-Section */}
-                <div className="mt-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                    Students Marked Absent Today ({summaryData.absentees.length})
-                  </h3>
-
-                  {summaryData.absentees.length === 0 ? (
-                    <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 text-center text-xs text-emerald-800 font-medium">
-                      ✓ No students marked absent on {summaryData.date}. 100% attendance recorded!
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {summaryData.absentees.map((absentee, idx) => (
-                        <div
-                          key={`${absentee.session_id}-${absentee.student_id}-${idx}`}
-                          className="p-3.5 rounded-2xl bg-rose-50/40 border border-rose-100 flex items-start gap-3"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs font-bold shrink-0">
-                            !
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-900 truncate">
-                              {absentee.student_name}
-                            </p>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              {absentee.class_name} • {absentee.course_title}
-                            </p>
-                            {absentee.remarks && (
-                              <p className="text-[11px] text-rose-700 italic mt-1 bg-white/70 px-2 py-0.5 rounded border border-rose-200/60 inline-block">
-                                Reason: {absentee.remarks}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
+              </div>
             )}
+          </div>
 
-            {/* Section 1: Assigned Classes and Courses */}
-            <section aria-labelledby="classes-heading">
-              <div className="flex items-center justify-between mb-4">
+          {/* Daily Attendance Summary Card */}
+          {summaryData && (
+            <div className={cardCls}>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-800">
                 <div>
-                  <h2 id="classes-heading" className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <GraduationCap className="w-5 h-5 text-indigo-600" />
-                    <span>Your Assigned Classes & Courses</span>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-[#0858a8] dark:text-sky-400" />
+                    <span>Daily Attendance Summary & Absentee List</span>
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Teaching assignments linked to your teacher profile
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Aggregated roll-call records for {summaryData.date}
                   </p>
                 </div>
 
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="px-2 py-0.5 rounded-[4px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800 text-[11px]">
+                    {summaryData.counts.present} Present
+                  </span>
+                  <span className="px-2 py-0.5 rounded-[4px] bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 font-semibold border border-rose-200 dark:border-rose-800 text-[11px]">
+                    {summaryData.counts.absent} Absent
+                  </span>
+                  <span className="px-2 py-0.5 rounded-[4px] bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-800 text-[11px]">
+                    {summaryData.counts.late} Late
+                  </span>
+                  <span className="px-2 py-0.5 rounded-[4px] bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 font-semibold border border-purple-200 dark:border-purple-800 text-[11px]">
+                    {summaryData.counts.excused} Excused
+                  </span>
+                </div>
+              </div>
+
+              {/* Absentee List Sub-Section */}
+              <div className="mt-3.5">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5">
+                  Students Marked Absent Today ({summaryData.absentees.length})
+                </h3>
+
+                {summaryData.absentees.length === 0 ? (
+                  <div className="p-3.5 rounded-[4px] bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 text-center text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+                    ✓ No students marked absent on {summaryData.date}. 100% attendance recorded!
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {summaryData.absentees.map((absentee, idx) => (
+                      <div
+                        key={`${absentee.session_id}-${absentee.student_id}-${idx}`}
+                        className="p-3 rounded-[4px] bg-rose-50/40 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 flex items-start gap-2.5"
+                      >
+                        <div className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 flex items-center justify-center text-[10px] font-bold shrink-0">
+                          !
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {absentee.student_name}
+                          </p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            {absentee.class_name} • {absentee.course_title}
+                          </p>
+                          {absentee.remarks && (
+                            <p className="text-[11px] text-rose-700 dark:text-rose-300 italic mt-1 bg-white/70 dark:bg-black/30 px-1.5 py-0.5 rounded-[3px] border border-rose-200/60 dark:border-rose-800/40 inline-block">
+                              Reason: {absentee.remarks}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Section 1: Assigned Classes and Courses */}
+          <section aria-labelledby="classes-heading" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 id="classes-heading" className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-[#0858a8] dark:text-sky-400" />
+                  <span>Your Assigned Classes & Courses</span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Teaching assignments linked to your teacher profile
+                </p>
+              </div>
+
+              {primaryAssignment && canCreateAttendance && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  type="button"
+                  className={btnPrimary}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Session</span>
+                </button>
+              )}
+            </div>
+
+            {assignments.length === 0 ? (
+              <div className="p-8 rounded-[6px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 text-center">
+                <div className="w-10 h-10 rounded-[4px] bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
+                <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200">No Teaching Assignments Found</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
+                  You currently have no classes or courses assigned by the Sunday school administrator.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {assignments.map((assignment) => (
+                  <div
+                    key={assignment.id}
+                    className="p-4 rounded-[6px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 hover:border-[#0858a8] dark:hover:border-sky-500 transition shadow-2xs group"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[10px] font-mono font-bold text-[#0858a8] dark:text-sky-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.5 rounded-[3px]">
+                          {assignment.class_code || "CLASS"}
+                        </span>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1.5">
+                          {assignment.class_name || "Assigned Class"}
+                        </h3>
+                      </div>
+                      {assignment.is_primary && (
+                        <span className="px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          Primary
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Course:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {assignment.course_name || "General / Homeroom"} ({assignment.course_code || "GEN"})
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Section:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">Section {assignment.section}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400">Semester:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize">
+                          {assignment.semester.replace("_", " ")}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Section 2: Attendance Sessions Scoped to Teacher */}
+          <section aria-labelledby="sessions-heading" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 id="sessions-heading" className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <CalendarCheck className="w-4 h-4 text-[#0858a8] dark:text-sky-400" />
+                  <span>Attendance Sessions</span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Sessions authorized for your assigned classes and dates
+                </p>
+              </div>
+            </div>
+
+            {dataLoading ? (
+              <div className="p-4 rounded-[6px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800">
+                <TableShimmerSkeleton rows={4} columns={5} />
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="p-8 rounded-[6px] bg-white dark:bg-[#111624] border border-slate-200/90 dark:border-slate-800 text-center">
+                <div className="w-10 h-10 rounded-[4px] bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                  <CalendarCheck className="w-5 h-5" />
+                </div>
+                <h3 className="text-xs font-semibold text-slate-800 dark:text-slate-200">No Attendance Sessions Yet</h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1 mb-3">
+                  There are no attendance sessions created for your assigned classes yet.
+                </p>
                 {primaryAssignment && canCreateAttendance && (
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    type="button"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition"
+                    className={btnPrimary}
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>New Session</span>
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Start Today&apos;s Roll Call Session</span>
                   </button>
                 )}
               </div>
+            ) : (
+              <div className={tableContainerCls}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className={tableHeaderRowCls}>
+                        <th className={tableHeaderCellCls}>Date</th>
+                        <th className={tableHeaderCellCls}>Slot</th>
+                        <th className={tableHeaderCellCls}>Class</th>
+                        <th className={tableHeaderCellCls}>Course</th>
+                        <th className={tableHeaderCellCls}>Status</th>
+                        <th className={`${tableHeaderCellCls} text-right`}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                      {sessions.map((session) => (
+                        <tr key={session.id} className={tableRowCls(false)}>
+                          <td className="py-3 px-4 font-mono font-medium text-slate-900 dark:text-slate-100">{session.date}</td>
+                          <td className="py-3 px-4 capitalize text-slate-700 dark:text-slate-300">{session.time_slot}</td>
+                          <td className="py-3 px-4 font-semibold text-slate-900 dark:text-slate-100">
+                            {nestedLocalizedText(session.school_class?.name) || `Class #${session.class_id}`}
+                          </td>
+                          <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
+                            {session.course?.name ? nestedLocalizedText(session.course.name) : <span className="text-slate-400">Homeroom</span>}
+                          </td>
+                          <td className="py-3 px-4">{getStatusBadge(session)}</td>
+                          <td className="py-3 px-4 text-right">
+                            {(() => {
+                              const sessionAssignment = assignments.find(
+                                (a) => a.class_id === session.class_id && (!session.course_id || a.course_id === session.course_id)
+                              );
+                              const linkHref = sessionAssignment
+                                ? `/attendance/${session.id}?section=${encodeURIComponent(sessionAssignment.section)}&semester=${encodeURIComponent(sessionAssignment.semester)}`
+                                : `/attendance/${session.id}`;
 
-              {assignments.length === 0 ? (
-                <div className="p-8 rounded-2xl bg-white border border-slate-200/80 text-center">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-                    <GraduationCap className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-slate-800">No Teaching Assignments Found</h3>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                    You currently have no classes or courses assigned by the Sunday school administrator. Please contact your administrator to configure your teaching schedule.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {assignments.map((assignment) => (
-                    <div
-                      key={assignment.id}
-                      className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-md transition group"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <span className="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-                            {assignment.class_code || "CLASS"}
-                          </span>
-                          <h3 className="text-base font-bold text-slate-900 mt-2">
-                            {assignment.class_name || "Assigned Class"}
-                          </h3>
-                        </div>
-                        {assignment.is_primary && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Primary
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-600">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Course:</span>
-                          <span className="font-semibold text-slate-800">
-                            {assignment.course_name || "General / Homeroom"} ({assignment.course_code || "GEN"})
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Section:</span>
-                          <span className="font-semibold text-slate-800">Section {assignment.section}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-400">Semester:</span>
-                          <span className="font-semibold text-slate-800 capitalize">
-                            {assignment.semester.replace("_", " ")}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Section 2: Attendance Sessions Scoped to Teacher */}
-            <section aria-labelledby="sessions-heading">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 id="sessions-heading" className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <CalendarCheck className="w-5 h-5 text-indigo-600" />
-                    <span>Attendance Sessions</span>
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Sessions authorized for your assigned classes and dates
-                  </p>
-                </div>
-                <button
-                  onClick={loadDashboardData}
-                  disabled={dataLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${dataLoading ? "animate-spin" : ""}`} />
-                  <span>Refresh</span>
-                </button>
-              </div>
-
-              {dataLoading ? (
-                <div className="p-6 rounded-2xl bg-white border border-slate-200/80">
-                  <TableShimmerSkeleton rows={4} columns={5} />
-                </div>
-              ) : sessions.length === 0 ? (
-                <div className="p-8 rounded-2xl bg-white border border-slate-200/80 text-center">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-                    <CalendarCheck className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-slate-800">No Attendance Sessions Yet</h3>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
-                    There are no attendance sessions created for your assigned classes yet.
-                  </p>
-                  {primaryAssignment && canCreateAttendance && (
-                    <button
-                      onClick={() => setShowCreateModal(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Start Today&apos;s Roll Call Session</span>
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-xs">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
-                          <th className="py-3 px-4">Date</th>
-                          <th className="py-3 px-4">Slot</th>
-                          <th className="py-3 px-4">Class</th>
-                          <th className="py-3 px-4">Course</th>
-                          <th className="py-3 px-4">Status</th>
-                          <th className="py-3 px-4 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-700">
-                        {sessions.map((session) => (
-                          <tr key={session.id} className="hover:bg-slate-50/80 transition">
-                            <td className="py-3 px-4 font-mono font-medium text-slate-900">{session.date}</td>
-                            <td className="py-3 px-4 capitalize">{session.time_slot}</td>
-                            <td className="py-3 px-4 font-semibold text-slate-900 dark:text-slate-100">
-                              {formatText(session.school_class?.name) || `Class #${session.class_id}`}
-                            </td>
-                            <td className="py-3 px-4">
-                              {session.course?.name ? formatText(session.course.name) : <span className="text-slate-400">Homeroom</span>}
-                            </td>
-                            <td className="py-3 px-4">{getStatusBadge(session)}</td>
-                            <td className="py-3 px-4 text-right">
-                              {(() => {
-                                const sessionAssignment = assignments.find(
-                                  (a) => a.class_id === session.class_id && (!session.course_id || a.course_id === session.course_id)
+                              if (session.status === "draft") {
+                                return (
+                                  <Link
+                                    href={linkHref}
+                                    className={`${btnBase} h-7 px-2.5 bg-[#0858a8] text-white hover:bg-[#074c91] text-[11px]`}
+                                  >
+                                    <span>Take Attendance</span>
+                                    <ArrowRight className="w-3 h-3" />
+                                  </Link>
                                 );
-                                const linkHref = sessionAssignment
-                                  ? `/attendance/${session.id}?section=${encodeURIComponent(sessionAssignment.section)}&semester=${encodeURIComponent(sessionAssignment.semester)}`
-                                  : `/attendance/${session.id}`;
-
-                                if (session.status === "draft") {
-                                  return (
-                                    <Link
-                                      href={linkHref}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition"
-                                    >
-                                      <span>Take Attendance</span>
-                                      <ArrowRight className="w-3.5 h-3.5" />
-                                    </Link>
-                                  );
-                                } else if (session.is_teacher_editable) {
-                                  return (
-                                    <Link
-                                      href={linkHref}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold text-xs transition"
-                                    >
-                                      <span>Review & Correct (24h)</span>
-                                      <ArrowRight className="w-3.5 h-3.5" />
-                                    </Link>
-                                  );
-                                } else {
-                                  return (
-                                    <Link
-                                      href={linkHref}
-                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 border border-slate-200 text-xs font-medium hover:bg-slate-50 transition"
-                                    >
-                                      <span>View Roster</span>
-                                      <ArrowRight className="w-3 h-3" />
-                                    </Link>
-                                  );
-                                }
-                              })()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </section>
-          </div>
-        )}
-
-        {/* ADMINISTRATOR VIEW */}
-        {isAdmin && (
-          <div className="space-y-8">
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Classes</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{adminClasses.length}</p>
-                  </div>
-                  <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                    <GraduationCap className="w-6 h-6" />
-                  </div>
+                              } else if (session.is_teacher_editable) {
+                                return (
+                                  <Link
+                                    href={linkHref}
+                                    className={`${btnBase} h-7 px-2.5 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 text-[11px]`}
+                                  >
+                                    <span>Review (24h)</span>
+                                    <ArrowRight className="w-3 h-3" />
+                                  </Link>
+                                );
+                              } else {
+                                return (
+                                  <Link
+                                    href={linkHref}
+                                    className={actionBtnView}
+                                    title="View Roster"
+                                  >
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                  </Link>
+                                );
+                              }
+                            })()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
+            )}
+          </section>
+        </div>
+      )}
 
-              <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Courses</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{adminCourses.length}</p>
-                  </div>
-                  <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-                    <BookOpen className="w-6 h-6" />
-                  </div>
+      {/* ADMINISTRATOR VIEW */}
+      {isAdmin && (
+        <div className="space-y-6">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+            <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Classes</p>
+                  <p className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">{adminClasses.length}</p>
                 </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Filtered Sessions</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {pagination?.total ?? sessions.length}
-                    </p>
-                  </div>
-                  <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                    <CalendarCheck className="w-6 h-6" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Daily Attendance</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {summaryData?.attendance_rate !== undefined ? `${summaryData.attendance_rate}%` : "-"}
-                    </p>
-                  </div>
-                  <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                    <Percent className="w-6 h-6" />
-                  </div>
+                <div className="w-9 h-9 rounded-[4px] bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <GraduationCap className="w-5 h-5" />
                 </div>
               </div>
             </div>
 
-            {/* School-Wide Attendance Summary & Absentee Drilldown Card */}
-            {canViewAttendance && <section aria-labelledby="admin-summary-heading" className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-slate-100">
+            <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 id="admin-summary-heading" className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <FileSpreadsheet className="w-5 h-5 text-indigo-600" />
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Courses</p>
+                  <p className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">{adminCourses.length}</p>
+                </div>
+                <div className="w-9 h-9 rounded-[4px] bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Filtered Sessions</p>
+                  <p className="text-xl font-black text-slate-900 dark:text-slate-100 mt-1">
+                    {pagination?.total ?? sessions.length}
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-[4px] bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-[#0858a8] dark:text-sky-400">
+                  <CalendarCheck className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Daily Attendance</p>
+                  <p className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                    {summaryData?.attendance_rate !== undefined ? `${summaryData.attendance_rate}%` : "—"}
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-[4px] bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <Percent className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* School-Wide Attendance Summary & Absentee Drilldown Card */}
+          {canViewAttendance && (
+            <div className={cardCls}>
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-slate-800">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-[#0858a8] dark:text-sky-400" />
                     <span>School-Wide Attendance Summary & Absentee List</span>
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Live aggregated attendance rates and drill-down for {summaryData?.date || summaryDate}
                   </p>
                 </div>
@@ -993,15 +1038,15 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                     aria-label="Summary Date"
                     value={summaryDate}
                     onChange={(e) => setSummaryDate(e.target.value)}
-                    className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 font-medium"
+                    className={`${inputCls()} w-36`}
                   />
-                  <div className="w-48">
+                  <div className="w-44">
                     <AppSelect
                       value={summaryClassId}
                       onChange={(val) => setSummaryClassId(val)}
                       options={[
                         { value: "", label: "All School Classes" },
-                        ...adminClasses.map((c) => ({ value: String(c.id), label: formatText(c.name) })),
+                        ...adminClasses.map((c) => ({ value: String(c.id), label: nestedLocalizedText(c.name) })),
                       ]}
                       placeholder="All School Classes"
                       size="sm"
@@ -1011,7 +1056,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                   <button
                     type="submit"
                     disabled={summaryLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition disabled:opacity-50"
+                    className={btnPrimary}
                   >
                     <Filter className="w-3.5 h-3.5" />
                     <span>Filter</span>
@@ -1021,7 +1066,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                     onClick={handleResetSummaryFilter}
                     disabled={summaryLoading}
                     title="Reset Summary Filters"
-                    className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs transition"
+                    className={btnSecondary}
                   >
                     <RotateCcw className={`w-3.5 h-3.5 ${summaryLoading ? "animate-spin" : ""}`} />
                   </button>
@@ -1030,61 +1075,61 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
 
               {/* Summary Stats Badges */}
               {summaryData && (
-                <div className="pt-4 space-y-4">
+                <div className="pt-3.5 space-y-3.5">
                   <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                    <span className="px-2 py-0.5 rounded-[4px] bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800 text-[11px]">
                       {summaryData.total_sessions} Sessions ({summaryData.submitted_sessions} submitted)
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                    <span className="px-2 py-0.5 rounded-[4px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800 text-[11px]">
                       {summaryData.counts.present} Present
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+                    <span className="px-2 py-0.5 rounded-[4px] bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 font-semibold border border-rose-200 dark:border-rose-800 text-[11px]">
                       {summaryData.counts.absent} Absent
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 font-semibold border border-amber-200">
+                    <span className="px-2 py-0.5 rounded-[4px] bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-800 text-[11px]">
                       {summaryData.counts.late} Late
                     </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 font-semibold border border-purple-200">
+                    <span className="px-2 py-0.5 rounded-[4px] bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 font-semibold border border-purple-200 dark:border-purple-800 text-[11px]">
                       {summaryData.counts.excused} Excused
                     </span>
                   </div>
 
                   {/* Absentees Drilldown */}
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5">
                       Absentees Recorded ({summaryData.absentees.length})
                     </h3>
 
                     {summaryData.absentees.length === 0 ? (
-                      <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 text-center text-xs text-emerald-800 font-medium">
+                      <div className="p-3.5 rounded-[4px] bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 text-center text-xs text-emerald-800 dark:text-emerald-300 font-medium">
                         ✓ No students marked absent on {summaryData.date} for the selected criteria.
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                         {summaryData.absentees.map((absentee, idx) => (
                           <div
                             key={`${absentee.session_id}-${absentee.student_id}-${idx}`}
-                            className="p-3.5 rounded-2xl bg-rose-50/40 border border-rose-100 flex items-start gap-3"
+                            className="p-3 rounded-[4px] bg-rose-50/40 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 flex items-start gap-2.5"
                           >
-                            <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs font-bold shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300 flex items-center justify-center text-[10px] font-bold shrink-0">
                               !
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-slate-900 truncate">
+                              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                                 {absentee.student_name}
                               </p>
-                              <p className="text-[11px] text-slate-500 mt-0.5">
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                                 {absentee.class_name} • {absentee.course_title}
                               </p>
                               {absentee.remarks && (
-                                <p className="text-[11px] text-rose-700 italic mt-1 bg-white/70 px-2 py-0.5 rounded border border-rose-200/60 inline-block">
+                                <p className="text-[11px] text-rose-700 dark:text-rose-300 italic mt-1 bg-white/70 dark:bg-black/30 px-1.5 py-0.5 rounded-[3px] border border-rose-200/60 dark:border-rose-800/40 inline-block">
                                   Reason: {absentee.remarks}
                                 </p>
                               )}
-                              <div className="mt-2">
+                              <div className="mt-1.5">
                                 <Link
                                   href={`/attendance/${absentee.session_id}`}
-                                  className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
+                                  className="text-[11px] font-semibold text-[#0858a8] dark:text-sky-400 hover:underline inline-flex items-center gap-1"
                                 >
                                   <span>View Session</span>
                                   <ArrowRight className="w-3 h-3" />
@@ -1098,64 +1143,38 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                   </div>
                 </div>
               )}
-            </section>}
+            </div>
+          )}
 
-            {/* School-Wide Attendance Sessions Overview & Filter Bar */}
-            {canViewAttendance && <section aria-labelledby="admin-sessions-heading">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-                <div>
-                  <h2 id="admin-sessions-heading" className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <CalendarCheck className="w-5 h-5 text-indigo-600" />
-                    <span>All Attendance Sessions (Administrative Overview & Closure)</span>
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Filter by date, class, and status; inspect student rosters; and close completed sessions
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => loadSessions(currentPage, filterDate, filterClassId, filterStatus)}
-                  disabled={dataLoading}
-                  className="self-start md:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${dataLoading ? "animate-spin" : ""}`} />
-                  <span>Refresh Sessions</span>
-                </button>
-              </div>
-
+          {/* School-Wide Attendance Sessions Overview */}
+          {canViewAttendance && (
+            <div className={tableContainerCls}>
               {/* Sessions Filter Toolbar */}
-              <form onSubmit={handleApplyFilters} className="mb-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-slate-500">Date:</span>
+              <div className="p-4 border-b border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <form onSubmit={handleApplyFilters} className="flex flex-1 flex-wrap items-center gap-2.5">
                   <input
                     type="date"
                     aria-label="Filter by Date"
                     value={filterDate}
                     onChange={(e) => setFilterDate(e.target.value)}
-                    className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-medium text-slate-800"
+                    className={`${inputCls()} w-36`}
                   />
-                </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-slate-500">Class:</span>
-                  <div className="w-36">
+                  <div className="w-40">
                     <AppSelect
                       value={filterClassId}
                       onChange={(val) => setFilterClassId(val)}
                       options={[
                         { value: "", label: "All Classes" },
-                        ...adminClasses.map((c) => ({ value: String(c.id), label: formatText(c.name) })),
+                        ...adminClasses.map((c) => ({ value: String(c.id), label: nestedLocalizedText(c.name) })),
                       ]}
                       placeholder="All Classes"
                       size="sm"
                       ariaLabel="Filter by Class"
                     />
                   </div>
-                </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-slate-500">Status:</span>
-                  <div className="w-32">
+                  <div className="w-36">
                     <AppSelect
                       value={filterStatus}
                       onChange={(val) => setFilterStatus(val)}
@@ -1170,165 +1189,171 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                       ariaLabel="Filter by Status"
                     />
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2 ml-auto">
                   <button
                     type="submit"
                     disabled={dataLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-2xs transition"
+                    className={btnPrimary}
                   >
                     <Filter className="w-3.5 h-3.5" />
-                    <span>Apply Filters</span>
+                    <span>Apply</span>
                   </button>
+
                   <button
                     type="button"
                     onClick={handleClearFilters}
                     disabled={dataLoading}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Clear</span>
-                  </button>
-                </div>
-              </form>
-
-              {/* Sessions Table */}
-              {dataLoading ? (
-                <div className="p-6 rounded-2xl bg-white border border-slate-200/80">
-                  <TableShimmerSkeleton rows={5} columns={6} />
-                </div>
-              ) : sessions.length === 0 ? (
-                <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-                    <CalendarCheck className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-slate-800">No Attendance Sessions Found</h3>
-                  <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 mb-4">
-                    No sessions match the selected filters or exist in the database.
-                  </p>
-                  <button
-                    onClick={handleClearFilters}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition"
+                    className={btnSecondary}
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Clear Filters</span>
+                    <span>Clear</span>
                   </button>
+                </form>
+
+                <div className="text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap self-end md:self-center">
+                  {pagination?.total ?? sessions.length} sessions
                 </div>
-              ) : (
-                <div className="overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-xs">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
-                          <th className="py-3 px-4">ID</th>
-                          <th className="py-3 px-4">Date</th>
-                          <th className="py-3 px-4">Slot</th>
-                          <th className="py-3 px-4">Class</th>
-                          <th className="py-3 px-4">Course</th>
-                          <th className="py-3 px-4">Status</th>
-                          <th className="py-3 px-4 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-700">
-                        {sessions.map((session) => (
-                          <tr key={session.id} className="hover:bg-slate-50/80 transition">
-                            <td className="py-3 px-4 font-mono text-slate-400">#{session.id}</td>
-                            <td className="py-3 px-4 font-mono font-medium text-slate-900">{session.date}</td>
-                            <td className="py-3 px-4 capitalize">{session.time_slot}</td>
-                            <td className="py-3 px-4 font-semibold text-slate-900 dark:text-slate-100">
-                              {formatText(session.school_class?.name) || `Class #${session.class_id}`}
-                            </td>
-                            <td className="py-3 px-4">
-                              {session.course?.name ? formatText(session.course.name) : <span className="text-slate-400">Homeroom</span>}
-                            </td>
-                            <td className="py-3 px-4">{getStatusBadge(session)}</td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="inline-flex items-center gap-2">
-                                <Link
-                                  href={`/attendance/${session.id}`}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 text-xs font-semibold transition"
+              </div>
+
+              {/* Sessions Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className={tableHeaderRowCls}>
+                      <th className={tableHeaderCellCls}>ID</th>
+                      <th className={tableHeaderCellCls}>Date</th>
+                      <th className={tableHeaderCellCls}>Slot</th>
+                      <th className={tableHeaderCellCls}>Class</th>
+                      <th className={tableHeaderCellCls}>Course</th>
+                      <th className={tableHeaderCellCls}>Status</th>
+                      <th className={`${tableHeaderCellCls} text-right`}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                    {dataLoading ? (
+                      <tr>
+                        <td colSpan={7} className="p-4">
+                          <TableShimmerSkeleton rows={5} columns={7} />
+                        </td>
+                      </tr>
+                    ) : sessions.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-slate-500 dark:text-slate-400">
+                          No attendance sessions match the selected filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      sessions.map((session) => (
+                        <tr key={session.id} className={tableRowCls(false)}>
+                          <td className="py-3 px-4 font-mono text-slate-400 dark:text-slate-500">#{session.id}</td>
+                          <td className="py-3 px-4 font-mono font-medium text-slate-900 dark:text-slate-100">{session.date}</td>
+                          <td className="py-3 px-4 capitalize text-slate-700 dark:text-slate-300">{session.time_slot}</td>
+                          <td className="py-3 px-4 font-semibold text-slate-900 dark:text-slate-100">
+                            {nestedLocalizedText(session.school_class?.name) || `Class #${session.class_id}`}
+                          </td>
+                          <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
+                            {session.course?.name ? nestedLocalizedText(session.course.name) : <span className="text-slate-400">Homeroom</span>}
+                          </td>
+                          <td className="py-3 px-4">{getStatusBadge(session)}</td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="inline-flex items-center gap-1.5">
+                              <Link
+                                href={`/attendance/${session.id}`}
+                                className={actionBtnView}
+                                title="Inspect Roster"
+                              >
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </Link>
+
+                              {session.status === "submitted" && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSessionToClose(session);
+                                    setCloseError(null);
+                                  }}
+                                  className={`${btnBase} h-7 px-2 bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 text-[11px]`}
+                                  title="Close and finalize session"
                                 >
-                                  <span>Inspect Roster</span>
-                                  <ArrowRight className="w-3 h-3" />
-                                </Link>
+                                  <Lock className="w-3 h-3" />
+                                  <span>Close</span>
+                                </button>
+                              )}
 
-                                {session.status === "submitted" && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSessionToClose(session);
-                                      setCloseError(null);
-                                    }}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-xs font-semibold transition"
-                                  >
-                                    <Lock className="w-3 h-3" />
-                                    <span>Close</span>
-                                  </button>
-                                )}
-                                {canDeleteAttendance && session.status !== "closed" && <button type="button" onClick={() => setSessionToDelete(session)} className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"><span>Delete</span></button>}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                              {canDeleteAttendance && session.status !== "closed" && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSessionToDelete(session)}
+                                  className={actionBtnDelete}
+                                  title="Delete Session"
+                                >
+                                  <span className="sr-only">Delete</span>
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination Footer */}
+              {pagination && pagination.total_pages > 1 && (
+                <div className="p-3.5 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                  <div>
+                    Page {pagination.current_page} of {pagination.total_pages} ({pagination.total} total sessions)
                   </div>
-
-                  {/* Pagination Footer */}
-                  {pagination && pagination.total_pages > 1 && (
-                    <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
-                      <div>
-                        Showing <strong>{sessions.length}</strong> of <strong>{pagination.total}</strong> sessions (Page <strong>{pagination.current_page}</strong> of <strong>{pagination.total_pages}</strong>)
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          disabled={pagination.current_page <= 1 || dataLoading}
-                          onClick={() => handlePageChange(pagination.current_page - 1)}
-                          className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 font-medium inline-flex items-center gap-1 transition"
-                        >
-                          <ChevronLeft className="w-3.5 h-3.5" />
-                          <span>Previous</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={pagination.current_page >= pagination.total_pages || dataLoading}
-                          onClick={() => handlePageChange(pagination.current_page + 1)}
-                          className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-40 font-medium inline-flex items-center gap-1 transition"
-                        >
-                          <span>Next</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <div className="inline-flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={pagination.current_page <= 1 || dataLoading}
+                      onClick={() => handlePageChange(pagination.current_page - 1)}
+                      className={btnSecondary}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span>Previous</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={pagination.current_page >= pagination.total_pages || dataLoading}
+                      onClick={() => handlePageChange(pagination.current_page + 1)}
+                      className={btnSecondary}
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               )}
-            </section>}
+            </div>
+          )}
 
-            {/* Administrative Academic Gradebook & Official Transcripts */}
-            {canViewReports && <section aria-labelledby="admin-gradebook-heading" className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-slate-100">
+          {/* Administrative Academic Gradebook & Official Transcripts */}
+          {canViewReports && (
+            <div className={tableContainerCls}>
+              <div className="p-4 border-b border-slate-200/80 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div>
-                  <h2 id="admin-gradebook-heading" className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <GraduationCap className="w-5 h-5 text-amber-600" />
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-[#0858a8] dark:text-sky-400" />
                     <span>Administrative Academic Gradebook & Official Transcripts</span>
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Official rankings, passing/failing marks, and exportable grade reports
                   </p>
                 </div>
 
                 {/* Gradebook Filter Controls & Actions */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="w-48">
+                  <div className="w-44">
                     <AppSelect
                       value={gradebookClassId}
                       onChange={(val) => setGradebookClassId(val)}
                       options={[
                         { value: "", label: "Select Class..." },
-                        ...adminClasses.map((c) => ({ value: String(c.id), label: `${formatText(c.name)} (${c.code})` })),
+                        ...adminClasses.map((c) => ({ value: String(c.id), label: `${nestedLocalizedText(c.name)} (${c.code})` })),
                       ]}
                       placeholder="Select Class..."
                       size="sm"
@@ -1336,7 +1361,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                     />
                   </div>
 
-                  <div className="w-36">
+                  <div className="w-32">
                     <AppSelect
                       value={gradebookSection}
                       onChange={(val) => setGradebookSection(val)}
@@ -1353,7 +1378,7 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                     />
                   </div>
 
-                  <div className="w-36">
+                  <div className="w-32">
                     <AppSelect
                       value={gradebookSemester}
                       onChange={(val) => setGradebookSemester(val)}
@@ -1367,193 +1392,239 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                     />
                   </div>
 
-                  {canExportReports && <button
-                    type="button"
-                    onClick={handleExportCsv}
-                    disabled={!gradebookClassId || gradebookLoading}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 disabled:opacity-50 flex items-center gap-1.5 transition cursor-pointer"
-                    title="Export Gradebook as CSV"
-                  >
-                    <Download className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Export CSV</span>
-                  </button>}
+                  {canExportReports && (
+                    <button
+                      type="button"
+                      onClick={handleExportCsv}
+                      disabled={!gradebookClassId || gradebookLoading}
+                      className={btnSecondary}
+                      title="Export Gradebook as CSV"
+                    >
+                      <Download className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+                      <span>Export CSV</span>
+                    </button>
+                  )}
 
-                  {canExportReports && <button
-                    type="button"
-                    onClick={handlePrintGradebook}
-                    disabled={!gradebookClassId || gradebookLoading}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 flex items-center gap-1.5 transition cursor-pointer shadow-xs"
-                    title="Print Official Gradebook / PDF"
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                    <span>Print Gradebook</span>
-                  </button>}
+                  {canExportReports && (
+                    <button
+                      type="button"
+                      onClick={handlePrintGradebook}
+                      disabled={!gradebookClassId || gradebookLoading}
+                      className={btnPrimary}
+                      title="Print Official Gradebook / PDF"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Print Gradebook</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Gradebook Content Table */}
-              <div className="pt-4">
+              {/* Gradebook Table */}
+              <div className="overflow-x-auto">
                 {gradebookLoading ? (
-                  <div className="p-4 rounded-xl bg-white border border-slate-200/80">
+                  <div className="p-4">
                     <TableShimmerSkeleton rows={5} columns={6} />
                   </div>
                 ) : gradebookError ? (
-                  <div className="py-8 text-center bg-rose-50 border border-rose-100 rounded-2xl p-4">
-                    <AlertTriangle className="w-6 h-6 text-rose-500 mx-auto mb-2" />
-                    <p className="text-xs text-rose-700 font-medium">{gradebookError}</p>
+                  <div className="py-8 text-center bg-rose-50 dark:bg-rose-950/20 border-b border-rose-100 dark:border-rose-900/40 p-4">
+                    <AlertTriangle className="w-5 h-5 text-rose-500 mx-auto mb-1.5" />
+                    <p className="text-xs text-rose-700 dark:text-rose-300 font-medium">{gradebookError}</p>
                   </div>
                 ) : !gradebookData || gradebookData.students.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 text-xs">
+                  <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs">
                     No student grades recorded for the selected class and semester.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs text-slate-600">
-                      <thead className="bg-slate-50 text-[11px] uppercase font-semibold text-slate-500 border-b border-slate-200">
-                        <tr>
-                          <th className="py-2.5 px-3">Student</th>
-                          <th className="py-2.5 px-3 text-center">Sec</th>
-                          <th className="py-2.5 px-3 text-center">Average %</th>
-                          <th className="py-2.5 px-3 text-center">Status</th>
-                          <th className="py-2.5 px-3 text-center">Sec Rank</th>
-                          <th className="py-2.5 px-3 text-center">Class Rank</th>
-                          <th className="py-2.5 px-3 text-center">Failed Subj</th>
-                          <th className="py-2.5 px-3 text-center">Attendance %</th>
-                          <th className="py-2.5 px-3 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {gradebookData.students.map((st) => (
-                          <tr key={st.student.id} className="hover:bg-slate-50/50 transition">
-                            <td className="py-2.5 px-3">
-                              <p className="font-semibold text-slate-900">{formatText(st.student.full_name)}</p>
-                              {st.student.christian_name && (
-                                <p className="text-[10px] text-slate-400">
-                                  {formatText(st.student.christian_name)}
-                                </p>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-center font-medium">{st.section}</td>
-                            <td className="py-2.5 px-3 text-center font-bold text-slate-900">
-                              {st.summary.overall_average}%
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              {st.summary.status === "PASS" && (
-                                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <CheckCircle2 className="w-2.5 h-2.5" /> PASS
-                                </span>
-                              )}
-                              {st.summary.status === "FAIL" && (
-                                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                  <AlertTriangle className="w-2.5 h-2.5" /> FAIL
-                                </span>
-                              )}
-                              {st.summary.status === "INCOMPLETE" && (
-                                <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                  <Clock className="w-2.5 h-2.5" /> INCOMPLETE
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 text-center font-medium">
-                              {st.summary.section_rank ? `#${st.summary.section_rank}` : "—"}
-                            </td>
-                            <td className="py-2.5 px-3 text-center font-medium">
-                              {st.summary.class_rank ? `#${st.summary.class_rank}` : "—"}
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <span className={st.summary.failed_courses_count > 0 ? "font-bold text-rose-600" : "text-slate-500"}>
-                                {st.summary.failed_courses_count}
+                  <table className="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                    <thead className={tableHeaderRowCls}>
+                      <tr>
+                        <th className={tableHeaderCellCls}>Student</th>
+                        <th className={`${tableHeaderCellCls} text-center`}>Sec</th>
+                        <th className={`${tableHeaderCellCls} text-center`}>Average %</th>
+                        <th className={`${tableHeaderCellCls} text-center`}>Status</th>
+                        <th className={`${tableHeaderCellCls} text-center`}>Sec Rank</th>
+                        <th className={`${tableHeaderCellCls} text-center`}>Class Rank</th>
+                        <th className={`${tableHeaderCellCls} text-center`}>Failed Subj</th>
+                        <th className={`${tableHeaderCellCls} text-center`}>Attendance %</th>
+                        <th className={`${tableHeaderCellCls} text-right`}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                      {gradebookData.students.map((st) => (
+                        <tr key={st.student.id} className={tableRowCls(false)}>
+                          <td className="py-2.5 px-3">
+                            <p className="font-semibold text-slate-900 dark:text-slate-100">{nestedLocalizedText(st.student.full_name)}</p>
+                            {st.student.christian_name && (
+                              <p className="text-[10px] text-slate-400">
+                                {nestedLocalizedText(st.student.christian_name)}
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-medium">{st.section}</td>
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-900 dark:text-slate-100">
+                            {st.summary.overall_average}%
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            {st.summary.status === "PASS" && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> PASS
                               </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-center font-medium">
-                              {st.attendance.attendance_rate}%
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
-                              <Link
-                                href={`/report-cards/${st.student.id}`}
-                                className="inline-flex items-center gap-1 text-amber-700 hover:text-amber-800 font-semibold text-xs hover:underline"
-                              >
-                                <span>Report Card</span>
-                                <ArrowRight className="w-3 h-3" />
-                              </Link>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                            )}
+                            {st.summary.status === "FAIL" && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                                <AlertTriangle className="w-2.5 h-2.5" /> FAIL
+                              </span>
+                            )}
+                            {st.summary.status === "INCOMPLETE" && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                <Clock className="w-2.5 h-2.5" /> INCOMPLETE
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-medium">
+                            {st.summary.section_rank ? `#${st.summary.section_rank}` : "—"}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-medium">
+                            {st.summary.class_rank ? `#${st.summary.class_rank}` : "—"}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={st.summary.failed_courses_count > 0 ? "font-bold text-rose-600 dark:text-rose-400" : "text-slate-500"}>
+                              {st.summary.failed_courses_count}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-medium">
+                            {st.attendance.attendance_rate}%
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Link
+                              href={`/report-cards/${st.student.id}`}
+                              className="inline-flex items-center gap-1 text-[#0858a8] dark:text-sky-400 hover:underline font-semibold text-xs"
+                            >
+                              <span>Report Card</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </div>
-            </section>}
-          </div>
-        )}
-
-        {/* Student and read-only academic view */}
-        {!isTeacher && !isAdmin && (
-          <div className="space-y-5">
-            <section className="rounded-2xl border border-slate-200 bg-white p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-700">Sunday School</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-900">Your learning space</h2>
-              <p className="mt-1 text-sm text-slate-600">Courses and school information available to your account.</p>
-            </section>
-            {hasPermission("courses.view") && <section aria-labelledby="student-courses-heading" className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h3 id="student-courses-heading" className="text-base font-semibold text-slate-900">Courses</h3>
-              {adminCourses.length ? <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{adminCourses.map((course) => <article key={course.id} className="rounded-xl border border-slate-200 p-4"><h4 className="font-semibold text-slate-900">{formatText(course.name)}</h4><p className="mt-1 text-xs text-slate-500">{course.code}</p></article>)}</div> : <p className="mt-3 text-sm text-slate-500">No courses are available to display.</p>}
-            </section>}
-          </div>
-        )}
-      </main>
-
-      <ConfirmDialog isOpen={Boolean(sessionToDelete)} onClose={() => { if (!deleteSubmitting) setSessionToDelete(null); }} onConfirm={() => void handleDeleteSession()} isLoading={deleteSubmitting} title="Delete attendance session" description={sessionToDelete ? `Delete session #${sessionToDelete.id}? This action cannot be undone.` : "This action cannot be undone."} />
-      {/* New Session Creation Modal */}
-      {showCreateModal && canCreateAttendance && primaryAssignment && <AdminModal open={showCreateModal} onOpenChange={(open) => { if (!open && !createSubmitting) setShowCreateModal(false); }} title="Start roll call session" description="Confirm the class, course, date, and time for this attendance session." showHeader={false} size="md">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <CalendarCheck className="w-5 h-5 text-indigo-600" />
-                <span>Start Roll Call Session</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-              >
-                ✕
-              </button>
             </div>
+          )}
+        </div>
+      )}
 
+      {/* Student / Read-Only View */}
+      {!isTeacher && !isAdmin && (
+        <div className="space-y-4">
+          <div className={cardCls}>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 dark:text-sky-400">Sunday School</p>
+            <h2 className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">Your Learning Space</h2>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Courses and school information available to your account.</p>
+          </div>
+          {hasPermission("courses.view") && (
+            <div className={cardCls}>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Courses</h3>
+              {adminCourses.length ? (
+                <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {adminCourses.map((course) => (
+                    <article key={course.id} className="rounded-[4px] border border-slate-200/90 dark:border-slate-800 p-3 bg-slate-50 dark:bg-slate-900/40">
+                      <h4 className="font-semibold text-slate-900 dark:text-slate-100 text-xs">{nestedLocalizedText(course.name)}</h4>
+                      <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{course.code}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">No courses are available to display.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Delete Attendance Session Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(sessionToDelete)}
+        onClose={() => {
+          if (!deleteSubmitting) setSessionToDelete(null);
+        }}
+        onConfirm={() => void handleDeleteSession()}
+        isLoading={deleteSubmitting}
+        title="Delete attendance session"
+        description={sessionToDelete ? `Delete session #${sessionToDelete.id}? This action cannot be undone.` : "This action cannot be undone."}
+      />
+
+      {/* Close Attendance Session Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(sessionToClose && canCloseAttendance)}
+        onClose={() => {
+          if (!closeSubmitting) {
+            setSessionToClose(null);
+            setCloseError(null);
+          }
+        }}
+        onConfirm={() => void handleConfirmClose()}
+        isLoading={closeSubmitting}
+        title="Close attendance session"
+        description={closeError || (sessionToClose ? `Close and archive session #${sessionToClose.id} for ${nestedLocalizedText(sessionToClose.school_class?.name) || `Class #${sessionToClose.class_id}`} (${sessionToClose.date}, ${sessionToClose.time_slot})? Teachers will no longer be able to correct attendance marks.` : "Closing finalizes this session.")}
+      />
+
+      {/* Start Roll Call Session Modal */}
+      {showCreateModal && canCreateAttendance && primaryAssignment && (
+        <AdminModal
+          open={showCreateModal}
+          onOpenChange={(open) => {
+            if (!open && !createSubmitting) setShowCreateModal(false);
+          }}
+          title="Start Roll Call Session"
+          description="Confirm the class, course, date, and time slot for this attendance session."
+          showHeader={true}
+          size="md"
+        >
+          <div className="space-y-4 text-xs">
             {createError && (
-              <div className="mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+              <div className="p-3 rounded-[4px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium">
                 {createError}
               </div>
             )}
 
-            <div className="my-4 space-y-3 text-xs">
+            <div className="space-y-3">
               <div>
-                <label className="block text-slate-600 font-semibold mb-1">Class & Section</label>
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-medium">
-                  {primaryAssignment.class_name || "Grade 9"} — Section {primaryAssignment.section}
+                <label className={labelCls}>Class & Section</label>
+                <div className={detailCardCls}>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {primaryAssignment.class_name || "Grade 9"} — Section {primaryAssignment.section}
+                  </span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-600 font-semibold mb-1">Course</label>
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-medium">
-                  {primaryAssignment.course_name || "Homeroom"}
+                <label className={labelCls}>Course</label>
+                <div className={detailCardCls}>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {primaryAssignment.course_name || "Homeroom"}
+                  </span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-600 font-semibold mb-1">Session Date</label>
+                <label className={labelCls}>
+                  Session Date <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="date"
                   value={newSessionDate}
                   onChange={(e) => setNewSessionDate(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 font-medium focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                  className={inputCls()}
                 />
               </div>
 
               <div>
-                <label className="block text-slate-600 font-semibold mb-1">Time Slot / Period</label>
+                <label className={labelCls}>
+                  Time Slot / Period <span className="text-rose-500">*</span>
+                </label>
                 <AppSelect
                   value={newSessionSlot}
                   onChange={(val) => setNewSessionSlot(val)}
@@ -1569,11 +1640,11 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className={modalStickyFooter}>
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition"
+                className={btnSecondary}
               >
                 Cancel
               </button>
@@ -1581,14 +1652,16 @@ export function SchoolDashboard({ area }: { area: SchoolDashboardArea }) {
                 type="button"
                 disabled={createSubmitting}
                 onClick={() => handleCreateSession(primaryAssignment)}
-                className="flex-1 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white text-xs font-semibold shadow-xs transition"
+                className={btnPrimary}
               >
                 {createSubmitting ? "Creating..." : "Create & Start Roll Call"}
               </button>
             </div>
-      </AdminModal>}
-      {/* Administrative Session Closure Confirmation Modal */}
-        <ConfirmDialog isOpen={Boolean(sessionToClose && canCloseAttendance)} onClose={() => { if (!closeSubmitting) { setSessionToClose(null); setCloseError(null); } }} onConfirm={() => void handleConfirmClose()} isLoading={closeSubmitting} title="Close attendance session" description={closeError || (sessionToClose ? `Close and archive session #${sessionToClose.id} for ${sessionToClose.school_class?.name || `Class #${sessionToClose.class_id}`} (${sessionToClose.date}, ${sessionToClose.time_slot})? Teachers will no longer be able to correct attendance marks.` : "Closing finalizes this session.")} />
+          </div>
+        </AdminModal>
+      )}
     </div>
   );
 }
+
+export default SchoolDashboard;

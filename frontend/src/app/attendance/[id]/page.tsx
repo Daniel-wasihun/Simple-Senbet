@@ -8,13 +8,26 @@ import { AdminModal } from "@/components/admin/AdminModal";
 import { attendanceService } from "@/services/attendance.service";
 import { formatText } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TableShimmerSkeleton, DashboardAppShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
+import { TableShimmerSkeleton, DashboardAppShimmerSkeleton, AttendanceTakingShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 import {
   AttendanceMark,
   AttendanceDetailSession,
   SessionRosterResponse,
   RosterStudent,
 } from "@/types/auth";
+import {
+  BRAND,
+  btnBase,
+  btnPrimary,
+  btnSecondary,
+  btnDanger,
+  btnSuccess,
+  inputCls,
+  labelCls,
+  modalStickyFooter,
+  detailCardCls,
+  nestedLocalizedText,
+} from "@/components/admin/adminUiTokens";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -200,14 +213,33 @@ function AttendanceTakingContent() {
     }
   }, [user, sessionId, loadSessionAndRoster]);
 
-  // Check session status and roles
-  const isAdmin = user?.role === "superadmin" || user?.role === "academic_director";
+  // Check session status and permissions
+  const permissions = useMemo(() => new Set(user?.permissions ?? []), [user?.permissions]);
+  const isSuperOrAdmin = useMemo(() => {
+    if (!user) return false;
+    const r = (user.role || "").toLowerCase();
+    const roles = (user.roles || []).map((x: any) =>
+      (typeof x === "string" ? x : x.name || "").toLowerCase()
+    );
+    const adminRoles = ["superadmin", "admin", "administrator", "academic_director", "academic_administrator", "attendance_officer"];
+    return adminRoles.includes(r) || roles.some((x) => adminRoles.includes(x)) || Boolean(user.permissions?.includes("*"));
+  }, [user]);
+
+  const can = useCallback(
+    (p: string) => isSuperOrAdmin || permissions.has(p) || permissions.has("*"),
+    [isSuperOrAdmin, permissions]
+  );
+  const canViewAttendance = can("attendance.view");
+  const canCloseAttendance = can("attendance.close");
+  const canSubmitAttendance = can("attendance.submit") || can("attendance.create");
+  const canCorrectAttendance = can("attendance.correct") || can("attendance.override");
+
   const isTeacher = user?.role === "teacher";
   const isDraft = session?.status === "draft";
   const isSubmitted = session?.status === "submitted";
   const isClosed = session?.status === "closed";
-  const isTeacherEditable = (isTeacher && session?.is_teacher_editable) ?? false;
-  const isEditable = (isTeacher && isDraft) || (isTeacher && isSubmitted && isTeacherEditable);
+  const isTeacherEditable = (canCorrectAttendance && (session?.is_teacher_editable || can("attendance.override"))) ?? false;
+  const isEditable = (canSubmitAttendance && isDraft) || (canCorrectAttendance && isSubmitted && isTeacherEditable);
 
   // Set single student mark
   const handleMarkChange = (studentId: number, mark: AttendanceMark) => {
@@ -442,20 +474,27 @@ function AttendanceTakingContent() {
   };
 
   if (authLoading || loading) {
+    return <AttendanceTakingShimmerSkeleton />;
+  }
+
+  if (!canViewAttendance && !canSubmitAttendance && !canCloseAttendance) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e1a] p-4 sm:p-6 lg:p-8">
-        <div className="max-w-5xl mx-auto space-y-6">
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#111624] border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-72" />
+      <div className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white p-6 rounded-3xl border border-slate-200 shadow-md text-center">
+          <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-3">
+            <AlertTriangle className="w-6 h-6" />
           </div>
-          <div className="p-6 rounded-3xl bg-white dark:bg-[#111624] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-40" />
-              <Skeleton className="h-8 w-28 rounded-xl" />
-            </div>
-            <TableShimmerSkeleton rows={8} columns={5} />
-          </div>
+          <h2 className="text-lg font-bold text-slate-900">Access Restricted</h2>
+          <p className="text-xs text-slate-600 mt-2 mb-6">
+            You do not have permission to view or manage attendance sessions.
+          </p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to Dashboard</span>
+          </Link>
         </div>
       </div>
     );
@@ -661,14 +700,14 @@ function AttendanceTakingContent() {
           </div>
 
           {/* Quick Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {isDraft && (
               <button
                 onClick={handleMarkAllPresent}
                 type="button"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition"
+                className={btnSecondary}
               >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Mark All Present</span>
               </button>
             )}
@@ -678,7 +717,7 @@ function AttendanceTakingContent() {
                 onClick={() => setShowConfirmModal(true)}
                 disabled={counts.unmarked > 0 || submitting || !selectedSection || !selectedSemester}
                 type="button"
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white text-xs font-semibold shadow-xs transition"
+                className={btnPrimary}
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{submitting ? "Submitting..." : "Submit Roster"}</span>
@@ -690,7 +729,7 @@ function AttendanceTakingContent() {
                 onClick={handleSaveCorrections}
                 disabled={changedMarksCount === 0 || submitting}
                 type="button"
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white text-xs font-semibold shadow-xs transition"
+                className={btnPrimary}
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>
@@ -699,11 +738,11 @@ function AttendanceTakingContent() {
               </button>
             )}
 
-            {isAdmin && isSubmitted && (
+            {canCloseAttendance && isSubmitted && (
               <button
                 onClick={() => setShowCloseModal(true)}
                 type="button"
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold shadow-xs transition"
+                className={btnDanger}
               >
                 <Lock className="w-3.5 h-3.5" />
                 <span>Close Session</span>
@@ -810,11 +849,11 @@ function AttendanceTakingContent() {
                         type="button"
                         disabled={!isEditable}
                         onClick={() => handleMarkChange(student.id, "present")}
-                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
+                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1.5 rounded-[4px] text-xs font-bold transition ${
                           currentMark === "present"
                             ? "bg-emerald-600 text-white shadow-xs"
-                            : "bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-transparent hover:border-emerald-200"
-                        } disabled:opacity-75 disabled:pointer-events-none`}
+                            : "bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-300 hover:text-emerald-700 border border-transparent hover:border-emerald-200"
+                        } disabled:opacity-75 disabled:pointer-events-none cursor-pointer`}
                       >
                         <Check className="w-3.5 h-3.5" />
                         <span>Present</span>
@@ -825,11 +864,11 @@ function AttendanceTakingContent() {
                         type="button"
                         disabled={!isEditable}
                         onClick={() => handleMarkChange(student.id, "absent")}
-                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
+                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1.5 rounded-[4px] text-xs font-bold transition ${
                           currentMark === "absent"
                             ? "bg-rose-600 text-white shadow-xs"
-                            : "bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-transparent hover:border-rose-200"
-                        } disabled:opacity-75 disabled:pointer-events-none`}
+                            : "bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-300 hover:text-rose-700 border border-transparent hover:border-rose-200"
+                        } disabled:opacity-75 disabled:pointer-events-none cursor-pointer`}
                       >
                         <X className="w-3.5 h-3.5" />
                         <span>Absent</span>
@@ -840,11 +879,11 @@ function AttendanceTakingContent() {
                         type="button"
                         disabled={!isEditable}
                         onClick={() => handleMarkChange(student.id, "late")}
-                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
+                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1.5 rounded-[4px] text-xs font-bold transition ${
                           currentMark === "late"
                             ? "bg-amber-600 text-white shadow-xs"
-                            : "bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-700 border border-transparent hover:border-amber-200"
-                        } disabled:opacity-75 disabled:pointer-events-none`}
+                            : "bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-slate-700 dark:text-slate-300 hover:text-amber-700 border border-transparent hover:border-amber-200"
+                        } disabled:opacity-75 disabled:pointer-events-none cursor-pointer`}
                       >
                         <Clock className="w-3.5 h-3.5" />
                         <span>Late</span>
@@ -855,11 +894,11 @@ function AttendanceTakingContent() {
                         type="button"
                         disabled={!isEditable}
                         onClick={() => handleMarkChange(student.id, "excused")}
-                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
+                        className={`flex-1 sm:flex-none flex items-center justify-center gap-1 px-3 py-1.5 rounded-[4px] text-xs font-bold transition ${
                           currentMark === "excused"
                             ? "bg-purple-600 text-white shadow-xs"
-                            : "bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-transparent hover:border-purple-200"
-                        } disabled:opacity-75 disabled:pointer-events-none`}
+                            : "bg-slate-100 dark:bg-slate-800 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-300 hover:text-purple-700 border border-transparent hover:border-purple-200"
+                        } disabled:opacity-75 disabled:pointer-events-none cursor-pointer`}
                       >
                         <HelpCircle className="w-3.5 h-3.5" />
                         <span>Excused</span>
@@ -871,10 +910,10 @@ function AttendanceTakingContent() {
                           type="button"
                           onClick={() => setActiveRemarksId(activeRemarksId === student.id ? null : student.id)}
                           title="Add Remarks"
-                          className={`p-2 rounded-xl border text-xs transition ${
+                          className={`p-1.5 rounded-[4px] border text-xs transition cursor-pointer ${
                             currentRemarks
-                              ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                              : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600"
+                              ? "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-[#0858a8] dark:text-sky-400"
+                              : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                           }`}
                         >
                           <MessageSquare className="w-4 h-4" />
@@ -909,47 +948,52 @@ function AttendanceTakingContent() {
 
       {/* Confirmation Modal for Full Submission */}
       {showConfirmModal && (
-        <AdminModal open={showConfirmModal} onOpenChange={(open) => { if (!open && !submitting) setShowConfirmModal(false); }} title="Confirm Attendance Submission" description={`Review attendance for ${counts.total} students before submitting.`} size="md" showHeader={false}>
-          <div className="max-w-md w-full bg-white rounded-3xl p-6 shadow-xl border border-slate-200 text-center animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Send className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">Confirm Attendance Submission</h3>
-            <p className="text-xs text-slate-600 mt-2">
+        <AdminModal
+          open={showConfirmModal}
+          onOpenChange={(open) => {
+            if (!open && !submitting) setShowConfirmModal(false);
+          }}
+          title="Confirm Attendance Submission"
+          description={`Review attendance for ${counts.total} students before submitting.`}
+          size="md"
+          showHeader={true}
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-slate-600 dark:text-slate-300">
               You are about to record attendance for <strong>{counts.total} students</strong> in{" "}
               <strong>{formatText(session?.school_class?.name) || `Class #${session?.class_id}`}</strong> (Section{" "}
               <strong>{selectedSection}</strong>,{" "}
               <span className="capitalize">{selectedSemester?.replace("_", " ")}</span>):
             </p>
 
-            <div className="my-4 p-3 rounded-2xl bg-slate-50 border border-slate-100 grid grid-cols-4 gap-2 text-xs">
+            <div className="p-3 rounded-[4px] bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 grid grid-cols-4 gap-2 text-center text-xs">
               <div>
-                <p className="text-slate-400 text-[10px]">Present</p>
-                <p className="font-bold text-emerald-600 text-sm mt-0.5">{counts.present}</p>
+                <p className="text-slate-400 text-[10px] uppercase font-semibold">Present</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5">{counts.present}</p>
               </div>
               <div>
-                <p className="text-slate-400 text-[10px]">Absent</p>
-                <p className="font-bold text-rose-600 text-sm mt-0.5">{counts.absent}</p>
+                <p className="text-slate-400 text-[10px] uppercase font-semibold">Absent</p>
+                <p className="font-bold text-rose-600 dark:text-rose-400 text-sm mt-0.5">{counts.absent}</p>
               </div>
               <div>
-                <p className="text-slate-400 text-[10px]">Late</p>
-                <p className="font-bold text-amber-600 text-sm mt-0.5">{counts.late}</p>
+                <p className="text-slate-400 text-[10px] uppercase font-semibold">Late</p>
+                <p className="font-bold text-amber-600 dark:text-amber-400 text-sm mt-0.5">{counts.late}</p>
               </div>
               <div>
-                <p className="text-slate-400 text-[10px]">Excused</p>
-                <p className="font-bold text-purple-600 text-sm mt-0.5">{counts.excused}</p>
+                <p className="text-slate-400 text-[10px] uppercase font-semibold">Excused</p>
+                <p className="font-bold text-purple-600 dark:text-purple-400 text-sm mt-0.5">{counts.excused}</p>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-500 mb-6">
-              Once submitted, marks can be corrected by the teacher within the 24-hour window.
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Once submitted, marks can be corrected by the teacher within the 24-hour correction window.
             </p>
 
-            <div className="flex items-center gap-3">
+            <div className={modalStickyFooter}>
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition"
+                className={btnSecondary}
               >
                 Cancel
               </button>
@@ -957,9 +1001,10 @@ function AttendanceTakingContent() {
                 type="button"
                 onClick={handleSubmitSession}
                 disabled={submitting}
-                className="flex-1 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
+                className={btnPrimary}
               >
-                {submitting ? "Submitting..." : "Confirm & Submit"}
+                <Send className="w-3.5 h-3.5" />
+                <span>{submitting ? "Submitting..." : "Confirm & Submit"}</span>
               </button>
             </div>
           </div>
@@ -968,33 +1013,41 @@ function AttendanceTakingContent() {
 
       {/* Confirmation Modal for Administrative Session Closure */}
       {showCloseModal && (
-        <AdminModal open={showCloseModal} onOpenChange={(open) => { if (!open && !closing) { setShowCloseModal(false); setCloseError(null); } }} title="Close Attendance Session" description="Review the permanent closure details before confirming." size="md" showHeader={false}>
-          <div className="max-w-md w-full bg-white rounded-3xl p-6 shadow-xl border border-slate-200 text-center animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 bg-purple-50 text-purple-700 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Lock className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">Close Attendance Session</h3>
-            <p className="text-xs text-slate-600 mt-2">
+        <AdminModal
+          open={showCloseModal}
+          onOpenChange={(open) => {
+            if (!open && !closing) {
+              setShowCloseModal(false);
+              setCloseError(null);
+            }
+          }}
+          title="Close Attendance Session"
+          description="Review the permanent closure details before confirming."
+          size="md"
+          showHeader={true}
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-slate-600 dark:text-slate-300">
               You are about to close and archive the session for <strong>{formatText(session?.school_class?.name) || `Class #${session?.class_id}`}</strong> ({session?.date}, {session?.time_slot}).
             </p>
 
-            <div className="my-4 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs text-left">
+            <div className="p-3 rounded-[4px] bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs">
               <p className="font-semibold flex items-center gap-1.5 mb-1">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>Permanent Administrative Closure</span>
               </p>
-              <p className="text-[11px] text-amber-800">
+              <p className="text-[11px] text-amber-800 dark:text-amber-300">
                 Closing permanently archives this session. Teachers will no longer be able to submit corrections. All roster marks become final for school reporting.
               </p>
             </div>
 
             {closeError && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium text-left">
+              <div className="p-3 rounded-[4px] bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-medium">
                 {closeError}
               </div>
             )}
 
-            <div className="flex items-center gap-3">
+            <div className={modalStickyFooter}>
               <button
                 type="button"
                 disabled={closing}
@@ -1002,7 +1055,7 @@ function AttendanceTakingContent() {
                   setShowCloseModal(false);
                   setCloseError(null);
                 }}
-                className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition disabled:opacity-50"
+                className={btnSecondary}
               >
                 Cancel
               </button>
@@ -1010,9 +1063,10 @@ function AttendanceTakingContent() {
                 type="button"
                 disabled={closing}
                 onClick={handleCloseSession}
-                className="flex-1 px-4 py-2 rounded-xl bg-purple-700 text-white text-xs font-semibold hover:bg-purple-800 transition disabled:opacity-50"
+                className={btnDanger}
               >
-                {closing ? "Closing..." : "Confirm & Close"}
+                <Lock className="w-3.5 h-3.5" />
+                <span>{closing ? "Closing..." : "Confirm & Close"}</span>
               </button>
             </div>
           </div>
@@ -1024,7 +1078,7 @@ function AttendanceTakingContent() {
 
 export default function AttendanceTakingPage() {
   return (
-    <Suspense fallback={<DashboardAppShimmerSkeleton />}>
+    <Suspense fallback={<AttendanceTakingShimmerSkeleton />}>
       <AttendanceTakingContent />
     </Suspense>
   );
