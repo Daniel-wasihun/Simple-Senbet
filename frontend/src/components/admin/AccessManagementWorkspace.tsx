@@ -1,7 +1,21 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, Check, LoaderCircle, Pencil, Plus, RefreshCw, Save, Shield, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Eye,
+  Key,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Shield,
+  Trash2,
+  UserCheck,
+  Users,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/hooks/useTranslation";
 import { AdminModal } from "@/components/admin/AdminModal";
@@ -10,24 +24,134 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { TableShimmerSkeleton, AccessManagementShimmerSkeleton } from "@/components/ui/DashboardShimmerSkeleton";
 import { AppSelect } from "@/components/ui/AppSelect";
 import { LocalizedFieldInput, SupportedLocale } from "@/components/admin/LocalizedFieldInput";
+import { toast } from "sonner";
+import {
+  btnBase,
+  btnDanger,
+  btnPrimary,
+  btnSecondary,
+  inputCls,
+  labelCls,
+  tableContainerCls,
+  tableHeaderCellCls,
+  tableHeaderRowCls,
+  tableRowCls,
+  actionBtnEdit,
+  actionBtnDelete,
+  modalStickyFooter,
+  cardCls,
+  detailCardCls,
+} from "@/components/admin/adminUiTokens";
 
 type AccessTab = "users" | "roles" | "permissions";
-type RoleRecord = { id: number; name: string; label?: Record<string, string> | string; permissions?: PermissionRecord[] | { data?: PermissionRecord[] }; users_count?: number };
-type PermissionRecord = { id: number; name: string; group_name: string; label?: Record<string, string> | string; description?: Record<string, string> | string | null };
-type UserRecord = { id: number; name: string; email: string; roles?: string[] | Array<{ id: number; name: string }>; role?: string | { id: number; name: string } };
-type PermissionDraft = { name: string; group_name: string; label: { en: string; am: string; om: string } };
-type RoleDraft = { name: string; label: { en: string; am: string; om: string } };
 
-const blankPermission: PermissionDraft = { name: "", group_name: "", label: { en: "", am: "", om: "" } };
-const blankRole: RoleDraft = { name: "", label: { en: "", am: "", om: "" } };
+type RoleRecord = {
+  id: number;
+  name: string;
+  label?: Record<string, string> | string;
+  permissions?: PermissionRecord[] | { data?: PermissionRecord[] };
+  users_count?: number;
+};
+
+type PermissionRecord = {
+  id: number;
+  name: string;
+  group_name: string;
+  label?: Record<string, string> | string;
+  description?: Record<string, string> | string | null;
+};
+
+type UserRecord = {
+  id: number;
+  name: string;
+  email: string;
+  roles?: string[] | Array<{ id: number; name: string }>;
+  role?: string | { id: number; name: string };
+};
+
+type PermissionDraft = {
+  name: string;
+  group_name: string;
+  label: { en: string; am: string; om: string };
+};
+
+type RoleDraft = {
+  name: string;
+  label: { en: string; am: string; om: string };
+};
+
+const blankPermission: PermissionDraft = {
+  name: "members.view",
+  group_name: "members",
+  label: { en: "View Members", am: "አባላትን ይመልከቱ", om: "Miseensota ilaali" },
+};
+
+export const STANDARD_PERMISSION_MODULES = [
+  { value: "members", label: "Members & Registry (members)" },
+  { value: "attendance", label: "Attendance & Sessions (attendance)" },
+  { value: "academic-years", label: "Academic Years (academic-years)" },
+  { value: "school-classes", label: "School Classes (school-classes)" },
+  { value: "courses", label: "Courses & Curriculum (courses)" },
+  { value: "teaching-assignments", label: "Teaching Assignments (teaching-assignments)" },
+  { value: "student-enrollments", label: "Student Enrollments (student-enrollments)" },
+  { value: "assessments", label: "Assessments & Tests (assessments)" },
+  { value: "assessment-results", label: "Assessment Results (assessment-results)" },
+  { value: "promotions", label: "Student Promotions (promotions)" },
+  { value: "payments", label: "Finance & Payments (payments)" },
+  { value: "reports", label: "Reports & Gradebooks (reports)" },
+  { value: "users", label: "User Accounts (users)" },
+  { value: "roles", label: "Security Roles (roles)" },
+  { value: "permissions", label: "Permissions Catalogue (permissions)" },
+  { value: "profile", label: "User Profile (profile)" },
+];
+
+export const STANDARD_PERMISSION_ACTIONS = [
+  { value: "view", label: "View / Read (view)" },
+  { value: "create", label: "Create / Register (create)" },
+  { value: "update", label: "Update / Edit (update)" },
+  { value: "delete", label: "Delete / Remove (delete)" },
+  { value: "manage", label: "Manage Full Module (manage)" },
+  { value: "export", label: "Export Reports (export)" },
+  { value: "assign", label: "Assign Allocations (assign)" },
+  { value: "submit", label: "Submit Marks / Data (submit)" },
+  { value: "record", label: "Record Data / Payments (record)" },
+  { value: "close", label: "Close Session (close)" },
+  { value: "correct", label: "Correct Marks (correct)" },
+  { value: "override", label: "Override Lock Windows (override)" },
+  { value: "void", label: "Void / Invalidate Records (void)" },
+  { value: "rules", label: "Configure Rules (rules)" },
+  { value: "view.all", label: "View Across All Classes (view.all)" },
+  { value: "record.all", label: "Record Across All Classes (record.all)" },
+  { value: "export.all", label: "Export Across All Classes (export.all)" },
+];
+
+function generateDefaultLabel(mod: string, act: string): string {
+  const actName = act.replace(".all", " (All Classes)").replace(".", " ");
+  const actCap = actName.charAt(0).toUpperCase() + actName.slice(1);
+  const modName = mod.replace("-", " ");
+  const modCap = modName.charAt(0).toUpperCase() + modName.slice(1);
+  return `${actCap} ${modCap}`;
+}
+
+const blankRole: RoleDraft = {
+  name: "",
+  label: { en: "", am: "", om: "" },
+};
 
 function listFrom<T>(payload: unknown, key?: string): T[] {
   if (Array.isArray(payload)) return payload as T[];
   if (!payload || typeof payload !== "object") return [];
   const record = payload as Record<string, unknown>;
-  const result = (key ? record[key] : undefined) ?? record.data ?? record.roles ?? record.permissions ?? record.users;
+  const result =
+    (key ? record[key] : undefined) ??
+    record.data ??
+    record.roles ??
+    record.permissions ??
+    record.users;
   if (Array.isArray(result)) return result as T[];
-  if (result && typeof result === "object" && Array.isArray((result as Record<string, unknown>).data)) return (result as { data: T[] }).data;
+  if (result && typeof result === "object" && Array.isArray((result as Record<string, unknown>).data)) {
+    return (result as { data: T[] }).data;
+  }
   return [];
 }
 
@@ -40,14 +164,32 @@ function labelValue(value: PermissionRecord["label"] | RoleRecord["label"], lang
 export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTab }) {
   const { user, refreshUser } = useAuth();
   const { t, currentLocale } = useTranslation();
+
+  const isSuperAdmin = useMemo(() => {
+    if (!user) return false;
+    const r = (user.role || "").toLowerCase();
+    const roles = (user.roles || []).map((x: any) =>
+      (typeof x === "string" ? x : x.name || "").toLowerCase()
+    );
+    return r === "superadmin" || roles.includes("superadmin");
+  }, [user]);
+
   const granted = useMemo(() => new Set(user?.permissions ?? []), [user?.permissions]);
-  const can = useCallback((permission: string) => granted.has(permission), [granted]);
+  const can = useCallback(
+    (permission: string) => {
+      if (isSuperAdmin) return true;
+      return granted.has(permission) || granted.has("*");
+    },
+    [isSuperAdmin, granted]
+  );
+
   const canViewUsers = can("users.view");
   const canViewRoles = can("roles.view");
   const canViewPermissions = can("permissions.view") || canViewRoles;
   const canAssignRoles = can("roles.assign") && canViewRoles;
   const canAssignPermissions = can("permissions.assign") && canViewRoles && canViewPermissions;
   const canCreateUser = can("users.create") && canAssignRoles;
+
   const [tab, setTab] = useState<AccessTab>(initialTab);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [roles, setRoles] = useState<RoleRecord[]>([]);
@@ -59,47 +201,86 @@ export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTa
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+
+  /* Users state */
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
   const [createUserOpen, setCreateUserOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", password_confirmation: "", role: "student" });
-  const [permissionDraft, setPermissionDraft] = useState<PermissionDraft>(blankPermission);
-  const [permissionOpen, setPermissionOpen] = useState(false);
-  const [editingPermission, setEditingPermission] = useState<number | null>(null);
-  const [permissionEdits, setPermissionEdits] = useState<Record<number, PermissionDraft>>({});
-  const [roleSelections, setRoleSelections] = useState<Record<number, number[]>>({});
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    password: "",
+    password_confirmation: "",
+    role: "student",
+  });
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
+  const [userEditDraft, setUserEditDraft] = useState({ name: "", email: "" });
   const [roleAssignmentUser, setRoleAssignmentUser] = useState<UserRecord | null>(null);
+  const [roleSelections, setRoleSelections] = useState<Record<number, number[]>>({});
   const [roleSearch, setRoleSearch] = useState("");
+
+  /* Roles state */
   const [roleDraft, setRoleDraft] = useState<RoleDraft>(blankRole);
   const [roleFormOpen, setRoleFormOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<number | null>(null);
-  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
-  const [userEditDraft, setUserEditDraft] = useState({ name: "", email: "" });
   const [roleEntryLanguage, setRoleEntryLanguage] = useState<SupportedLocale>("en");
-  const [permissionEntryLanguage, setPermissionEntryLanguage] = useState<SupportedLocale>("en");
-  const [pendingConfirmation, setPendingConfirmation] = useState<{ title: string; description: string; action: () => void } | null>(null);
 
-  const request = useCallback(async (path: string, method = "GET", body?: unknown) => {
-    const response = await accessManagementService.request(path, method, body, user?.id);
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.message || t("administration.requestFailed"));
-    return payload as Record<string, unknown>;
-  }, []);
+  /* Permissions state */
+  const [permissionSearchCatalogue, setPermissionSearchCatalogue] = useState("");
+  const [permissionGroupFilter, setPermissionGroupFilter] = useState("all");
+  const [permModule, setPermModule] = useState<string>("members");
+  const [permAction, setPermAction] = useState<string>("view");
+  const [permissionDraft, setPermissionDraft] = useState<PermissionDraft>(blankPermission);
+  const [permissionOpen, setPermissionOpen] = useState(false);
+  const [editingPermission, setEditingPermission] = useState<PermissionRecord | null>(null);
+  const [permissionEntryLanguage, setPermissionEntryLanguage] = useState<SupportedLocale>("en");
+
+  /* Confirmation */
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    title: string;
+    description: string;
+    action: () => void;
+  } | null>(null);
+
+  const request = useCallback(
+    async (path: string, method = "GET", body?: unknown) => {
+      const response = await accessManagementService.request(path, method, body, user?.id);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || t("administration.requestFailed"));
+      return payload as Record<string, unknown>;
+    },
+    [user?.id, t]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const jobs: Array<Promise<void>> = [];
-      if (canViewUsers) jobs.push(request("users").then((data) => {
-        const result = listFrom<UserRecord>(data, "users");
-        setUsers(result);
-      }));
-      if (canViewRoles) jobs.push(request("roles").then((data) => {
-        const result = listFrom<RoleRecord>(data);
-        setRoles(result);
-        setActiveRoleId((current) => current ?? result[0]?.id ?? null);
-      }));
-      if (canViewPermissions) jobs.push(request("permissions?per_page=100").then((data) => setPermissions(listFrom<PermissionRecord>(data))));
+      if (canViewUsers) {
+        jobs.push(
+          request("users").then((data) => {
+            const result = listFrom<UserRecord>(data, "users");
+            setUsers(result);
+          })
+        );
+      }
+      if (canViewRoles) {
+        jobs.push(
+          request("roles").then((data) => {
+            const result = listFrom<RoleRecord>(data);
+            setRoles(result);
+            setActiveRoleId((current) => current ?? result[0]?.id ?? null);
+          })
+        );
+      }
+      if (canViewPermissions) {
+        jobs.push(
+          request("permissions?per_page=150").then((data) =>
+            setPermissions(listFrom<PermissionRecord>(data))
+          )
+        );
+      }
       await Promise.all(jobs);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("administration.requestFailed"));
@@ -108,7 +289,9 @@ export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTa
     }
   }, [canViewPermissions, canViewRoles, canViewUsers, request, t]);
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const rolePermissions = useMemo(() => {
     const selected = roles.find((role) => role.id === activeRoleId)?.permissions;
@@ -116,70 +299,79 @@ export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTa
     return selected?.data?.map((permission) => permission.id) ?? [];
   }, [activeRoleId, roles]);
 
-  useEffect(() => { setSelectedPermissionIds(rolePermissions); }, [rolePermissions]);
+  useEffect(() => {
+    setSelectedPermissionIds(rolePermissions);
+  }, [rolePermissions]);
 
-  const save = async (action: () => Promise<unknown>, successMessage: string, refreshSession = false) => {
+  const saveAction = async (
+    action: () => Promise<unknown>,
+    successMessage: string,
+    refreshSession = false
+  ) => {
     setSaving(true);
     setError("");
-    setNotice("");
-    try { await action(); setNotice(successMessage); await load(); if (refreshSession) await refreshUser(); return true; }
-    catch (cause) { setError(cause instanceof Error ? cause.message : t("administration.requestFailed")); return false; }
-    finally { setSaving(false); }
+    try {
+      await action();
+      toast.success(successMessage);
+      await load();
+      if (refreshSession) await refreshUser();
+      return true;
+    } catch (cause) {
+      const msg = cause instanceof Error ? cause.message : t("administration.requestFailed");
+      setError(msg);
+      toast.error(msg);
+      return false;
+    } finally {
+      setSaving(false);
+    }
   };
 
+  /* ── User Form Submissions ───────────────────────────────────────── */
   const submitNewUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canCreateUser) return;
-    const saved = await save(() => request("users", "POST", newUser), t("administration.userCreated"));
+    const saved = await saveAction(
+      () => request("users", "POST", newUser),
+      t("administration.userCreated", { defaultValue: "User account created successfully." })
+    );
     if (saved) {
       setNewUser({ name: "", email: "", password: "", password_confirmation: "", role: "student" });
       setCreateUserOpen(false);
     }
   };
 
-  const submitPermission = async (event: FormEvent<HTMLFormElement>) => {
+  const submitEditUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!can("permissions.create")) return;
-    if (!permissionDraft.label.en?.trim()) {
-      setError(t("administration.englishMandatory", { defaultValue: "English display name is mandatory." }));
-      return;
-    }
-    const cleanDraft = {
-      name: permissionDraft.name.trim(),
-      group_name: permissionDraft.group_name.trim(),
-      label: {
-        en: permissionDraft.label.en.trim(),
-        ...(permissionDraft.label.am?.trim() ? { am: permissionDraft.label.am.trim() } : {}),
-        ...(permissionDraft.label.om?.trim() ? { om: permissionDraft.label.om.trim() } : {}),
-      },
-    };
-    const saved = await save(() => request("permissions", "POST", cleanDraft), t("administration.permissionCreated"));
-    if (saved) {
-      setPermissionDraft(blankPermission);
-      setPermissionOpen(false);
-    }
+    if (!editingUser) return;
+    const saved = await saveAction(
+      () => request(`users/${editingUser.id}`, "PUT", userEditDraft),
+      t("administration.userUpdated", { defaultValue: "User account updated." })
+    );
+    if (saved) setEditingUser(null);
   };
 
+  /* ── Role Form Submissions ───────────────────────────────────────── */
   const submitRole = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (editingRole === null && !can("roles.create")) return;
     if (editingRole !== null && !can("roles.update")) return;
-    if (!roleDraft.label.en?.trim()) {
-      setError(t("administration.englishMandatory", { defaultValue: "English display name is mandatory." }));
+    if (!roleDraft.label.en?.trim() && !roleDraft.label.am?.trim() && !roleDraft.label.om?.trim()) {
+      setError("Display name is required in at least one language.");
       return;
     }
     const isEditing = editingRole !== null;
+    const enLabel = roleDraft.label.en?.trim() || roleDraft.label.am?.trim() || roleDraft.label.om?.trim() || "";
     const cleanDraft = {
       name: roleDraft.name.trim(),
       label: {
-        en: roleDraft.label.en.trim(),
+        en: enLabel,
         ...(roleDraft.label.am?.trim() ? { am: roleDraft.label.am.trim() } : {}),
         ...(roleDraft.label.om?.trim() ? { om: roleDraft.label.om.trim() } : {}),
       },
     };
-    const result = await save(
+    const result = await saveAction(
       () => request(isEditing ? `roles/${editingRole}` : "roles", isEditing ? "PUT" : "POST", cleanDraft),
-      isEditing ? t("administration.roleUpdated") : t("administration.roleCreated"),
+      isEditing ? "Role updated successfully." : "Role created successfully."
     );
     if (result) {
       setRoleFormOpen(false);
@@ -188,94 +380,1385 @@ export function AccessManagementWorkspace({ initialTab }: { initialTab: AccessTa
     }
   };
 
+  /* ── Permission Form Submissions ─────────────────────────────────── */
+  const submitPermission = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!can("permissions.create")) return;
+    const mergedKey = `${permModule.trim()}.${permAction.trim()}`;
+    const enLabel =
+      permissionDraft.label.en?.trim() ||
+      permissionDraft.label.am?.trim() ||
+      permissionDraft.label.om?.trim() ||
+      generateDefaultLabel(permModule, permAction);
+    const cleanDraft = {
+      name: mergedKey,
+      group_name: permModule.trim(),
+      label: {
+        en: enLabel,
+        ...(permissionDraft.label.am?.trim() ? { am: permissionDraft.label.am.trim() } : {}),
+        ...(permissionDraft.label.om?.trim() ? { om: permissionDraft.label.om.trim() } : {}),
+      },
+    };
+    const saved = await saveAction(
+      () => request("permissions", "POST", cleanDraft),
+      "Permission created successfully."
+    );
+    if (saved) {
+      setPermissionDraft(blankPermission);
+      setPermissionOpen(false);
+    }
+  };
+
+  const submitEditPermission = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingPermission) return;
+    const mergedKey = `${permModule.trim()}.${permAction.trim()}`;
+    const enLabel =
+      permissionDraft.label.en?.trim() ||
+      permissionDraft.label.am?.trim() ||
+      permissionDraft.label.om?.trim() ||
+      generateDefaultLabel(permModule, permAction);
+    const cleanDraft = {
+      name: mergedKey,
+      group_name: permModule.trim(),
+      label: {
+        en: enLabel,
+        ...(permissionDraft.label.am?.trim() ? { am: permissionDraft.label.am.trim() } : {}),
+        ...(permissionDraft.label.om?.trim() ? { om: permissionDraft.label.om.trim() } : {}),
+      },
+    };
+    const saved = await saveAction(
+      () => request(`permissions/${editingPermission.id}`, "PUT", cleanDraft),
+      "Permission updated successfully."
+    );
+    if (saved) setEditingPermission(null);
+  };
+
+  /* ── Helpers ─────────────────────────────────────────────────────── */
   const availableTabs: AccessTab[] = [
     ...(canViewUsers ? ["users" as const] : []),
     ...(canViewRoles ? ["roles" as const] : []),
     ...(canViewPermissions ? ["permissions" as const] : []),
   ];
+
   useEffect(() => {
     if (!availableTabs.includes(tab) && availableTabs.length) setTab(availableTabs[0]);
-  }, [tab, canViewPermissions, canViewRoles, canViewUsers]);
+  }, [tab, availableTabs]);
+
   const roleLabel = (role: RoleRecord) => labelValue(role.label, currentLocale) || role.name;
-  const assignmentRoleIds = roleAssignmentUser ? roleSelections[roleAssignmentUser.id] ?? roles.filter((role) => {
-    const assigned = Array.isArray(roleAssignmentUser.roles) ? roleAssignmentUser.roles.map((item) => typeof item === "string" ? item : item.name) : typeof roleAssignmentUser.role === "string" ? [roleAssignmentUser.role] : [];
-    return assigned.includes(role.name);
-  }).map((role) => role.id) : [];
+
+  const assignmentRoleIds = roleAssignmentUser
+    ? roleSelections[roleAssignmentUser.id] ??
+      roles
+        .filter((role) => {
+          const assigned = Array.isArray(roleAssignmentUser.roles)
+            ? roleAssignmentUser.roles.map((item) => (typeof item === "string" ? item : item.name))
+            : typeof roleAssignmentUser.role === "string"
+              ? [roleAssignmentUser.role]
+              : [];
+          return assigned.includes(role.name);
+        })
+        .map((role) => role.id)
+    : [];
+
   const openRoleAssignment = (entry: UserRecord, currentIds: number[]) => {
     setRoleSelections((current) => ({ ...current, [entry.id]: current[entry.id] ?? currentIds }));
     setRoleSearch("");
     setRoleAssignmentUser(entry);
   };
 
-  if (!availableTabs.length) return <section className="mx-auto max-w-4xl px-5 py-12"><h1 className="text-2xl font-semibold">{t("administration.accessDenied")}</h1></section>;
-  if (loading && !roles.length && !users.length) return <AccessManagementShimmerSkeleton />;
+  /* Filtered users */
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      const matchSearch =
+        !userSearch.trim() ||
+        u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+        u.email.toLowerCase().includes(userSearch.toLowerCase());
+      const assigned = Array.isArray(u.roles)
+        ? u.roles.map((r) => (typeof r === "string" ? r : r.name))
+        : typeof u.role === "string"
+          ? [u.role]
+          : [];
+      const matchRole = userRoleFilter === "all" || assigned.includes(userRoleFilter);
+      return matchSearch && matchRole;
+    });
+  }, [users, userSearch, userRoleFilter]);
 
-  return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-xs font-semibold uppercase tracking-widest text-blue-700 dark:text-blue-300">{t("administration.eyebrow")}</p><h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">{t("administration.title")}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">{t("administration.description")}</p></div>
-      <button onClick={() => void load()} disabled={loading} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />{t("administration.refresh")}</button>
-    </div>
+  /* Unique permission groups */
+  const permissionGroups = useMemo(() => {
+    const set = new Set(permissions.map((p) => p.group_name).filter(Boolean));
+    return Array.from(set).sort();
+  }, [permissions]);
 
-    {(error || notice) && <div role={error ? "alert" : "status"} className={`mt-6 flex items-start gap-2 rounded-lg border p-3 text-sm ${error ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200" : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"}`}>{error ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <Check className="mt-0.5 h-4 w-4 shrink-0" />}{error || notice}</div>}
-    {roleAssignmentUser && <AdminModal open={Boolean(roleAssignmentUser)} onOpenChange={(open) => { if (!open && !saving) setRoleAssignmentUser(null); }} title={t("administration.assignRolesFor", { defaultValue: `Roles for ${roleAssignmentUser.name}` })} description={t("administration.roleAssignmentDescription", { defaultValue: "Choose the roles this user may hold. System administrator access requires additional authorization." })} size="md"><div className="space-y-4"><label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">{t("administration.searchRoles", { defaultValue: "Search roles" })}<input type="search" value={roleSearch} onChange={(event) => setRoleSearch(event.target.value)} className="mt-1.5 min-h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950" /></label><div className="max-h-[45vh] space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2 dark:border-slate-800">{roles.filter((role) => (can("roles.assign-system") || role.name !== "superadmin" || assignmentRoleIds.includes(role.id)) && `${role.name} ${roleLabel(role)}`.toLowerCase().includes(roleSearch.toLowerCase())).map((role) => { const checked = assignmentRoleIds.includes(role.id); const locked = role.name === "superadmin" && !can("roles.assign-system"); return <label key={role.id} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"><input type="checkbox" checked={checked} disabled={locked || saving} onChange={(event) => setRoleSelections((current) => ({ ...current, [roleAssignmentUser.id]: event.target.checked ? [...new Set([...assignmentRoleIds, role.id])] : assignmentRoleIds.filter((id) => id !== role.id) }))} className="h-4 w-4 accent-blue-700" /><span>{roleLabel(role)}</span>{locked && <span className="ml-auto text-xs text-slate-500">System role locked</span>}</label>; })}{!roles.length && <p className="p-4 text-center text-sm text-slate-500">{t("administration.noRoles", { defaultValue: "No roles are available." })}</p>}</div><div className="sticky bottom-[-1.25rem] flex justify-end gap-2 border-t border-slate-100 bg-white py-4 dark:border-slate-800 dark:bg-slate-900"><button type="button" disabled={saving} onClick={() => setRoleAssignmentUser(null)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold">{t("administration.cancel")}</button><button type="button" disabled={saving || !assignmentRoleIds.length} onClick={() => { const entry = roleAssignmentUser; void save(() => request(`users/${entry.id}/roles`, "PUT", { role_ids: assignmentRoleIds }), t("administration.rolesSaved")).then((saved) => { if (saved) setRoleAssignmentUser(null); }); }} className="rounded-md bg-blue-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? t("administration.saving") : t("administration.saveRoles")}</button></div></div></AdminModal>}
-    <ConfirmDialog isOpen={Boolean(pendingConfirmation)} onClose={() => { if (!saving) setPendingConfirmation(null); }} onConfirm={() => { const action = pendingConfirmation?.action; setPendingConfirmation(null); action?.(); }} isLoading={saving} title={pendingConfirmation?.title} description={pendingConfirmation?.description} />
+  const availableModuleOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    STANDARD_PERMISSION_MODULES.forEach((m) => map.set(m.value, m.label));
+    permissions.forEach((p) => {
+      if (p.group_name && !map.has(p.group_name)) {
+        map.set(
+          p.group_name,
+          `${p.group_name.charAt(0).toUpperCase() + p.group_name.slice(1)} (${p.group_name})`
+        );
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [permissions]);
 
-    <div className="mt-7 flex flex-wrap gap-2 border-b border-slate-200 pb-3 dark:border-slate-800" role="tablist" aria-label={t("administration.sections")}>
-      {availableTabs.map((item) => <button key={item} role="tab" aria-selected={tab === item} onClick={() => setTab(item)} className={`rounded-md px-3 py-2 text-sm font-medium transition ${tab === item ? "bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}>{t(`administration.tabs.${item}`)}</button>)}
-    </div>
+  const availableActionOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    STANDARD_PERMISSION_ACTIONS.forEach((a) => map.set(a.value, a.label));
+    permissions.forEach((p) => {
+      const parts = p.name.split(".");
+      if (parts.length > 1) {
+        const actionPart = parts.slice(1).join(".");
+        if (!map.has(actionPart)) {
+          map.set(
+            actionPart,
+            `${actionPart.charAt(0).toUpperCase() + actionPart.slice(1)} (${actionPart})`
+          );
+        }
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [permissions]);
 
-    {loading ? <div className="pt-6"><TableShimmerSkeleton rows={6} columns={4} /></div> : <>
-      {tab === "users" && canViewUsers && <section className="pt-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("administration.usersTitle")}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("administration.usersDescription")}</p></div>{canCreateUser && <button onClick={() => setCreateUserOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-blue-700 px-3.5 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"><Plus className="h-4 w-4" />{t("administration.addUser")}</button>}</div>
-        {createUserOpen && canCreateUser && <AdminModal open={createUserOpen} onOpenChange={(open) => { if (!open && !saving) setCreateUserOpen(false); }} title={t("administration.addUser")} description={t("administration.modalDescription", { defaultValue: "Enter the account details and initial role." })} size="lg"><form onSubmit={(event) => void submitNewUser(event)} className="mb-5 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-3 dark:border-slate-800 dark:bg-slate-900">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.name")}<input required maxLength={255} value={newUser.name} onChange={(event) => setNewUser({ ...newUser, name: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.email")}<input required type="email" value={newUser.email} onChange={(event) => setNewUser({ ...newUser, email: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.role")}<div className="mt-1.5"><AppSelect value={newUser.role} onChange={(val) => setNewUser({ ...newUser, role: val })} options={roles.filter((role) => ["student", "teacher", "superadmin"].includes(role.name) && (role.name !== "superadmin" || can("roles.assign-system"))).map((role) => ({ value: role.name, label: roleLabel(role) }))} placeholder={t("administration.role")} /></div></label>
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.password")}<input required minLength={8} type="password" value={newUser.password} onChange={(event) => setNewUser({ ...newUser, password: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.confirmPassword")}<input required minLength={8} type="password" value={newUser.password_confirmation} onChange={(event) => setNewUser({ ...newUser, password_confirmation: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          <div className="flex items-end gap-2"><button disabled={saving} className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"><Save className="h-4 w-4" />{saving ? t("administration.saving") : t("administration.createUser")}</button><button type="button" onClick={() => setCreateUserOpen(false)} className="min-h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700">{t("administration.cancel")}</button></div>
-        </form></AdminModal>}
-        {editingUser && can("users.update") && editingUser.id !== user?.id && <AdminModal open={Boolean(editingUser)} onOpenChange={(open) => { if (!open && !saving) setEditingUser(null); }} title={t("administration.editUser", { defaultValue: "Edit user" })} description={t("administration.modalDescription", { defaultValue: "Update the account details." })} size="md"><form onSubmit={(event) => { event.preventDefault(); void save(() => request(`users/${editingUser.id}`, "PUT", userEditDraft), t("administration.userUpdated")).then((saved) => { if (saved) setEditingUser(null); }); }} className="mb-5 grid gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-4 sm:grid-cols-[1fr_1fr_auto] dark:border-blue-900 dark:bg-blue-950/20">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.name")}<input required maxLength={255} value={userEditDraft.name} onChange={(event) => setUserEditDraft({ ...userEditDraft, name: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.email")}<input required type="email" value={userEditDraft.email} onChange={(event) => setUserEditDraft({ ...userEditDraft, email: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          <div className="flex items-end gap-2"><button disabled={saving} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-blue-700 px-3 text-sm font-semibold text-white disabled:opacity-50"><Save className="h-4 w-4" />{t("administration.saveUser")}</button><button type="button" onClick={() => setEditingUser(null)} className="min-h-10 rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700">{t("administration.cancel")}</button></div>
-        </form></AdminModal>}
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400"><tr><th className="px-4 py-3">{t("administration.user")}</th><th className="px-4 py-3">{t("administration.email")}</th><th className="px-4 py-3">{t("administration.role")}</th><th className="px-4 py-3 text-right">{t("administration.actions")}</th></tr></thead><tbody className="divide-y divide-slate-100 dark:divide-slate-800">{users.map((entry) => { const assigned = Array.isArray(entry.roles) ? entry.roles.map((role) => typeof role === "string" ? role : role.name) : typeof entry.role === "string" ? [entry.role] : []; const ids = roleSelections[entry.id] ?? roles.filter((role) => assigned.includes(role.name)).map((role) => role.id); return <tr key={entry.id}><td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{entry.name}{entry.id === user?.id && <span className="ml-2 text-xs text-slate-500">{t("administration.you")}</span>}</td><td className="px-4 py-3 text-slate-600 dark:text-slate-300">{entry.email}</td><td className="px-4 py-3">{canAssignRoles ? <button type="button" onClick={() => openRoleAssignment(entry, ids)} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200">{t("administration.manageRoles", { defaultValue: "Manage roles" })}</button> : <div className="flex flex-wrap gap-1">{assigned.map((name) => <span key={name} className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">{roles.find((role) => role.name === name) ? roleLabel(roles.find((role) => role.name === name)!) : name}</span>)}</div>}</td><td className="px-4 py-3 text-right">{can("users.update") && entry.id !== user?.id && <button onClick={() => { setEditingUser(entry); setUserEditDraft({ name: entry.name, email: entry.email }); }} className="mr-2 rounded-md border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">{t("administration.edit")}</button>}{can("users.delete") && entry.id !== user?.id && <button aria-label={t("administration.deleteUser", { defaultValue: entry.name })} onClick={() => { setPendingConfirmation({ title: t("administration.deleteUser", { defaultValue: "Delete user" }), description: t("administration.confirmDeleteUser", { defaultValue: entry.name }), action: () => void save(() => request(`users/${entry.id}`, "DELETE"), t("administration.userDeleted")) }); }} className="ml-2 rounded-md p-2 text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"><Trash2 className="h-4 w-4" /></button>}</td></tr>; })}{!users.length && <tr><td colSpan={4} className="px-4 py-12 text-center text-sm text-slate-500">{t("administration.noUsers")}</td></tr>}</tbody></table></div>
-      </section>}
+  /* Filtered permissions catalogue */
+  const filteredPermissions = useMemo(() => {
+    return permissions.filter((p) => {
+      const matchSearch =
+        !permissionSearchCatalogue.trim() ||
+        p.name.toLowerCase().includes(permissionSearchCatalogue.toLowerCase()) ||
+        labelValue(p.label, currentLocale).toLowerCase().includes(permissionSearchCatalogue.toLowerCase());
+      const matchGroup =
+        permissionGroupFilter === "all" || p.group_name === permissionGroupFilter;
+      return matchSearch && matchGroup;
+    });
+  }, [permissions, permissionSearchCatalogue, permissionGroupFilter, currentLocale]);
 
-      {tab === "roles" && canViewRoles && <section className="space-y-4 pt-6">
-        {roleFormOpen && <AdminModal open={roleFormOpen} onOpenChange={(open) => { if (!open && !saving) { setRoleFormOpen(false); setEditingRole(null); } }} title={t(editingRole === null ? "administration.createRole" : "administration.editRole", { defaultValue: editingRole === null ? "Create role" : "Edit role" })} description={t("administration.modalDescription", { defaultValue: "Define the role and its translated display name." })} size="lg" headerAction={<div className="w-36 sm:w-44"><AppSelect value={roleEntryLanguage} onChange={(val) => setRoleEntryLanguage(val as SupportedLocale)} options={[{ value: "en", label: "English (en)" }, { value: "am", label: "አማርኛ (am)" }, { value: "om", label: "Afaan Oromoo (om)" }]} size="sm" ariaLabel="Role data entry language" /></div>}><form onSubmit={(event) => void submitRole(event)} className="space-y-4">
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.roleKey")}<input required pattern="[a-z][a-z0-9_-]*" value={roleDraft.name} onChange={(event) => setRoleDraft({ ...roleDraft, name: event.target.value })} disabled={editingRole !== null && roles.find((role) => role.id === editingRole)?.name === "superadmin"} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          <LocalizedFieldInput label={t("administration.displayName", { defaultValue: "Display Name" })} value={roleDraft.label} onChange={(val) => setRoleDraft({ ...roleDraft, label: { en: val.en ?? "", am: val.am ?? "", om: val.om ?? "" } })} activeLocale={roleEntryLanguage} onLocaleChange={setRoleEntryLanguage} required={true} />
-          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800"><button type="button" onClick={() => { setRoleFormOpen(false); setEditingRole(null); }} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">{t("administration.cancel")}</button><button disabled={saving} className="rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? t("administration.saving") : t(editingRole === null ? "administration.createRole" : "administration.saveRole")}</button></div>
-        </form></AdminModal>}
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"><div className="flex items-center justify-between gap-2 px-2 pb-3"><div className="flex items-center gap-2 text-sm font-semibold"><Shield className="h-4 w-4 text-blue-700 dark:text-blue-300" />{t("administration.rolesTitle")}</div>{can("roles.create") && <button type="button" onClick={() => { setEditingRole(null); setRoleDraft(blankRole); setRoleFormOpen(true); }} className="rounded-md p-1.5 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/50" aria-label={t("administration.createRole")}><Plus className="h-4 w-4" /></button>}</div>{roles.map((role) => <button key={role.id} onClick={() => setActiveRoleId(role.id)} className={`mb-1 flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm ${activeRoleId === role.id ? "bg-blue-50 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200" : "text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"}`}><span>{roleLabel(role)}<small className="mt-0.5 block text-xs text-slate-500">{role.users_count ?? 0} {t("administration.assignedUsers")}</small></span><span className="text-xs text-slate-500">{Array.isArray(role.permissions) ? role.permissions.length : role.permissions?.data?.length ?? 0}</span></button>)}</div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold text-slate-900 dark:text-white">{roles.find((role) => role.id === activeRoleId) ? roleLabel(roles.find((role) => role.id === activeRoleId)!) : t("administration.selectRole")}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("administration.rolePermissionsDescription")}</p></div><div className="flex flex-wrap gap-2">{activeRoleId !== null && roles.find((role) => role.id === activeRoleId)?.name !== "superadmin" && can("roles.update") && <button onClick={() => { const role = roles.find((item) => item.id === activeRoleId); if (!role) return; setEditingRole(role.id); setRoleDraft({ name: role.name, label: { en: labelValue(role.label, "en"), am: labelValue(role.label, "am"), om: labelValue(role.label, "om") } }); setRoleFormOpen(true); }} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200"><Pencil className="h-4 w-4" />{t("administration.edit")}</button>}{activeRoleId !== null && roles.find((role) => role.id === activeRoleId)?.name !== "superadmin" && can("roles.delete") && <button disabled={saving || (roles.find((role) => role.id === activeRoleId)?.users_count ?? 0) > 0} onClick={() => { const role = roles.find((item) => item.id === activeRoleId); if (role) setPendingConfirmation({ title: t("administration.deleteRole", { defaultValue: "Delete role" }), description: t("administration.confirmDeleteRole", { defaultValue: role.name }), action: () => void save(() => request(`roles/${role.id}`, "DELETE"), t("administration.roleDeleted")) }); }} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-700 disabled:opacity-40 dark:border-rose-900 dark:text-rose-300"><Trash2 className="h-4 w-4" />{t("administration.deleteRole")}</button>}{canAssignPermissions && activeRoleId !== null && roles.find((role) => role.id === activeRoleId)?.name !== "superadmin" && <button disabled={saving} onClick={() => { setPermissionSearch(""); setPermissionAssignmentOpen(true); }} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-blue-700 px-3.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:opacity-50"><Save className="h-4 w-4" />{t("administration.managePermissions", { defaultValue: "Manage permissions" })}</button>}</div></div>
-          {canAssignPermissions ? <div className="hidden">{Object.entries(permissions.reduce<Record<string, PermissionRecord[]>>((groups, permission) => { (groups[permission.group_name] ??= []).push(permission); return groups; }, {})).map(([group, items]) => <fieldset key={group} className="rounded-md border border-slate-200 p-3 dark:border-slate-800"><legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{group}</legend><div className="space-y-2">{items.map((permission) => <label key={permission.id} className="flex cursor-pointer items-start gap-2.5 rounded px-1 py-1 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"><input type="checkbox" checked={selectedPermissionIds.includes(permission.id)} onChange={(event) => setSelectedPermissionIds((current) => event.target.checked ? [...new Set([...current, permission.id])] : current.filter((id) => id !== permission.id))} className="mt-0.5 accent-blue-700" /><span><span className="block font-medium">{labelValue(permission.label, currentLocale) || permission.name}</span><span className="text-xs text-slate-500">{permission.name}</span></span></label>)}</div></fieldset>)}</div> : <p className="mt-6 rounded-md bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">{t("administration.noPermissionEdit")}</p>}
+  if (!availableTabs.length) {
+    return (
+      <section className="m-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111624] p-8 text-center text-sm text-slate-500">
+        {t("administration.accessDenied", { defaultValue: "Access denied to administration workspace." })}
+      </section>
+    );
+  }
+
+  if (loading && !roles.length && !users.length) {
+    return <AccessManagementShimmerSkeleton />;
+  }
+
+  return (
+    <main className="w-full space-y-5 px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-7">
+      {/* ─── Page Header ─────────────────────────────────────────────── */}
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 dark:text-sky-400">
+            System Security & Access
+          </p>
+          <h1 className="mt-0.5 text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+            {t("administration.title", { defaultValue: "Access Control & Identity" })}
+          </h1>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            {users.length} registered accounts · {roles.length} system roles · {permissions.length} security permissions
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className={btnSecondary}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            {t("administration.refresh", { defaultValue: "Refresh" })}
+          </button>
+          {tab === "users" && canCreateUser && (
+            <button
+              type="button"
+              onClick={() => setCreateUserOpen(true)}
+              className={btnPrimary}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t("administration.addUser", { defaultValue: "Add User" })}
+            </button>
+          )}
+          {tab === "roles" && can("roles.create") && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingRole(null);
+                setRoleDraft(blankRole);
+                setRoleFormOpen(true);
+              }}
+              className={btnPrimary}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t("administration.createRole", { defaultValue: "Create Role" })}
+            </button>
+          )}
+          {tab === "permissions" && can("permissions.create") && (
+            <button
+              type="button"
+              onClick={() => {
+                setPermModule("members");
+                setPermAction("view");
+                setPermissionDraft({
+                  name: "members.view",
+                  group_name: "members",
+                  label: { en: "View Members", am: "አባላትን ይመልከቱ", om: "Miseensota ilaali" },
+                });
+                setPermissionOpen(true);
+              }}
+              className={btnPrimary}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t("administration.addPermission", { defaultValue: "Add Permission" })}
+            </button>
+          )}
         </div>
-      </section>}
+      </header>
 
-      {permissionAssignmentOpen && activeRoleId !== null && <AdminModal open={permissionAssignmentOpen} onOpenChange={(open) => { if (!open && !saving) { const changed = selectedPermissionIds.length !== rolePermissions.length || selectedPermissionIds.some((id) => !rolePermissions.includes(id)); if (changed) setPendingConfirmation({ title: t("administration.discardChanges", { defaultValue: "Discard permission changes?" }), description: t("administration.unsavedChanges", { defaultValue: "Your unsaved changes will be lost." }), action: () => { setSelectedPermissionIds(rolePermissions); setPermissionAssignmentOpen(false); } }); else setPermissionAssignmentOpen(false); } }} title={t("administration.savePermissions")} description={t("administration.rolePermissionsDescription")} size="xl"><div className="space-y-4"><label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">{t("administration.searchPermissions", { defaultValue: "Search permissions" })}<input type="search" value={permissionSearch} onChange={(event) => setPermissionSearch(event.target.value)} className="mt-1.5 min-h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950" /></label><div className="max-h-[55vh] space-y-3 overflow-y-auto">{Object.entries(permissions.reduce<Record<string, PermissionRecord[]>>((groups, permission) => { (groups[permission.group_name] ??= []).push(permission); return groups; }, {})).map(([group, items]) => { const visible = items.filter((permission) => { const isSystem = ["roles.manage", "roles.assign-system", "permissions.assign"].includes(permission.name); const allowed = !isSystem || can("roles.manage") || can("roles.assign-system") || selectedPermissionIds.includes(permission.id); return allowed && `${permission.name} ${labelValue(permission.label, currentLocale)} ${permission.group_name}`.toLowerCase().includes(permissionSearch.toLowerCase()); }); return visible.length ? <fieldset key={group} className="rounded-md border border-slate-200 p-3 dark:border-slate-800"><legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{group}</legend><div className="space-y-1">{visible.map((permission) => { const systemLocked = ["roles.manage", "roles.assign-system", "permissions.assign"].includes(permission.name) && !can("roles.manage") && !can("roles.assign-system"); return <label key={permission.id} className="flex items-start gap-2.5 rounded px-2 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"><input type="checkbox" checked={selectedPermissionIds.includes(permission.id)} disabled={systemLocked || saving} onChange={(event) => setSelectedPermissionIds((current) => event.target.checked ? [...new Set([...current, permission.id])] : current.filter((id) => id !== permission.id))} className="mt-0.5 accent-blue-700" /><span><span className="block font-medium">{labelValue(permission.label, currentLocale) || permission.name}</span><span className="text-xs text-slate-500">{permission.name}</span>{systemLocked && <span className="ml-2 text-xs text-slate-500">System permission locked</span>}</span></label>; })}</div></fieldset> : null; })}{!permissions.length && <p className="rounded-md border border-slate-200 p-5 text-center text-sm text-slate-500">{t("administration.noPermissions", { defaultValue: "No permissions are available." })}</p>}</div><div className="sticky bottom-[-1.25rem] flex justify-end gap-2 border-t border-slate-100 bg-white py-4 dark:border-slate-800 dark:bg-slate-900"><button type="button" disabled={saving} onClick={() => { const changed = selectedPermissionIds.length !== rolePermissions.length || selectedPermissionIds.some((id) => !rolePermissions.includes(id)); if (changed) setPendingConfirmation({ title: t("administration.discardChanges", { defaultValue: "Discard permission changes?" }), description: t("administration.unsavedChanges", { defaultValue: "Your unsaved changes will be lost." }), action: () => { setSelectedPermissionIds(rolePermissions); setPermissionAssignmentOpen(false); } }); else setPermissionAssignmentOpen(false); }} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold">{t("administration.cancel")}</button><button type="button" disabled={saving} onClick={() => { void save(() => request(`roles/${activeRoleId}/permissions`, "PUT", { permission_ids: selectedPermissionIds }), t("administration.permissionsSaved"), true).then((saved) => { if (saved) setPermissionAssignmentOpen(false); }); }} className="rounded-md bg-blue-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? t("administration.saving") : t("administration.savePermissions")}</button></div></div></AdminModal>}      {tab === "permissions" && canViewPermissions && <section className="pt-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("administration.permissionsTitle")}</h2><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("administration.permissionsDescription")}</p></div>{can("permissions.create") && <button onClick={() => setPermissionOpen((value) => !value)} className="inline-flex min-h-10 items-center gap-2 rounded-md bg-blue-700 px-3.5 text-sm font-semibold text-white hover:bg-blue-800"><Plus className="h-4 w-4" />{t("administration.addPermission")}</button>}</div>
-        {permissionOpen && can("permissions.create") && <AdminModal open={permissionOpen} onOpenChange={(open) => { if (!open && !saving) setPermissionOpen(false); }} title={t("administration.addPermission")} description={t("administration.modalDescription", { defaultValue: "Add a permission to the system catalogue." })} size="lg" headerAction={<div className="w-36 sm:w-44"><AppSelect value={permissionEntryLanguage} onChange={(val) => setPermissionEntryLanguage(val as SupportedLocale)} options={[{ value: "en", label: "English (en)" }, { value: "am", label: "አማርኛ (am)" }, { value: "om", label: "Afaan Oromoo (om)" }]} size="sm" ariaLabel="Permission data entry language" /></div>}><form onSubmit={(event) => void submitPermission(event)} className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.permissionName")}<input required pattern="[a-z]+(\.[a-z]+)*" value={permissionDraft.name} onChange={(event) => setPermissionDraft({ ...permissionDraft, name: event.target.value })} placeholder="students.view" className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-            <label className="text-xs font-medium text-slate-600 dark:text-slate-300">{t("administration.group")}<input required value={permissionDraft.group_name} onChange={(event) => setPermissionDraft({ ...permissionDraft, group_name: event.target.value })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" /></label>
-          </div>
-          <LocalizedFieldInput label={t("administration.displayName", { defaultValue: "Display Name" })} value={permissionDraft.label} onChange={(val) => setPermissionDraft({ ...permissionDraft, label: { en: val.en ?? "", am: val.am ?? "", om: val.om ?? "" } })} activeLocale={permissionEntryLanguage} onLocaleChange={setPermissionEntryLanguage} required={true} />
-          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800"><button type="button" onClick={() => setPermissionOpen(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">{t("administration.cancel")}</button><button disabled={saving} className="rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? t("administration.saving") : t("administration.createPermission")}</button></div>
-        </form></AdminModal>}
-        <div className="space-y-3">{permissions.map((permission) => { const draft = permissionEdits[permission.id] ?? { name: permission.name, group_name: permission.group_name, label: { en: labelValue(permission.label, "en"), am: labelValue(permission.label, "am"), om: labelValue(permission.label, "om") } }; return <article key={permission.id} className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-[minmax(160px,1fr)_minmax(120px,0.8fr)_repeat(3,minmax(120px,1fr))_auto]">{editingPermission === permission.id && can("permissions.update") && <AdminModal open={editingPermission === permission.id} onOpenChange={(open) => { if (!open && !saving) setEditingPermission(null); }} title={t("administration.editPermission", { defaultValue: "Edit permission" })} description={t("administration.modalDescription", { defaultValue: "Update the permission details and translated labels." })} size="lg" headerAction={<div className="w-36 sm:w-44"><AppSelect value={permissionEntryLanguage} onChange={(val) => setPermissionEntryLanguage(val as SupportedLocale)} options={[{ value: "en", label: "English (en)" }, { value: "am", label: "አማርኛ (am)" }, { value: "om", label: "Afaan Oromoo (om)" }]} size="sm" ariaLabel="Permission data entry language" /></div>}><form onSubmit={(event) => { event.preventDefault(); void save(() => request(`permissions/${permission.id}`, "PUT", { ...draft, label: { en: draft.label.en.trim(), ...(draft.label.am?.trim() ? { am: draft.label.am.trim() } : {}), ...(draft.label.om?.trim() ? { om: draft.label.om.trim() } : {}) } }), t("administration.permissionUpdated")).then((saved) => { if (saved) setEditingPermission(null); }); }} className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-xs font-medium">{t("administration.permissionName")}<input value={draft.name} onChange={(event) => setPermissionEdits({ ...permissionEdits, [permission.id]: { ...draft, name: event.target.value } })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs dark:border-slate-700 dark:bg-slate-950" /></label>
-              <label className="text-xs font-medium">{t("administration.group")}<input value={draft.group_name} onChange={(event) => setPermissionEdits({ ...permissionEdits, [permission.id]: { ...draft, group_name: event.target.value } })} className="mt-1.5 w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs dark:border-slate-700 dark:bg-slate-950" /></label>
+      {/* ─── Workspace Tabs ──────────────────────────────────────────── */}
+      <div className="flex gap-1.5 border-b border-slate-200/90 dark:border-slate-800 pb-3" role="tablist">
+        {canViewUsers && (
+          <button
+            type="button"
+            onClick={() => setTab("users")}
+            className={`${btnBase} ${
+              tab === "users"
+                ? "bg-[#0858a8] text-white shadow-2xs"
+                : "border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Users className="h-3.5 w-3.5" />
+            <span>Users & Accounts</span>
+          </button>
+        )}
+        {canViewRoles && (
+          <button
+            type="button"
+            onClick={() => setTab("roles")}
+            className={`${btnBase} ${
+              tab === "roles"
+                ? "bg-[#0858a8] text-white shadow-2xs"
+                : "border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Shield className="h-3.5 w-3.5" />
+            <span>Roles & Assignments</span>
+          </button>
+        )}
+        {canViewPermissions && (
+          <button
+            type="button"
+            onClick={() => setTab("permissions")}
+            className={`${btnBase} ${
+              tab === "permissions"
+                ? "bg-[#0858a8] text-white shadow-2xs"
+                : "border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Key className="h-3.5 w-3.5" />
+            <span>Permissions Catalogue</span>
+          </button>
+        )}
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* TAB 1: USERS                                                    */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {tab === "users" && canViewUsers && (
+        <div className="space-y-4">
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 flex-1">
+              <div className="relative w-full sm:w-96">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search users by name or email…"
+                  className="h-9 w-full rounded-[4px] border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] pl-9 pr-3 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0858a8] focus:border-[#0858a8] shadow-2xs"
+                />
+              </div>
+
+              {roles.length > 0 && (
+                <div className="w-44">
+                  <AppSelect
+                    value={userRoleFilter}
+                    onChange={(v) => setUserRoleFilter(v)}
+                    options={[
+                      { value: "all", label: "Role: All" },
+                      ...roles.map((r) => ({ value: r.name, label: roleLabel(r) })),
+                    ]}
+                    size="sm"
+                    ariaLabel="Filter by role"
+                  />
+                </div>
+              )}
+
+              {(userSearch || userRoleFilter !== "all") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUserSearch("");
+                    setUserRoleFilter("all");
+                  }}
+                  className="inline-flex h-8 items-center gap-1 rounded-[4px] px-2 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  title="Reset filters"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
-            <LocalizedFieldInput label={t("administration.displayName", { defaultValue: "Display Name" })} value={draft.label} onChange={(val) => setPermissionEdits({ ...permissionEdits, [permission.id]: { ...draft, label: { en: val.en ?? "", am: val.am ?? "", om: val.om ?? "" } } })} activeLocale={permissionEntryLanguage} onLocaleChange={setPermissionEntryLanguage} required={true} />
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800"><button type="button" onClick={() => setEditingPermission(null)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">{t("administration.cancel")}</button><button type="submit" disabled={saving} className="rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? t("administration.saving") : t("administration.savePermission")}</button></div>
-          </form></AdminModal>}<div><p className="font-medium text-slate-900 dark:text-white">{labelValue(permission.label, currentLocale) || permission.name}</p><p className="mt-1 text-xs text-slate-500">{permission.name}</p></div><div className="text-xs text-slate-500">{permission.group_name}</div><div className="md:col-span-3 flex items-center gap-2 text-xs text-slate-500"><span className="font-semibold">EN</span>{labelValue(permission.label, "en")}<span className="ml-2 font-semibold">AM</span>{labelValue(permission.label, "am")}<span className="ml-2 font-semibold">OM</span>{labelValue(permission.label, "om")}</div><div className="flex items-center justify-end gap-1">{can("permissions.update") && <button onClick={() => setEditingPermission(permission.id)} className="rounded-md border border-slate-200 px-2.5 py-2 text-xs font-semibold dark:border-slate-700">{t("administration.edit")}</button>}{can("permissions.delete") && <button onClick={() => { setPendingConfirmation({ title: t("administration.deletePermission", { defaultValue: "Delete permission" }), description: t("administration.confirmDeletePermission", { defaultValue: permission.name }), action: () => void save(() => request(`permissions/${permission.id}`, "DELETE"), t("administration.permissionDeleted")) }); }} className="rounded-md p-2 text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30" aria-label={t("administration.deletePermission")}><Trash2 className="h-4 w-4" /></button>}</div></article>; })}</div>
-      </section>}
-    </>}
-  </section>
+          </div>
+
+          {/* Table */}
+          <div className={tableContainerCls}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px] text-left text-sm">
+                <thead className={tableHeaderRowCls}>
+                  <tr>
+                    <th className={tableHeaderCellCls}>User</th>
+                    <th className={tableHeaderCellCls}>Email Address</th>
+                    <th className={tableHeaderCellCls}>Role Access</th>
+                    <th className={`${tableHeaderCellCls} text-right`}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-14 text-center text-sm text-slate-500 dark:text-slate-400">
+                        No users found matching your search.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredUsers.map((entry) => {
+                      const assigned = Array.isArray(entry.roles)
+                        ? entry.roles.map((r) => (typeof r === "string" ? r : r.name))
+                        : typeof entry.role === "string"
+                          ? [entry.role]
+                          : [];
+                      const ids =
+                        roleSelections[entry.id] ??
+                        roles.filter((role) => assigned.includes(role.name)).map((role) => role.id);
+
+                      return (
+                        <tr key={entry.id} className={tableRowCls(false)}>
+                          <td className="py-3 px-4">
+                            <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                              {entry.name}
+                            </span>
+                            {entry.id === user?.id && (
+                              <span className="ml-2 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                                You
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-slate-400">
+                            {entry.email}
+                          </td>
+                          <td className="py-3 px-4">
+                            {canAssignRoles ? (
+                              <button
+                                type="button"
+                                onClick={() => openRoleAssignment(entry, ids)}
+                                className="inline-flex h-7 items-center gap-1.5 rounded-[4px] border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] px-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                              >
+                                <UserCheck className="h-3 w-3 text-blue-600 dark:text-sky-400" />
+                                <span>Manage Roles ({ids.length})</span>
+                              </button>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {assigned.map((name) => (
+                                  <span
+                                    key={name}
+                                    className="rounded-[3px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300"
+                                  >
+                                    {roles.find((r) => r.name === name)
+                                      ? roleLabel(roles.find((r) => r.name === name)!)
+                                      : name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {can("users.update") && entry.id !== user?.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingUser(entry);
+                                    setUserEditDraft({ name: entry.name, email: entry.email });
+                                  }}
+                                  title="Edit User"
+                                  className={actionBtnEdit}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                              )}
+                              {can("users.delete") && entry.id !== user?.id && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPendingConfirmation({
+                                      title: `Delete User: ${entry.name}`,
+                                      description: `Are you sure you want to delete ${entry.name} (${entry.email})? This action cannot be undone.`,
+                                      action: () =>
+                                        void saveAction(
+                                          () => request(`users/${entry.id}`, "DELETE"),
+                                          "User account deleted."
+                                        ),
+                                    });
+                                  }}
+                                  title="Delete User"
+                                  className={actionBtnDelete}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* TAB 2: ROLES & ASSIGNMENTS                                      */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {tab === "roles" && canViewRoles && (
+        <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
+          {/* Roles Selector Sidebar */}
+          <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-3 shadow-xs">
+            <div className="flex items-center justify-between pb-3 px-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Configured Roles ({roles.length})
+              </span>
+              {can("roles.create") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingRole(null);
+                    setRoleDraft(blankRole);
+                    setRoleFormOpen(true);
+                  }}
+                  className="rounded-[4px] p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50 cursor-pointer"
+                  title="Create Role"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="mt-2 space-y-1">
+              {roles.map((role) => (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() => setActiveRoleId(role.id)}
+                  className={`w-full flex items-center justify-between rounded-[4px] px-3 py-2.5 text-left transition cursor-pointer ${
+                    activeRoleId === role.id
+                      ? "bg-blue-50/80 text-blue-900 font-semibold dark:bg-blue-950/60 dark:text-blue-200 border-l-2 border-[#0858a8]"
+                      : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  }`}
+                >
+                  <div>
+                    <span className="block text-xs font-semibold">{roleLabel(role)}</span>
+                    <span className="block text-[11px] text-slate-400 font-normal">
+                      {role.users_count ?? 0} assigned users
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {Array.isArray(role.permissions)
+                      ? role.permissions.length
+                      : role.permissions?.data?.length ?? 0}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Active Role Permissions Card */}
+          <div className="rounded-[6px] border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#111624] p-5 shadow-xs">
+            {activeRoleId !== null && roles.find((r) => r.id === activeRoleId) ? (
+              (() => {
+                const role = roles.find((r) => r.id === activeRoleId)!;
+                return (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                      <div>
+                        <h2 className="text-base font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                          {roleLabel(role)}
+                        </h2>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          Key: <code className="font-mono text-blue-600 dark:text-sky-400">{role.name}</code>
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {role.name !== "superadmin" && can("roles.update") && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingRole(role.id);
+                              setRoleDraft({
+                                name: role.name,
+                                label: {
+                                  en: labelValue(role.label, "en"),
+                                  am: labelValue(role.label, "am"),
+                                  om: labelValue(role.label, "om"),
+                                },
+                              });
+                              setRoleFormOpen(true);
+                            }}
+                            className={btnSecondary}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span>Edit Role</span>
+                          </button>
+                        )}
+                        {role.name !== "superadmin" && can("roles.delete") && (
+                          <button
+                            type="button"
+                            disabled={(role.users_count ?? 0) > 0}
+                            onClick={() => {
+                              setPendingConfirmation({
+                                title: `Delete Role: ${role.name}`,
+                                description: `Are you sure you want to remove the role ${roleLabel(role)}? This action cannot be undone.`,
+                                action: () =>
+                                  void saveAction(
+                                    () => request(`roles/${role.id}`, "DELETE"),
+                                    "Role deleted successfully."
+                                  ),
+                              });
+                            }}
+                            className={btnDanger}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        )}
+                        {canAssignPermissions && role.name !== "superadmin" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPermissionSearch("");
+                              setPermissionAssignmentOpen(true);
+                            }}
+                            className={btnPrimary}
+                          >
+                            <Key className="h-3.5 w-3.5" />
+                            <span>Manage Permissions</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                        Granted Permissions (
+                        {Array.isArray(role.permissions)
+                          ? role.permissions.length
+                          : role.permissions?.data?.length ?? 0}
+                        )
+                      </h3>
+                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        {(Array.isArray(role.permissions) ? role.permissions : role.permissions?.data ?? []).map(
+                          (p) => (
+                            <div
+                              key={p.id}
+                              className="rounded-[4px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 p-2.5"
+                            >
+                              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                {labelValue(p.label, currentLocale) || p.name}
+                              </p>
+                              <p className="text-[10px] font-mono text-slate-400 mt-0.5">{p.name}</p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <p className="py-12 text-center text-xs text-slate-400">
+                Select a role from the left sidebar to inspect and configure permissions.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* TAB 3: PERMISSIONS CATALOGUE                                    */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {tab === "permissions" && canViewPermissions && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 flex-1">
+              <div className="relative w-full sm:w-96">
+                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={permissionSearchCatalogue}
+                  onChange={(e) => setPermissionSearchCatalogue(e.target.value)}
+                  placeholder="Search permissions by identifier or label…"
+                  className="h-9 w-full rounded-[4px] border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] pl-9 pr-3 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0858a8] focus:border-[#0858a8] shadow-2xs"
+                />
+              </div>
+
+              {permissionGroups.length > 0 && (
+                <div className="w-44">
+                  <AppSelect
+                    value={permissionGroupFilter}
+                    onChange={(v) => setPermissionGroupFilter(v)}
+                    options={[
+                      { value: "all", label: "Group: All" },
+                      ...permissionGroups.map((g) => ({ value: g, label: g })),
+                    ]}
+                    size="sm"
+                    ariaLabel="Filter by group"
+                  />
+                </div>
+              )}
+
+              {(permissionSearchCatalogue || permissionGroupFilter !== "all") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPermissionSearchCatalogue("");
+                    setPermissionGroupFilter("all");
+                  }}
+                  className="inline-flex h-8 items-center gap-1 rounded-[4px] px-2 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  title="Reset filters"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span>Reset</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className={tableContainerCls}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[700px] text-left text-sm">
+                <thead className={tableHeaderRowCls}>
+                  <tr>
+                    <th className={tableHeaderCellCls}>Display Name</th>
+                    <th className={tableHeaderCellCls}>System Code</th>
+                    <th className={tableHeaderCellCls}>Security Group</th>
+                    <th className={`${tableHeaderCellCls} text-right`}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filteredPermissions.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-14 text-center text-sm text-slate-500 dark:text-slate-400">
+                        No permissions found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPermissions.map((permission) => (
+                      <tr key={permission.id} className={tableRowCls(false)}>
+                        <td className="py-3 px-4">
+                          <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                            {labelValue(permission.label, currentLocale) || permission.name}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-xs text-blue-600 dark:text-sky-400">
+                          {permission.name}
+                        </td>
+                        <td className="py-3 px-4 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                          <span className="inline-flex items-center rounded px-2 py-0.5 bg-slate-100 dark:bg-slate-800">
+                            {permission.group_name}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {can("permissions.update") && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const parts = permission.name.split(".");
+                                  const mod = parts[0] || permission.group_name || "members";
+                                  const act = parts.slice(1).join(".") || "view";
+                                  setPermModule(mod);
+                                  setPermAction(act);
+                                  setEditingPermission(permission);
+                                  setPermissionDraft({
+                                    name: permission.name,
+                                    group_name: permission.group_name,
+                                    label: {
+                                      en: labelValue(permission.label, "en"),
+                                      am: labelValue(permission.label, "am"),
+                                      om: labelValue(permission.label, "om"),
+                                    },
+                                  });
+                                }}
+                                title="Edit Permission"
+                                className={actionBtnEdit}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                            )}
+                            {can("permissions.delete") && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingConfirmation({
+                                    title: `Delete Permission: ${permission.name}`,
+                                    description: `Are you sure you want to delete permission '${permission.name}'?`,
+                                    action: () =>
+                                      void saveAction(
+                                        () => request(`permissions/${permission.id}`, "DELETE"),
+                                        "Permission deleted."
+                                      ),
+                                  });
+                                }}
+                                title="Delete Permission"
+                                className={actionBtnDelete}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Add User ─────────────────────────────────────────── */}
+      {createUserOpen && (
+        <AdminModal
+          open={createUserOpen}
+          onOpenChange={(o) => {
+            if (!o) setCreateUserOpen(false);
+          }}
+          title="Create New User Account"
+          description="Provision a new administrative, teacher, or student account."
+          size="lg"
+        >
+          <form onSubmit={(e) => void submitNewUser(e)} className="space-y-4 p-1">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelCls}>
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  placeholder="e.g. Samuel Bekele"
+                  className={inputCls()}
+                />
+              </div>
+
+              <div>
+                <label className={labelCls}>
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  placeholder="user@senbet.org"
+                  className={inputCls()}
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className={labelCls}>
+                  Primary Role <span className="text-rose-500">*</span>
+                </label>
+                <AppSelect
+                  value={newUser.role}
+                  onChange={(v) => setNewUser({ ...newUser, role: v })}
+                  options={roles
+                    .filter(
+                      (role) =>
+                        ["student", "teacher", "superadmin", "admin"].includes(role.name) &&
+                        (role.name !== "superadmin" || isSuperAdmin)
+                    )
+                    .map((role) => ({ value: role.name, label: roleLabel(role) }))}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className={labelCls}>
+                  Initial Password <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  minLength={8}
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  placeholder="••••••••••••"
+                  className={inputCls()}
+                />
+              </div>
+
+              <div>
+                <label className={labelCls}>
+                  Confirm Password <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  required
+                  minLength={8}
+                  type="password"
+                  value={newUser.password_confirmation}
+                  onChange={(e) => setNewUser({ ...newUser, password_confirmation: e.target.value })}
+                  placeholder="••••••••••••"
+                  className={inputCls()}
+                />
+              </div>
+            </div>
+
+            <div className={modalStickyFooter}>
+              <button
+                type="button"
+                onClick={() => setCreateUserOpen(false)}
+                className={btnSecondary}
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className={btnPrimary}>
+                {saving ? "Creating…" : "Create User"}
+              </button>
+            </div>
+          </form>
+        </AdminModal>
+      )}
+
+      {/* ─── MODAL: Edit User ────────────────────────────────────────── */}
+      {editingUser && (
+        <AdminModal
+          open={Boolean(editingUser)}
+          onOpenChange={(o) => {
+            if (!o) setEditingUser(null);
+          }}
+          title={`Edit Account: ${editingUser.name}`}
+          description="Update identity details for this user."
+          size="md"
+        >
+          <form onSubmit={(e) => void submitEditUser(e)} className="space-y-4 p-1">
+            <div>
+              <label className={labelCls}>Full Name</label>
+              <input
+                required
+                value={userEditDraft.name}
+                onChange={(e) => setUserEditDraft({ ...userEditDraft, name: e.target.value })}
+                className={inputCls()}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Email Address</label>
+              <input
+                required
+                type="email"
+                value={userEditDraft.email}
+                onChange={(e) => setUserEditDraft({ ...userEditDraft, email: e.target.value })}
+                className={inputCls()}
+              />
+            </div>
+
+            <div className={modalStickyFooter}>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className={btnSecondary}
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className={btnPrimary}>
+                {saving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </AdminModal>
+      )}
+
+      {/* ─── MODAL: Manage User Roles ────────────────────────────────── */}
+      {roleAssignmentUser && (
+        <AdminModal
+          open={Boolean(roleAssignmentUser)}
+          onOpenChange={(o) => {
+            if (!o && !saving) setRoleAssignmentUser(null);
+          }}
+          title={`Role Assignments: ${roleAssignmentUser.name}`}
+          description="Select the security roles assigned to this user."
+          size="md"
+        >
+          <div className="space-y-4 p-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={roleSearch}
+                onChange={(e) => setRoleSearch(e.target.value)}
+                placeholder="Search roles…"
+                className="h-9 w-full rounded-[4px] border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] pl-9 pr-3 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0858a8] focus:border-[#0858a8] shadow-2xs"
+              />
+            </div>
+
+            <div className="max-h-[50vh] space-y-1 overflow-y-auto rounded-[4px] border border-slate-200/90 dark:border-slate-800 p-2">
+              {roles
+                .filter(
+                  (role) =>
+                    (isSuperAdmin || role.name !== "superadmin" || assignmentRoleIds.includes(role.id)) &&
+                    `${role.name} ${roleLabel(role)}`.toLowerCase().includes(roleSearch.toLowerCase())
+                )
+                .map((role) => {
+                  const checked = assignmentRoleIds.includes(role.id);
+                  const locked = role.name === "superadmin" && !isSuperAdmin;
+                  return (
+                    <label
+                      key={role.id}
+                      className={`flex items-center gap-3 rounded-[4px] px-3 py-2 text-xs cursor-pointer transition ${
+                        checked
+                          ? "bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 font-semibold"
+                          : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={locked || saving}
+                        onChange={(e) =>
+                          setRoleSelections((current) => ({
+                            ...current,
+                            [roleAssignmentUser.id]: e.target.checked
+                              ? [...new Set([...assignmentRoleIds, role.id])]
+                              : assignmentRoleIds.filter((id) => id !== role.id),
+                          }))
+                        }
+                        className="h-4 w-4 rounded-[2px] border-slate-300 dark:border-slate-600 text-[#0858a8] cursor-pointer accent-[#0858a8]"
+                      />
+                      <span>{roleLabel(role)}</span>
+                      {locked && (
+                        <span className="ml-auto text-[10px] text-slate-400">Locked</span>
+                      )}
+                    </label>
+                  );
+                })}
+            </div>
+
+            <div className={modalStickyFooter}>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setRoleAssignmentUser(null)}
+                className={btnSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => {
+                  const entry = roleAssignmentUser;
+                  void saveAction(
+                    () => request(`users/${entry.id}/roles`, "PUT", { role_ids: assignmentRoleIds }),
+                    "Roles updated."
+                  ).then((saved) => {
+                    if (saved) setRoleAssignmentUser(null);
+                  });
+                }}
+                className={btnPrimary}
+              >
+                {saving ? "Saving…" : "Save Roles"}
+              </button>
+            </div>
+          </div>
+        </AdminModal>
+      )}
+
+      {/* ─── MODAL: Add / Edit Role ──────────────────────────────────── */}
+      {roleFormOpen && (
+        <AdminModal
+          open={roleFormOpen}
+          onOpenChange={(o) => {
+            if (!o && !saving) {
+              setRoleFormOpen(false);
+              setEditingRole(null);
+            }
+          }}
+          title={editingRole === null ? "Create Security Role" : "Edit Role"}
+          description="Define the system key and multi-language display names."
+          size="lg"
+          headerAction={
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                Language:
+              </span>
+              <div className="w-40">
+                <AppSelect
+                  value={roleEntryLanguage}
+                  onChange={(val) => setRoleEntryLanguage(val as SupportedLocale)}
+                  options={[
+                    { value: "en", label: "English" },
+                    { value: "am", label: "አማርኛ" },
+                    { value: "om", label: "Afaan Oromoo" },
+                  ]}
+                  size="sm"
+                  ariaLabel="Role language"
+                />
+              </div>
+            </div>
+          }
+        >
+          <form onSubmit={(e) => void submitRole(e)} className="space-y-4 p-1">
+            <div>
+              <label className={labelCls}>
+                Role Key (System Identifier) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                required
+                pattern="[a-z][a-z0-9_-]*"
+                value={roleDraft.name}
+                onChange={(e) => setRoleDraft({ ...roleDraft, name: e.target.value })}
+                disabled={editingRole !== null && roles.find((r) => r.id === editingRole)?.name === "superadmin"}
+                placeholder="e.g. academic_director"
+                className={inputCls()}
+              />
+            </div>
+
+            <LocalizedFieldInput
+              label="Display Name"
+              value={roleDraft.label}
+              onChange={(val) =>
+                setRoleDraft({
+                  ...roleDraft,
+                  label: { en: val.en ?? "", am: val.am ?? "", om: val.om ?? "" },
+                })
+              }
+              activeLocale={roleEntryLanguage}
+              onLocaleChange={setRoleEntryLanguage}
+              required={true}
+            />
+
+            <div className={modalStickyFooter}>
+              <button
+                type="button"
+                onClick={() => {
+                  setRoleFormOpen(false);
+                  setEditingRole(null);
+                }}
+                className={btnSecondary}
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className={btnPrimary}>
+                {saving ? "Saving…" : editingRole === null ? "Create Role" : "Save Role"}
+              </button>
+            </div>
+          </form>
+        </AdminModal>
+      )}
+
+      {/* ─── MODAL: Manage Role Permissions ──────────────────────────── */}
+      {permissionAssignmentOpen && activeRoleId !== null && (
+        <AdminModal
+          open={permissionAssignmentOpen}
+          onOpenChange={(o) => {
+            if (!o && !saving) setPermissionAssignmentOpen(false);
+          }}
+          title="Configure Role Permissions"
+          description={`Select permissions granted to role: ${
+            roles.find((r) => r.id === activeRoleId)?.name
+          }`}
+          size="2xl"
+        >
+          <div className="space-y-4 p-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={permissionSearch}
+                onChange={(e) => setPermissionSearch(e.target.value)}
+                placeholder="Search permissions…"
+                className="h-9 w-full rounded-[4px] border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-[#141a29] pl-9 pr-3 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#0858a8] focus:border-[#0858a8] shadow-2xs"
+              />
+            </div>
+
+            <div className="max-h-[55vh] space-y-3 overflow-y-auto">
+              {Object.entries(
+                permissions.reduce<Record<string, PermissionRecord[]>>((groups, p) => {
+                  (groups[p.group_name] ??= []).push(p);
+                  return groups;
+                }, {})
+              ).map(([group, items]) => {
+                const visible = items.filter((p) => {
+                  const isSystem = ["roles.manage", "roles.assign-system", "permissions.assign"].includes(
+                    p.name
+                  );
+                  const allowed = !isSystem || isSuperAdmin || selectedPermissionIds.includes(p.id);
+                  return (
+                    allowed &&
+                    `${p.name} ${labelValue(p.label, currentLocale)} ${p.group_name}`
+                      .toLowerCase()
+                      .includes(permissionSearch.toLowerCase())
+                  );
+                });
+
+                if (!visible.length) return null;
+
+                return (
+                  <fieldset
+                    key={group}
+                    className="rounded-[4px] border border-slate-200/90 dark:border-slate-800 p-3"
+                  >
+                    <legend className="px-1 text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-sky-400">
+                      {group}
+                    </legend>
+                    <div className="grid gap-1 sm:grid-cols-2">
+                      {visible.map((p) => {
+                        const checked = selectedPermissionIds.includes(p.id);
+                        return (
+                          <label
+                            key={p.id}
+                            className={`flex items-start gap-2.5 rounded-[4px] px-2.5 py-1.5 text-xs cursor-pointer transition ${
+                              checked
+                                ? "bg-blue-50/70 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 font-semibold"
+                                : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={saving}
+                              onChange={(e) =>
+                                setSelectedPermissionIds((current) =>
+                                  e.target.checked
+                                    ? [...new Set([...current, p.id])]
+                                    : current.filter((id) => id !== p.id)
+                                )
+                              }
+                              className="mt-0.5 h-3.5 w-3.5 rounded-[2px] border-slate-300 dark:border-slate-600 text-[#0858a8] cursor-pointer accent-[#0858a8]"
+                            />
+                            <div>
+                              <span>{labelValue(p.label, currentLocale) || p.name}</span>
+                              <span className="block text-[10px] font-mono text-slate-400 font-normal">
+                                {p.name}
+                              </span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                );
+              })}
+            </div>
+
+            <div className={modalStickyFooter}>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setPermissionAssignmentOpen(false)}
+                className={btnSecondary}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => {
+                  void saveAction(
+                    () =>
+                      request(`roles/${activeRoleId}/permissions`, "PUT", {
+                        permission_ids: selectedPermissionIds,
+                      }),
+                    "Permissions updated successfully.",
+                    true
+                  ).then((saved) => {
+                    if (saved) setPermissionAssignmentOpen(false);
+                  });
+                }}
+                className={btnPrimary}
+              >
+                {saving ? "Saving…" : "Save Permissions"}
+              </button>
+            </div>
+          </div>
+        </AdminModal>
+      )}
+
+      {/* ─── MODAL: Add / Edit Permission ────────────────────────────── */}
+      {(permissionOpen || Boolean(editingPermission)) && (
+        <AdminModal
+          open={permissionOpen || Boolean(editingPermission)}
+          onOpenChange={(o) => {
+            if (!o) {
+              setPermissionOpen(false);
+              setEditingPermission(null);
+            }
+          }}
+          title={editingPermission ? "Edit Permission" : "Add Permission"}
+          description="Register or modify a security permission in the system catalogue."
+          size="lg"
+          headerAction={
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                Language:
+              </span>
+              <div className="w-40">
+                <AppSelect
+                  value={permissionEntryLanguage}
+                  onChange={(val) => setPermissionEntryLanguage(val as SupportedLocale)}
+                  options={[
+                    { value: "en", label: "English" },
+                    { value: "am", label: "አማርኛ" },
+                    { value: "om", label: "Afaan Oromoo" },
+                  ]}
+                  size="sm"
+                  ariaLabel="Permission language"
+                />
+              </div>
+            </div>
+          }
+        >
+          <form
+            onSubmit={(e) => void (editingPermission ? submitEditPermission(e) : submitPermission(e))}
+            className="space-y-4 p-1"
+          >
+            <div className="space-y-3.5">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelCls}>
+                    Target Module <span className="text-rose-500">*</span>
+                  </label>
+                  <AppSelect
+                    value={permModule}
+                    onChange={(mod) => {
+                      setPermModule(mod);
+                      const newName = `${mod}.${permAction}`;
+                      setPermissionDraft((p) => ({
+                        ...p,
+                        name: newName,
+                        group_name: mod,
+                        label: {
+                          ...p.label,
+                          en: p.label.en ? p.label.en : generateDefaultLabel(mod, permAction),
+                        },
+                      }));
+                    }}
+                    options={availableModuleOptions}
+                    size="md"
+                    ariaLabel="Select permission module"
+                  />
+                </div>
+
+                <div>
+                  <label className={labelCls}>
+                    Operation Action <span className="text-rose-500">*</span>
+                  </label>
+                  <AppSelect
+                    value={permAction}
+                    onChange={(act) => {
+                      setPermAction(act);
+                      const newName = `${permModule}.${act}`;
+                      setPermissionDraft((p) => ({
+                        ...p,
+                        name: newName,
+                        group_name: permModule,
+                        label: {
+                          ...p.label,
+                          en: p.label.en ? p.label.en : generateDefaultLabel(permModule, act),
+                        },
+                      }));
+                    }}
+                    options={availableActionOptions}
+                    size="md"
+                    ariaLabel="Select permission action"
+                  />
+                </div>
+              </div>
+
+              {/* Merged Permission Identifier Card */}
+              <div className="p-3 rounded-[4px] bg-slate-50 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
+                    Merged Permission Key (System Identifier)
+                  </span>
+                  <code className="text-xs font-mono font-bold text-blue-600 dark:text-sky-400">
+                    {permModule}.{permAction}
+                  </code>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
+                    Assigned Group
+                  </span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 font-mono">
+                    {permModule}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <LocalizedFieldInput
+              label="Display Name"
+              value={permissionDraft.label}
+              onChange={(val) =>
+                setPermissionDraft({
+                  ...permissionDraft,
+                  label: { en: val.en ?? "", am: val.am ?? "", om: val.om ?? "" },
+                })
+              }
+              activeLocale={permissionEntryLanguage}
+              onLocaleChange={setPermissionEntryLanguage}
+              required={true}
+            />
+
+            <div className={modalStickyFooter}>
+              <button
+                type="button"
+                onClick={() => {
+                  setPermissionOpen(false);
+                  setEditingPermission(null);
+                }}
+                className={btnSecondary}
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className={btnPrimary}>
+                {saving ? "Saving…" : editingPermission ? "Save Permission" : "Create Permission"}
+              </button>
+            </div>
+          </form>
+        </AdminModal>
+      )}
+
+      {/* ─── Confirmation Dialog ─────────────────────────────────────── */}
+      <ConfirmDialog
+        isOpen={Boolean(pendingConfirmation)}
+        onClose={() => {
+          if (!saving) setPendingConfirmation(null);
+        }}
+        onConfirm={() => {
+          const action = pendingConfirmation?.action;
+          setPendingConfirmation(null);
+          action?.();
+        }}
+        isLoading={saving}
+        title={pendingConfirmation?.title ?? "Confirm Action"}
+        description={pendingConfirmation?.description ?? "Are you sure you want to proceed?"}
+      />
+    </main>
+  );
 }
