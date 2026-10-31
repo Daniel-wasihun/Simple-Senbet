@@ -35,9 +35,59 @@ class AssessmentResultController extends Controller
         ];
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->indexCrud(AssessmentResult::class, AssessmentResultResource::class, ['assessment', 'member.schoolClass'], true);
+        $this->authorize('viewAny', AssessmentResult::class);
+
+        $query = AssessmentResult::with(['assessment', 'member.schoolClass']);
+
+        if ($request->filled('teaching_assignment_id')) {
+            $query->whereHas('assessment', function ($q) use ($request) {
+                $q->where('teaching_assignment_id', (int) $request->query('teaching_assignment_id'));
+            });
+            return AssessmentResultResource::collection($query->get());
+        }
+
+        if ($request->filled('assessment_id')) {
+            $query->where('assessment_id', (int) $request->query('assessment_id'));
+            return AssessmentResultResource::collection($query->get());
+        }
+
+        return $this->indexCrud(AssessmentResult::class, AssessmentResultResource::class, ['assessment', 'member.schoolClass'], false);
+    }
+
+    public function batchStore(Request $request)
+    {
+        $this->authorize('create', AssessmentResult::class);
+
+        $validated = $request->validate([
+            'results' => ['required', 'array'],
+            'results.*.assessment_id' => ['required', 'exists:assessments,id'],
+            'results.*.member_id' => ['required', 'exists:members,id'],
+            'results.*.score' => ['required', 'numeric', 'min:0', 'max:999.99'],
+            'results.*.remarks' => ['nullable'],
+        ]);
+
+        $saved = [];
+        foreach ($validated['results'] as $item) {
+            $result = AssessmentResult::updateOrCreate(
+                [
+                    'assessment_id' => $item['assessment_id'],
+                    'member_id' => $item['member_id'],
+                ],
+                [
+                    'score' => $item['score'],
+                    'remarks' => $item['remarks'] ?? null,
+                ]
+            );
+            $saved[] = $result;
+        }
+
+        return response()->json([
+            'message' => 'Assessment results saved successfully.',
+            'count' => count($saved),
+            'data' => AssessmentResultResource::collection(collect($saved)->load(['assessment', 'member'])),
+        ]);
     }
 
     public function store(Request $request)

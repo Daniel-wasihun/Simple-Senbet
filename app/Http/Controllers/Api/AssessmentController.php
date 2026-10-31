@@ -8,6 +8,7 @@ use App\Http\Resources\AssessmentResource;
 use App\Models\Assessment;
 use App\Services\AssessmentService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -15,9 +16,15 @@ class AssessmentController extends Controller
 {
     public function __construct(protected AssessmentService $assessmentService) {}
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Assessment::class);
+
+        if ($request->filled('teaching_assignment_id')) {
+            $query = Assessment::where('teaching_assignment_id', (int) $request->query('teaching_assignment_id'))
+                ->with('teachingAssignment');
+            return AssessmentResource::collection($query->get());
+        }
 
         return AssessmentResource::collection($this->assessmentService->paginate());
     }

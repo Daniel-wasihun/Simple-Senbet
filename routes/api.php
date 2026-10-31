@@ -129,6 +129,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Assessments & Gradebook Results
     Route::apiResource('assessments', AssessmentController::class);
+    Route::post('assessment-results/batch', [AssessmentResultController::class, 'batchStore'])->name('assessment-results.batch');
     Route::apiResource('assessment-results', AssessmentResultController::class);
 
     // Academic Reporting & Printable Gradebooks
