@@ -1,5 +1,5 @@
-﻿import { SchoolManagementWorkspace } from "@/components/admin/SchoolManagementWorkspace";
+import { CourseAssessmentGradebookWorkspace } from "@/components/admin/CourseAssessmentGradebookWorkspace";
 
 export default function Page() {
-  return <SchoolManagementWorkspace module="assessment-results" />;
+  return <CourseAssessmentGradebookWorkspace />;
 }
